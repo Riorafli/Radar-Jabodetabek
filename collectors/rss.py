@@ -3,11 +3,11 @@
 Stores title, a short summary (max 300 chars) and the link only - never the
 full article (copyright).
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import feedparser
 
-from pipeline.common import clean_html, db, http, load_config, log
+from pipeline.common import clean_html, db, env, http, load_config, log
 from pipeline.entities import BrandMatcher
 from pipeline.geocode import Matcher, strip_dateline, zona_ids
 from pipeline.items import brand_mentions, insert_item
@@ -26,6 +26,8 @@ def parse_entry(e, feed, matcher):
     t = e.get("published_parsed") or e.get("updated_parsed")
     waktu = datetime(*t[:6], tzinfo=timezone.utc) if t else datetime.now(timezone.utc)
     waktu = min(waktu, datetime.now(timezone.utc))  # some feeds publish future timestamps
+    if waktu < datetime.now(timezone.utc) - timedelta(days=int(env("RETENSI_BERITA_HARI", 14))):
+        return None  # older than retention: cleanup would delete it again
     return {
         "judul": judul, "url": link, "ringkasan": ringkasan, "published_at": waktu,
         "zona": m.zona, "kode_wilayah": m.kode_wilayah or feed.get("default_wilayah"),

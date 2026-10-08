@@ -152,6 +152,12 @@ def test_parse_entry_local_feed_default(m):
     assert parse_entry({"title": "tanpa link"}, local, m) is None
 
 
+def test_parse_entry_skips_entries_older_than_retention(m):
+    old = _entry("Banjir di Bekasi Timur")
+    old["published_parsed"] = time.gmtime(time.time() - 20 * 86400)
+    assert parse_entry(old, {"filter_wilayah": True}, m) is None
+
+
 def test_clean_html_broken_entities():
     assert clean_html("Saksi dari JPUamp;nbsp;") == "Saksi dari JPU"
     assert clean_html("A &amp;amp; B&amp;nbsp;C") == "A & B C"
