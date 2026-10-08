@@ -1,0 +1,111 @@
+# Jabodetabek regions. Codes = Kemendagri (verified via api.bmkg.go.id, Oct 2026).
+# alias: lowercase words that identify the region in news text. When several
+# aliases match, the longest wins ("tangerang selatan" beats "tangerang").
+# lat/lon = rough center, used for the map and "dekat saya".
+
+kawasan: Jabodetabek
+
+provinsi:
+  - {kode: "31", nama: DKI Jakarta, alias: [jakarta, dki, dki jakarta, ibu kota], lat: -6.2088, lon: 106.8456}
+  - {kode: "32", nama: Jawa Barat, alias: [], lat: -6.9147, lon: 107.6098}
+  - {kode: "36", nama: Banten, alias: [], lat: -6.1200, lon: 106.1500}
+
+wilayah:
+  - kode: "31.71"
+    nama: Jakarta Pusat
+    level: kota
+    bagian: Ja
+    alias: [jakarta pusat, jakpus, menteng, tanah abang, gambir, senen, kemayoran, cempaka putih, sawah besar, monas]
+    lat: -6.1805
+    lon: 106.8284
+  - kode: "31.72"
+    nama: Jakarta Utara
+    level: kota
+    bagian: Ja
+    alias: [jakarta utara, jakut, tanjung priok, koja, cilincing, penjaringan, pademangan, ancol, sunter]
+    lat: -6.1384
+    lon: 106.8640
+  - kode: "31.73"
+    nama: Jakarta Barat
+    level: kota
+    bagian: Ja
+    alias: [jakarta barat, jakbar, grogol, cengkareng, kalideres, kebon jeruk, palmerah, tambora, taman sari, kembangan]
+    lat: -6.1683
+    lon: 106.7588
+  - kode: "31.74"
+    nama: Jakarta Selatan
+    level: kota
+    bagian: Ja
+    alias: [jakarta selatan, jaksel, kebayoran baru, kebayoran lama, cilandak, pasar minggu, jagakarsa, pesanggrahan, mampang, pancoran, setiabudi, kuningan jakarta]
+    lat: -6.2615
+    lon: 106.8106
+  - kode: "31.75"
+    nama: Jakarta Timur
+    level: kota
+    bagian: Ja
+    alias: [jakarta timur, jaktim, cakung, duren sawit, jatinegara, kramat jati, pulogadung, matraman, cipayung, ciracas, pasar rebo, makasar jakarta]
+    lat: -6.2250
+    lon: 106.9004
+  - kode: "31.01"
+    nama: Kepulauan Seribu
+    level: kabupaten
+    bagian: Ja
+    alias: [kepulauan seribu, pulau seribu, pulau pramuka, pulau tidung]
+    lat: -5.7985
+    lon: 106.5072
+  - kode: "32.71"
+    nama: Kota Bogor
+    level: kota
+    bagian: Bo
+    alias: [bogor, kota bogor]
+    lat: -6.5971
+    lon: 106.8060
+  - kode: "32.01"
+    nama: Kabupaten Bogor
+    level: kabupaten
+    bagian: Bo
+    alias: [kabupaten bogor, kab bogor, cibinong, cileungsi, gunung putri, parung, cisarua, ciawi, citeureup, jonggol]
+    lat: -6.4797
+    lon: 106.8249
+  - kode: "32.76"
+    nama: Kota Depok
+    level: kota
+    bagian: De
+    alias: [depok, kota depok, sawangan, cinere, beji, cimanggis, sukmajaya, tapos]
+    lat: -6.4025
+    lon: 106.7942
+  - kode: "36.71"
+    nama: Kota Tangerang
+    level: kota
+    bagian: Ta
+    alias: [tangerang, kota tangerang, ciledug, cipondoh, karawaci, batuceper, benda tangerang, bandara soetta, soekarno-hatta]
+    lat: -6.1783
+    lon: 106.6319
+  - kode: "36.74"
+    nama: Tangerang Selatan
+    level: kota
+    bagian: Ta
+    alias: [tangerang selatan, tangsel, serpong, pamulang, ciputat, pondok aren, setu tangsel]
+    lat: -6.2886
+    lon: 106.7179
+  - kode: "36.03"
+    nama: Kabupaten Tangerang
+    level: kabupaten
+    bagian: Ta
+    alias: [kabupaten tangerang, kab tangerang, tigaraksa, cikupa, balaraja, kelapa dua tangerang, curug tangerang, pasar kemis, kosambi]
+    lat: -6.1870
+    lon: 106.4870
+  - kode: "32.75"
+    nama: Kota Bekasi
+    level: kota
+    bagian: Bek
+    alias: [bekasi, kota bekasi, bekasi barat, bekasi timur, bekasi selatan, bekasi utara, jatiasih, pondok gede, jatisampurna, bantargebang, rawalumbu, mustikajaya]
+    lat: -6.2383
+    lon: 106.9756
+  - kode: "32.16"
+    nama: Kabupaten Bekasi
+    level: kabupaten
+    bagian: Bek
+    alias: [kabupaten bekasi, kab bekasi, cikarang, tambun, cibitung, setu bekasi, babelan, tarumajaya]
+    lat: -6.2474
+    lon: 107.1485

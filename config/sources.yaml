@@ -1,0 +1,143 @@
+# Data sources. Every URL below was tested on 2026-10-08 (HTTP 200 + parsable).
+#
+# rss.filter_wilayah: true  -> national feed, keep only items that mention a
+#                              Jabodetabek place (wilayah.yaml / zones.yaml)
+#                     false -> local feed, keep everything
+# rss.default_wilayah:       kode used when a local item mentions no place
+# rss.tipe:                  berita (default) | info (public service: weather, transit)
+
+rss:
+  - nama: Detik News
+    url: https://news.detik.com/berita/rss
+    filter_wilayah: true
+  - nama: detikFood
+    url: https://food.detik.com/rss
+    filter_wilayah: true
+  # Antara "megapolitan"/"metro" also carry national stories -> filtered too
+  - nama: Antara Megapolitan
+    url: https://megapolitan.antaranews.com/rss/terkini.xml
+    filter_wilayah: true
+  - nama: Antara Metro
+    url: https://www.antaranews.com/rss/metro.xml
+    filter_wilayah: true
+  - nama: CNN Indonesia
+    url: https://www.cnnindonesia.com/nasional/rss
+    filter_wilayah: true
+  - nama: CNN Indonesia Gaya Hidup
+    url: https://www.cnnindonesia.com/gaya-hidup/rss
+    filter_wilayah: true
+  - nama: CNBC Indonesia
+    url: https://www.cnbcindonesia.com/news/rss
+    filter_wilayah: true
+  - nama: Tempo
+    url: https://rss.tempo.co/nasional
+    filter_wilayah: true
+  - nama: Okezone
+    url: https://www.okezone.com/rss
+    filter_wilayah: true
+  - nama: Republika
+    url: https://www.republika.co.id/rss
+    filter_wilayah: true
+  # Local outlets also carry national/entertainment news -> filtered too
+  - nama: Radar Bekasi
+    url: https://radarbekasi.id/feed
+    filter_wilayah: true
+  - nama: Tangerang News
+    url: https://www.tangerangnews.com/rss
+    filter_wilayah: true
+  # Not working on 2026-10-08 (re-check later): Kompas megapolitan (404),
+  # Tempo metro (403), Radar Bogor (timeout), Radar Depok (connection error).
+
+# BMKG nowcast (weather warnings), filtered to Jabodetabek provinces/regions.
+bmkg:
+  nowcast_url: https://www.bmkg.go.id/alerts/nowcast/id
+  provinsi: [DKI Jakarta, Jawa Barat, Banten]
+
+# GDELT DOC API: free, no key, max 1 request / 5 s. Extra coverage only.
+gdelt:
+  aktif: true
+  query: '(jakarta OR bekasi OR depok OR tangerang OR bogor) sourcecountry:indonesia'
+  timespan: 2h
+  maxrecords: 75
+
+# Promo pages. The collector checks robots.txt before every fetch and only
+# calls the LLM when the page text changed. selector = CSS selector of the
+# promo area (empty = whole <body>). Pages that need JavaScript return almost
+# no text; those stay aktif: false - use /tambah_promo in the bot instead.
+promo:
+  - nama: McDonald's
+    brand: McDonald's
+    url: https://www.mcdonalds.co.id/promo
+    selector: ""
+    aktif: true
+  - nama: HokBen
+    brand: HokBen
+    url: https://www.hokben.co.id/promo
+    selector: ""
+    aktif: true
+  - nama: Richeese Factory
+    brand: Richeese Factory
+    url: https://www.richeesefactory.com/promo
+    selector: ""
+    aktif: true
+  - nama: BCA
+    brand: ""            # bank promo: brand comes from the LLM per promo
+    url: https://www.bca.co.id/id/promo-bca
+    selector: ""
+    aktif: true
+  - nama: Bank Mandiri
+    brand: ""
+    url: https://www.bankmandiri.co.id/promo
+    selector: ""
+    aktif: true
+  - nama: ShopeePay
+    brand: ""
+    url: https://shopeepay.co.id/promo
+    selector: ""
+    aktif: true
+  # JS-rendered or broken on 2026-10-08 - enable after finding a static URL:
+  - {nama: KFC, brand: KFC, url: https://kfcku.com/promo, selector: "", aktif: false}
+  - {nama: Pizza Hut, brand: Pizza Hut, url: https://www.pizzahut.co.id/promo, selector: "", aktif: false}
+  - {nama: Domino's, brand: Domino's, url: https://www.dominos.co.id/promo, selector: "", aktif: false}
+  - {nama: Starbucks, brand: Starbucks, url: https://www.starbucks.co.id/promotions, selector: "", aktif: false}
+  - {nama: Grand Indonesia, brand: "", url: https://www.grand-indonesia.com/, selector: "", aktif: false}
+
+# YouTube Data API. Each search costs ~100 units (quota 10,000/day).
+# The collector runs every 2 h and uses `per_run` queries per run, rotating
+# through the list -> 12 runs x 4 = 48 searches/day.
+youtube:
+  per_run: 4
+  max_results: 25
+  queries:
+    - kuliner viral jakarta
+    - tempat nongkrong baru jakarta selatan
+    - kuliner viral bsd
+    - cafe baru bsd serpong
+    - kuliner viral depok margonda
+    - kuliner viral bekasi
+    - kuliner viral tangerang
+    - kuliner viral bogor
+    - cafe viral pik
+    - kuliner blok m
+    - kuliner kelapa gading
+    - makanan viral jabodetabek
+    - antri panjang makanan jakarta
+    - cafe hits bintaro
+    - kuliner malam jakarta
+    - street food jakarta terbaru
+
+# Google Trends via pytrends (unofficial; treated as bonus).
+trends:
+  geo: [ID-JK, ID-JB, ID-BT]
+  # brands from brands.yaml are checked in groups of 5 (Trends limit)
+  max_brand: 15
+
+# Reddit (optional; needs REDDIT_CLIENT_ID/SECRET, app-only OAuth).
+reddit:
+  subreddits: [indonesia, jakarta]
+  limit: 50
+
+# OSM Overpass: cafes/restaurants per zone. Public server - be gentle.
+osm:
+  endpoint: https://overpass-api.de/api/interpreter
+  amenity: [cafe, restaurant, fast_food, food_court, ice_cream]

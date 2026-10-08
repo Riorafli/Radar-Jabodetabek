@@ -1,0 +1,55 @@
+# Brand names + aliases. Used to (1) normalize entity names for viral scoring
+# ("kokenang" -> Kopi Kenangan) and (2) tag promos and news with a brand.
+# Aliases are lowercase; matching is whole-word.
+
+brand:
+  - nama: Kopi Kenangan
+    alias: [kopi kenangan, kopken, kokenang, kenangan coffee]
+  - nama: Janji Jiwa
+    alias: [janji jiwa, kopi janji jiwa, jiwa toast]
+  - nama: Fore Coffee
+    alias: [fore coffee, kopi fore]
+  - nama: Tomoro Coffee
+    alias: [tomoro, tomoro coffee]
+  - nama: Point Coffee
+    alias: [point coffee, indomaret point]
+  - nama: Starbucks
+    alias: [starbucks, sbux]
+  - nama: Mixue
+    alias: [mixue]
+  - nama: Es Teh Indonesia
+    alias: [es teh indonesia, esteh indonesia]
+  - nama: Chatime
+    alias: [chatime]
+  - nama: Mie Gacoan
+    alias: [mie gacoan, gacoan]
+  - nama: McDonald's
+    alias: [mcdonald's, mcdonalds, mcd, mekdi]
+  - nama: KFC
+    alias: [kfc]
+  - nama: HokBen
+    alias: [hokben, hoka hoka bento]
+  - nama: Richeese Factory
+    alias: [richeese factory, richeese]
+  - nama: Pizza Hut
+    alias: [pizza hut]
+  - nama: Burger King
+    alias: [burger king]
+  - nama: Solaria
+    alias: [solaria]
+  - nama: Haidilao
+    alias: [haidilao, hai di lao]
+  - nama: Sate Khas Senayan
+    alias: [sate khas senayan]
+  - nama: Bakmi GM
+    alias: [bakmi gm, bakmi gajah mada]
+  - nama: Gyukatsu Kyoto Katsugyu
+    alias: [katsugyu]
+  - nama: Sushi Tei
+    alias: [sushi tei]
+  - nama: Marugame Udon
+    alias: [marugame, marugame udon]
+  - nama: Wingstop
+    alias: [wingstop]
+  - nama: Bebek Kaleyo
+    alias: [bebek kaleyo]

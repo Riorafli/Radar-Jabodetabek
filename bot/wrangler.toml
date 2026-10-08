@@ -1,0 +1,10 @@
+name = "radar-jabodetabek-bot"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+[vars]
+# Your Cloudflare Pages URL, shown in /help
+WEB_URL = ""
+
+# Secrets - set with `npx wrangler secret put NAME`, never here:
+#   BOT_TOKEN, WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_KEY, ADMIN_IDS

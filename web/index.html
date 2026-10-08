@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Radar Jabodetabek</title>
+  <meta name="description" content="Berita terkini, promo makanan, dan tempat viral di Jabodetabek per kota dan zona.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e8590c'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='white' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="#">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14"/><circle cx="16" cy="16" r="8" class="ring"/><circle cx="16" cy="16" r="2.5" class="dot"/></svg>
+        <span>Radar <b>Jabodetabek</b></span>
+      </a>
+      <div class="area-ctl">
+        <label class="sr" for="area">Pilih area</label>
+        <select id="area"></select>
+        <button id="near" class="btn ghost" type="button" title="Gunakan lokasi saya">📍 Dekat saya</button>
+      </div>
+    </div>
+    <nav class="wrap tabs" role="tablist">
+      <button role="tab" data-tab="berita" aria-selected="true">📰 Berita</button>
+      <button role="tab" data-tab="promo">🍜 Promo</button>
+      <button role="tab" data-tab="viral">🔥 Viral</button>
+      <button role="tab" data-tab="peta">🗺️ Peta</button>
+    </nav>
+  </header>
+
+  <div id="demo" class="demo" hidden>
+    <div class="wrap">Mode demo: data contoh. Isi <code>web/config.js</code> dengan URL &amp; anon key Supabase untuk data asli.</div>
+  </div>
+
+  <main class="wrap">
+    <section id="tab-berita" class="panel">
+      <div class="panel-head">
+        <h1 id="h-berita">Berita terkini</h1>
+        <input id="q" type="search" placeholder="Cari judul…" aria-label="Cari berita">
+      </div>
+      <ul id="list-berita" class="list"></ul>
+      <button id="more-berita" class="btn more" type="button" hidden>Muat lebih banyak</button>
+    </section>
+
+    <section id="tab-promo" class="panel" hidden>
+      <div class="panel-head"><h1 id="h-promo">Promo makanan</h1></div>
+      <ul id="list-promo" class="grid"></ul>
+    </section>
+
+    <section id="tab-viral" class="panel" hidden>
+      <div class="panel-head"><h1 id="h-viral">Lagi viral &amp; ramai</h1></div>
+      <p class="note">Skor dihitung tiap jam dari lonjakan sebutan (YouTube, berita, Reddit), engagement, jumlah platform, dan laporan pengguna, dibanding rata-rata 14 hari di zona yang sama. "Ramai" adalah perkiraan, bukan data real-time.</p>
+      <ol id="list-viral" class="list rank"></ol>
+      <h2>🆕 Tempat makan baru</h2>
+      <ul id="list-baru" class="list compact"></ul>
+      <form id="lapor" class="lapor">
+        <h2>Lihat tempat yang lagi ramai?</h2>
+        <div class="lapor-row">
+          <select id="lapor-zona" aria-label="Zona" required></select>
+          <input id="lapor-nama" maxlength="120" placeholder="Nama tempat" aria-label="Nama tempat" required>
+          <button class="btn" type="submit">Laporkan</button>
+        </div>
+        <p id="lapor-msg" class="note" role="status"></p>
+      </form>
+    </section>
+
+    <section id="tab-peta" class="panel" hidden>
+      <div class="panel-head"><h1>Peta tempat ramai</h1></div>
+      <div id="map" role="region" aria-label="Peta"></div>
+      <p class="legend"><span class="lg hot"></span> viral (besar = skor tinggi) <span class="lg new"></span> tempat baru <span class="lg zone"></span> zona</p>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Sumber: RSS media, BMKG, GDELT, YouTube, Google Trends, OpenStreetMap, kurasi manual. Hanya judul &amp; ringkasan singkat; baca selengkapnya di situs aslinya.</p>
+    <p id="bot-link"></p>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="config.js"></script>
+  <script src="demo.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

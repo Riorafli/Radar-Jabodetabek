@@ -1,0 +1,19 @@
+name: osm
+on:
+  schedule:
+    - cron: "0 20 * * *"   # 03:00 WIB, quiet hours for the public Overpass server
+  workflow_dispatch:
+concurrency: { group: osm, cancel-in-progress: false }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CONTACT_EMAIL: ${{ secrets.CONTACT_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - run: python -m collectors.osm

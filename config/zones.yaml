@@ -1,0 +1,130 @@
+# Popular zones. Coordinates are approximate - check them on
+# openstreetmap.org and adjust. Keep it to the zones you actually care about.
+#   kota:    kode wilayah (see wilayah.yaml)
+#   alias:   lowercase phrases that identify the zone in text
+#   kecuali: if any of these words appear, the alias match is ignored
+#            (e.g. "Kemang" also exists in Kabupaten Bogor)
+
+zona:
+  - nama: Kemang
+    kota: "31.74"
+    lat: -6.2615
+    lon: 106.8137
+    radius_m: 1500
+    alias: [kemang, kemang raya, kemang jaksel]
+    kecuali: [bogor, parung, kemang pratama]
+  - nama: Blok M
+    kota: "31.74"
+    lat: -6.2441
+    lon: 106.8001
+    radius_m: 1200
+    alias: [blok m, melawai, blok m square, taman literasi]
+  - nama: SCBD & Senopati
+    kota: "31.74"
+    lat: -6.2276
+    lon: 106.8091
+    radius_m: 1500
+    alias: [scbd, senopati, gunawarman, sudirman central business district]
+  - nama: Menteng & Cikini
+    kota: "31.71"
+    lat: -6.1924
+    lon: 106.8370
+    radius_m: 1500
+    alias: [menteng, cikini, sabang, jalan sabang]
+  - nama: Kota Tua & Glodok
+    kota: "31.73"
+    lat: -6.1400
+    lon: 106.8140
+    radius_m: 1500
+    alias: [kota tua, glodok, petak sembilan, pancoran glodok, pecinan glodok]
+  - nama: Kelapa Gading
+    kota: "31.72"
+    lat: -6.1588
+    lon: 106.9087
+    radius_m: 2000
+    alias: [kelapa gading, mall kelapa gading, mkg]
+  - nama: PIK
+    kota: "31.72"
+    lat: -6.1088
+    lon: 106.7410
+    radius_m: 3000
+    alias: [pik, pantai indah kapuk, pik 1, pik avenue]
+    kecuali: [pik 2, pik2]
+  - nama: PIK 2
+    kota: "36.03"
+    lat: -6.0560
+    lon: 106.6920
+    radius_m: 4000
+    alias: [pik 2, pik2, pantai indah kapuk 2]
+  - nama: Tebet
+    kota: "31.74"
+    lat: -6.2264
+    lon: 106.8540
+    radius_m: 1500
+    alias: [tebet, tebet eco park]
+  - nama: Rawamangun
+    kota: "31.75"
+    lat: -6.1959
+    lon: 106.8885
+    radius_m: 1500
+    alias: [rawamangun, pasar rawamangun]
+  - nama: BSD City
+    kota: "36.74"
+    lat: -6.3016
+    lon: 106.6529
+    radius_m: 3000
+    alias: [bsd, bsd city, serpong bsd, aeon bsd, ice bsd, the breeze bsd]
+  - nama: Gading Serpong
+    kota: "36.03"
+    lat: -6.2400
+    lon: 106.6290
+    radius_m: 2500
+    alias: [gading serpong, summarecon serpong, sms serpong]
+  - nama: Alam Sutera
+    kota: "36.71"
+    lat: -6.2240
+    lon: 106.6520
+    radius_m: 2000
+    alias: [alam sutera, alsut, living world alam sutera]
+  - nama: Bintaro
+    kota: "36.74"
+    lat: -6.2725
+    lon: 106.7240
+    radius_m: 2500
+    alias: [bintaro, bintaro jaya, bintaro xchange]
+  - nama: Margonda
+    kota: "32.76"
+    lat: -6.3707
+    lon: 106.8333
+    radius_m: 2000
+    alias: [margonda, margonda raya, jalan margonda, ui depok]
+  - nama: Summarecon Bekasi
+    kota: "32.75"
+    lat: -6.2260
+    lon: 107.0010
+    radius_m: 2000
+    alias: [summarecon bekasi, sumbek, mall summarecon bekasi]
+  - nama: Suryakencana Bogor
+    kota: "32.71"
+    lat: -6.6040
+    lon: 106.7990
+    radius_m: 1200
+    alias: [suryakencana, surken, jalan suryakencana, pecinan bogor]
+  - nama: Sentul
+    kota: "32.01"
+    lat: -6.5640
+    lon: 106.8620
+    radius_m: 3000
+    alias: [sentul, sentul city, jungleland sentul]
+  - nama: Puncak
+    kota: "32.01"
+    lat: -6.7000
+    lon: 106.9800
+    radius_m: 6000
+    alias: [puncak bogor, kawasan puncak, jalur puncak, cisarua puncak]
+  - nama: Cikarang
+    kota: "32.16"
+    lat: -6.2880
+    lon: 107.1700
+    radius_m: 4000
+    alias: [cikarang, jababeka, lippo cikarang, meikarta]
