@@ -28,7 +28,7 @@ GitHub Actions (cron)                         Supabase Postgres (+PostGIS, pg_tr
 | `config/brands.yaml` | 25 food brands + aliases (`kokenang` → Kopi Kenangan) |
 | `config/sources.yaml` | RSS feeds, BMKG, GDELT, promo pages, YouTube queries, Trends, Reddit, OSM |
 | `config/scoring.yaml` | Viral score weights (0.5/0.3/0.2), thresholds, notification settings |
-| `collectors/` | `rss`, `bmkg`, `gdelt`, `promo`, `youtube`, `trends`, `reddit`, `osm` |
+| `collectors/` | `rss`, `bmkg`, `gdelt`, `promo`, `youtube`, `trends`, `trends_now` (Google Trends "Trending Now" ID), `reddit`, `osm` |
 | `pipeline/` | `geocode` (text → zone/city, LLM + Nominatim fallback), `extract_llm`, `entities`, `dedup`, `score`, `notify`, `cleanup`, `sync_config` |
 | `web/` | Static site: news / promo / viral / map tabs, area filter, "Dekat saya", crowd reports. Demo mode until configured. |
 | `bot/` | Telegram bot Worker: `/berita /promo /viral /baru /zona /langganan /berhenti /lapor /tambah_promo` |

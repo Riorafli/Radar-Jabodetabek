@@ -19,7 +19,7 @@ bonus_per_laporan: 0.1
 bonus_maks: 0.5
 
 # Sources that count as a "mention"
-sumber_mention: [youtube, berita, reddit]
+sumber_mention: [youtube, berita, reddit, gtrends]
 
 # trends ratio (last day / previous days) above this counts as an extra platform
 trends_naik: 1.3

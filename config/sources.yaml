@@ -140,6 +140,12 @@ trends:
   # brands from brands.yaml are checked in groups of 5 (Trends limit)
   max_brand: 15
 
+# Google Trends "Trending Now" (public RSS, no key). General topics for
+# Indonesia, shown as "Lagi dicari di Google" in the Viral tab; searches that
+# name a brand from brands.yaml also count as a viral mention ('gtrends').
+google_trends_now:
+  url: https://trends.google.com/trending/rss?geo=ID
+
 # Reddit (optional; needs REDDIT_CLIENT_ID/SECRET, app-only OAuth).
 reddit:
   subreddits: [indonesia, jakarta]

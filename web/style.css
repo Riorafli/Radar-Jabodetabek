@@ -250,6 +250,17 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
 .rank > li.t2 .bar > span { background: linear-gradient(90deg, color-mix(in srgb, var(--info) 55%, transparent), var(--info)); }
 .rank .btn.done { background: var(--good-soft); color: var(--good); border-color: transparent; }
 
+.trend-list { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.trend-list > li { animation: rise .45s var(--ease) both; animation-delay: calc(min(var(--i, 0), 20) * 30ms); }
+.trend-list > li.empty { flex-basis: 100%; padding: 16px 0; }
+.trend { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 8px 6px 14px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow);
+  transition: transform .2s var(--ease), border-color .2s, box-shadow .2s; }
+.trend:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-hover); }
+.trend.hot { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.trend-n { font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; }
+.trend-sk { width: 130px; height: 34px; padding: 0; margin: 0; border-radius: 999px; overflow: hidden; }
+.trend-sk i { height: 100% !important; width: 100% !important; margin: 0 !important; border-radius: 0; }
 .lapor { background: var(--surface); border: 1px dashed color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: var(--radius); padding: 4px 16px 14px; margin-top: 28px; }
 .lapor h3 { margin-top: 14px; }
 .lapor-row { display: flex; gap: 8px; flex-wrap: wrap; }

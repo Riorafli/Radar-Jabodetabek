@@ -135,6 +135,15 @@
       if (DEMO) return D().baru.filter((r) => areaMatch(r, area));
       return rest(`v_tempat_baru?select=id,nama,lat,lon,zona_id,zona,kode_wilayah,baru_sejak&order=baru_sejak.desc&limit=30${areaQS(area)}`);
     },
+    async gtrends() {
+      if (DEMO) {
+        return [["kuliner viral", 20000, "Contoh berita kuliner"], ["contoh brand kopi", 5000, "Contoh promo baru"],
+          ["contoh konser", 2000, "Contoh berita hiburan"]].map(([judul, traffic, ringkasan]) =>
+          ({ judul, ringkasan, url: "https://example.com/", meta: { traffic, traffic_teks: `${traffic}+` } }));
+      }
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      return rest(`item?select=judul,url,ringkasan,meta,published_at&sumber=eq.${encodeURIComponent("Google Trends")}&published_at=gt.${encodeURIComponent(since)}&order=published_at.desc&limit=40`);
+    },
     async lapor(body) {
       if (DEMO) return;
       await rest("laporan", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ ...body, sumber: "web" }) });
@@ -265,6 +274,7 @@
         </li>`;
       }).join("") || empty(`Belum ada tempat yang dibicarakan di ${areaName()} minggu ini. Coba pilih "Semua Jabodetabek".`);
     } catch (e) { fail(el, e); }
+    renderGtrends();
     try {
       const baru = await data.baru(S.area);
       elBaru.innerHTML = baru.map((r, i) => `<li style="--i:${i}"><b>${esc(r.nama)}</b>
@@ -272,6 +282,29 @@
         <a href="https://www.openstreetmap.org/?mlat=${Number(r.lat)}&mlon=${Number(r.lon)}#map=18/${Number(r.lat)}/${Number(r.lon)}" target="_blank" rel="noopener noreferrer">lihat peta →</a></span></li>`).join("")
         || empty("Belum ada tempat baru tercatat. Muncul setelah pemindaian OSM harian menemukan tempat yang baru ditambahkan.");
     } catch (e) { fail(elBaru, e); }
+  }
+
+  const fmtTraffic = (n) => (n >= 1e6 ? `${Math.round(n / 1e6)}jt+` : n >= 1000 ? `${Math.round(n / 1000)}rb+` : n ? `${n}+` : "");
+
+  async function renderGtrends() {
+    const el = $("#list-gtrends");
+    el.innerHTML = `<li class="sk trend-sk" aria-hidden="true"><i></i></li>`.repeat(6);
+    try {
+      const seen = new Set();
+      const rows = (await data.gtrends())
+        .filter((r) => { const k = r.judul.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+        .sort((a, b) => ((b.meta && b.meta.traffic) || 0) - ((a.meta && a.meta.traffic) || 0))
+        .slice(0, 20);
+      const max = Math.max(1, ...rows.map((r) => (r.meta && r.meta.traffic) || 0));
+      el.innerHTML = rows.map((r, i) => {
+        const url = safeUrl(r.url);
+        const n = (r.meta && r.meta.traffic) || 0;
+        const hot = n >= max * 0.5 && n >= 1000;
+        return `<li style="--i:${i}"><a class="trend ${hot ? "hot" : ""}" href="${esc(url || `https://www.google.com/search?q=${encodeURIComponent(r.judul)}`)}"
+          target="_blank" rel="noopener noreferrer" title="${esc(r.ringkasan || "")}">
+          <span class="trend-q">${hot ? "🔥 " : ""}${esc(r.judul)}</span>${n ? `<span class="trend-n">${fmtTraffic(n)}</span>` : ""}</a></li>`;
+      }).join("") || `<li class="empty">Belum ada data trending. Diperbarui tiap 15 menit.</li>`;
+    } catch (e) { el.innerHTML = `<li class="empty">Gagal memuat trending.</li>`; console.error(e); }
   }
 
   // ------------------------------------------------------------ map

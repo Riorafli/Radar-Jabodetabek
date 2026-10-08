@@ -205,6 +205,15 @@ def test_engagement():
     assert engagement({}) == 0
 
 
+def test_google_trends_now_parse():
+    from collectors.trends_now import parse, traffic
+    assert traffic("10,000+") == 10000 and traffic("2K+") == 2000 and traffic("") == 0 and traffic("1M+") == 1000000
+    p = parse({"title": "Kopi Kenangan", "ht_approx_traffic": "5000+", "ht_news_item_title": "Promo <b>baru</b>",
+               "ht_news_item_url": "https://x.id/a", "published_parsed": time.gmtime()})
+    assert p["traffic"] == 5000 and p["berita"] == "Promo baru" and p["url"] == "https://x.id/a"
+    assert parse({"title": ""}) is None
+
+
 def test_trends_ratio():
     assert ratio([10] * 21 + [30] * 3) == 3.0
     assert ratio([0] * 24) is None
