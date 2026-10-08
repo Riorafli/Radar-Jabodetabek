@@ -3,6 +3,7 @@
   const C = window.RADAR_CONFIG || {};
   const DEMO = !C.SUPABASE_URL || /PROJECT/.test(C.SUPABASE_URL) || !C.SUPABASE_ANON_KEY || /ANON_PUBLIC_KEY/.test(C.SUPABASE_ANON_KEY);
   const PAGE = 20;
+  const REDUCED = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const $ = (s) => document.querySelector(s);
 
   // ------------------------------------------------------------ utils
@@ -13,15 +14,24 @@
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
   };
+  /** stable hue 0-359 from a string, for brand/source colours */
+  const hue = (s) => { let h = 0; for (const c of String(s || "")) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+  const initials = (s) => String(s || "?").replace(/[^A-Za-z0-9 ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 
   function timeAgo(iso) {
     const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (m < 1) return "baru saja";
     if (m < 60) return `${m} mnt lalu`;
     const h = Math.round(m / 60);
     return h < 24 ? `${h} jam lalu` : `${Math.round(h / 24)} hari lalu`;
   }
   const tgl = (d) => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
   const rupiah = (n) => (n == null ? "" : "Rp" + Math.round(n).toLocaleString("id-ID"));
+  function daysLeft(d) {
+    if (!d) return null;
+    const end = new Date(d + "T23:59:59");
+    return Math.floor((end - Date.now()) / 86400000);
+  }
 
   function haversine(lat1, lon1, lat2, lon2) {
     const r = 6371000, rad = Math.PI / 180;
@@ -30,15 +40,42 @@
     return 2 * r * Math.asin(Math.sqrt(a));
   }
 
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2800);
+  }
+
+  function countUp(el, to) {
+    const from = Number(el.dataset.v || 0);
+    el.dataset.v = to;
+    if (REDUCED || from === to) { el.textContent = to.toLocaleString("id-ID"); return; }
+    const t0 = performance.now(), dur = 900;
+    const step = (t) => {
+      const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(from + (to - from) * e).toLocaleString("id-ID");
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  const skeleton = (n) => Array.from({ length: n }, () => `<li class="sk" aria-hidden="true"><i></i><i></i><i></i></li>`).join("");
+
   // ------------------------------------------------------------ data layer
+  const headers = () => ({ apikey: C.SUPABASE_ANON_KEY, Authorization: `Bearer ${C.SUPABASE_ANON_KEY}`, "content-type": "application/json" });
   async function rest(path, init = {}) {
-    const r = await fetch(`${C.SUPABASE_URL}/rest/v1/${path}`, {
-      ...init,
-      headers: { apikey: C.SUPABASE_ANON_KEY, Authorization: `Bearer ${C.SUPABASE_ANON_KEY}`, "content-type": "application/json", ...(init.headers || {}) },
-    });
+    const r = await fetch(`${C.SUPABASE_URL}/rest/v1/${path}`, { ...init, headers: { ...headers(), ...(init.headers || {}) } });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const t = await r.text();
     return t ? JSON.parse(t) : null;
+  }
+  async function count(path) {
+    const r = await fetch(`${C.SUPABASE_URL}/rest/v1/${path}`, { method: "HEAD", headers: { ...headers(), Prefer: "count=exact" } });
+    const cr = r.headers.get("content-range") || "";
+    return Number(cr.split("/")[1]) || 0;
   }
 
   function areaQS(area, kind) {
@@ -46,7 +83,6 @@
     if (kind === "promo") return `&or=(kota_berlaku.cs.${encodeURIComponent(`{"${area.kode}"}`)},kota_berlaku.eq.%7B%7D)`;
     return area.type === "zona" ? `&zona_id=eq.${area.id}` : `&kode_wilayah=eq.${encodeURIComponent(area.kode)}`;
   }
-  // demo-mode equivalent of areaQS
   function areaMatch(row, area, kind) {
     if (!area) return true;
     if (kind === "promo") return !row.kota_berlaku.length || row.kota_berlaku.includes(area.kode);
@@ -62,6 +98,21 @@
         rest("wilayah?select=kode,nama,level,lat,lon&level=in.(kota,kabupaten)&order=kode"),
       ]);
       return { zonas, wilayahs };
+    },
+    async stats(area) {
+      if (DEMO) {
+        const d = D();
+        return { berita: d.berita.filter((r) => areaMatch(r, area)).length, promo: d.promo.filter((r) => areaMatch(r, area, "promo")).length,
+          video: 37, tempat: 1274, updated: d.berita[0] && d.berita[0].published_at };
+      }
+      const [berita, promo, video, tempat, last] = await Promise.all([
+        count(`v_berita?select=id${areaQS(area)}`),
+        count(`v_promo?select=id${areaQS(area, "promo")}`),
+        count(`item?select=id&tipe=eq.post${areaQS(area)}`),
+        count(`entitas?select=id&tipe=eq.tempat${areaQS(area)}`),
+        rest("item?select=dibuat&order=dibuat.desc&limit=1"),
+      ]);
+      return { berita, promo, video, tempat, updated: last && last[0] && last[0].dibuat };
     },
     async berita(area, q, offset) {
       const clean = (q || "").replace(/[,()*%]/g, " ").trim();
@@ -105,29 +156,36 @@
   }
   const areaValue = (a) => (!a ? "all" : a.type === "zona" ? `z:${a.id}` : `k:${a.kode}`);
   const areaName = () => (S.area ? S.area.nama : "Jabodetabek");
-
-  function saveHash() {
-    history.replaceState(null, "", `#${S.tab}/${areaValue(S.area)}`);
-  }
+  const saveHash = () => history.replaceState(null, "", `#${S.tab}/${areaValue(S.area)}`);
 
   // ------------------------------------------------------------ renderers
   const empty = (msg) => `<li class="empty">${esc(msg)}</li>`;
   const fail = (el, e) => { el.innerHTML = empty("Gagal memuat data. Coba lagi nanti."); console.error(e); };
 
+  async function renderStats() {
+    $("#hero-area").textContent = areaName();
+    try {
+      const s = await data.stats(S.area);
+      for (const el of document.querySelectorAll("[data-count]")) countUp(el, s[el.dataset.count] || 0);
+      $("#updated").textContent = s.updated ? `· diperbarui ${timeAgo(s.updated)}` : "";
+    } catch (e) { console.error(e); }
+  }
+
   async function renderBerita(append = false) {
     const el = $("#list-berita");
     $("#h-berita").textContent = `Berita terkini · ${areaName()}`;
-    if (!append) { S.offset = 0; el.innerHTML = empty("Memuat…"); }
+    if (!append) { S.offset = 0; el.innerHTML = skeleton(5); }
     try {
       const rows = await data.berita(S.area, S.q, S.offset);
-      const html = rows.map((r) => {
+      const html = rows.map((r, i) => {
         const url = safeUrl(r.url);
         const where = r.zona || r.wilayah;
-        return `<li>
+        return `<li class="${r.tipe === "info" ? "info" : ""}" style="--i:${i}">
           ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
           ${r.ringkasan ? `<p class="sum">${esc(r.ringkasan)}</p>` : ""}
-          <div class="meta">${r.tipe === "info" ? '<span class="chip info">Info layanan</span>' : ""}
-            ${where ? `<span class="chip">${esc(where)}</span>` : ""}<span>${esc(r.sumber)}</span>·<span>${timeAgo(r.published_at)}</span></div>
+          <div class="meta">${r.tipe === "info" ? '<span class="chip info">⚠️ Info layanan</span>' : ""}
+            ${where ? `<span class="chip">📍 ${esc(where)}</span>` : ""}
+            <span class="src" style="--h:${hue(r.sumber)}">${esc(initials(r.sumber).slice(0, 1))}</span><span>${esc(r.sumber)}</span>·<span>${timeAgo(r.published_at)}</span></div>
         </li>`;
       }).join("");
       if (append) el.insertAdjacentHTML("beforeend", html);
@@ -137,39 +195,47 @@
     } catch (e) { fail(el, e); }
   }
 
+  const kodeNama = (k) => (S.wilayahs.find((w) => w.kode === k) || {}).nama || k;
+
+  function sisaChip(selesai) {
+    const d = daysLeft(selesai);
+    if (d == null) return `<span class="chip good">Periode tidak disebut</span>`;
+    if (d <= 0) return `<span class="chip urgent">⏰ Berakhir hari ini</span>`;
+    if (d <= 3) return `<span class="chip urgent">⏰ ${d} hari lagi</span>`;
+    return `<span class="chip">s.d. ${esc(tgl(selesai))}</span>`;
+  }
+
   async function renderPromo() {
     const el = $("#list-promo");
     $("#h-promo").textContent = `Promo makanan · ${areaName()}`;
-    el.innerHTML = empty("Memuat…");
+    el.innerHTML = skeleton(6);
     try {
       const rows = await data.promo(S.area);
-      el.innerHTML = rows.map((r) => {
+      el.innerHTML = rows.map((r, i) => {
         const url = safeUrl(r.url);
         const harga = r.harga_teks || rupiah(r.harga);
         const title = r.menu || r.judul;
-        return `<li>
-          <span class="promo-brand">${esc(r.brand)}${r.sumber_input === "manual" ? ' · <span class="chip good">kurasi</span>' : ""}</span>
+        return `<li class="promo" style="--i:${i};--h:${hue(r.brand)}">
+          <div class="promo-head"><span class="avatar">${esc(initials(r.brand))}</span>
+            <div><div class="promo-brand">${esc(r.brand)}</div>${r.sumber_input === "manual" ? '<span class="chip good">✓ kurasi</span>' : ""}</div></div>
           <span class="promo-title">${esc(title)}</span>
           ${harga ? `<span class="promo-price">${esc(harga)}</span>` : ""}
           ${r.syarat ? `<span class="promo-syarat">${esc(r.syarat)}</span>` : ""}
-          <span class="meta">${r.selesai ? `s.d. ${esc(tgl(r.selesai))}` : "Periode tidak disebut"}
-            · ${r.kota_berlaku && r.kota_berlaku.length ? esc(r.kota_berlaku.map(kodeNama).join(", ")) : "Semua kota"}</span>
-          ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Lihat di ${esc(r.sumber || "sumber")} →</a>` : ""}
+          <span class="meta">${sisaChip(r.selesai)}<span>${r.kota_berlaku && r.kota_berlaku.length ? esc(r.kota_berlaku.map(kodeNama).join(", ")) : "Semua kota"}</span></span>
+          ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Lihat di ${esc(r.sumber || "sumber")} <span>→</span></a>` : ""}
         </li>`;
       }).join("") || empty(`Belum ada promo aktif untuk ${areaName()}.`);
     } catch (e) { fail(el, e); }
   }
-  const kodeNama = (k) => (S.wilayahs.find((w) => w.kode === k) || {}).nama || k;
 
-  function sudahLapor(id) {
-    const t = Number(store.get(`lapor:${id}`) || 0);
-    return Date.now() - t < 6 * 3600 * 1000;
-  }
+  const sudahLapor = (id) => Date.now() - Number(store.get(`lapor:${id}`) || 0) < 6 * 3600 * 1000;
+  const MEDAL = ["🥇", "🥈", "🥉"];
 
   async function renderViral() {
     const el = $("#list-viral"), elBaru = $("#list-baru");
     $("#h-viral").textContent = `Lagi viral & ramai · ${areaName()}`;
-    el.innerHTML = empty("Memuat…");
+    el.innerHTML = skeleton(4);
+    elBaru.innerHTML = skeleton(2);
     try {
       let rows = await data.viral(S.area);
       if (S.me) rows = rows.map((r) => ({ ...r, jarak: r.lat ? haversine(S.me.lat, S.me.lon, r.lat, r.lon) : null }));
@@ -177,25 +243,26 @@
       el.innerHTML = rows.map((r, i) => {
         const url = safeUrl(r.contoh_url);
         const src = (r.detail && r.detail.sumber) || [];
-        return `<li>
-          <span class="no">${i + 1}</span>
+        const done = sudahLapor(r.entitas_id);
+        return `<li class="${i < 3 ? "top" : ""}" style="--i:${i}">
+          <span class="no ${i < 3 ? `medal m${i + 1}` : ""}">${i < 3 ? MEDAL[i] : i + 1}</span>
           <div>
             ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.nama)}</a>` : `<span class="title">${esc(r.nama)}</span>`}
-            <div class="meta">${r.zona ? `<span class="chip">${esc(r.zona)}</span>` : ""}
-              <span>${r.mention_24j} sebutan/24 jam</span>·<span>${r.platform} platform${src.length ? ` (${esc(src.join(", "))})` : ""}</span>
+            <div class="meta">${r.zona ? `<span class="chip">📍 ${esc(r.zona)}</span>` : ""}
+              <span>${i < 3 ? '<span class="flame">🔥</span> ' : ""}${r.mention_24j} sebutan/24 jam</span>·<span>${r.platform} platform${src.length ? ` (${esc(src.join(", "))})` : ""}</span>
               ${r.jarak != null ? `·<span>${(r.jarak / 1000).toFixed(1)} km</span>` : ""}</div>
             <div class="bar"><span style="width:${Math.max(4, (r.skor / max) * 100).toFixed(0)}%"></span></div>
           </div>
-          <button class="btn ghost" type="button" data-lapor="${r.entitas_id}" data-zona="${r.zona_id ?? ""}" ${sudahLapor(r.entitas_id) ? "disabled" : ""}>🔥 Ramai</button>
+          <button class="btn ghost ${done ? "done" : ""}" type="button" data-lapor="${r.entitas_id}" data-zona="${r.zona_id ?? ""}" ${done ? "disabled" : ""}>${done ? "✓ Terkirim" : "🔥 Ramai"}</button>
         </li>`;
-      }).join("") || empty(`Belum ada yang viral di ${areaName()}. Butuh minimal beberapa sebutan dari 2 sumber dalam 24 jam.`);
+      }).join("") || empty(`Belum ada yang viral di ${areaName()}. Butuh beberapa sebutan dari beberapa sumber dalam 24 jam.`);
     } catch (e) { fail(el, e); }
     try {
       const baru = await data.baru(S.area);
-      elBaru.innerHTML = baru.map((r) => `<li><b>${esc(r.nama)}</b>
-        <span class="meta">${r.zona ? `<span class="chip good">${esc(r.zona)}</span>` : ""}<span>tercatat ${timeAgo(r.baru_sejak)}</span>·
-        <a href="https://www.openstreetmap.org/?mlat=${Number(r.lat)}&mlon=${Number(r.lon)}#map=18/${Number(r.lat)}/${Number(r.lon)}" target="_blank" rel="noopener noreferrer">peta</a></span></li>`).join("")
-        || empty("Belum ada tempat baru tercatat.");
+      elBaru.innerHTML = baru.map((r, i) => `<li style="--i:${i}"><b>${esc(r.nama)}</b>
+        <span class="meta">${r.zona ? `<span class="chip good">📍 ${esc(r.zona)}</span>` : ""}<span>tercatat ${timeAgo(r.baru_sejak)}</span>·
+        <a href="https://www.openstreetmap.org/?mlat=${Number(r.lat)}&mlon=${Number(r.lon)}#map=18/${Number(r.lat)}/${Number(r.lon)}" target="_blank" rel="noopener noreferrer">lihat peta →</a></span></li>`).join("")
+        || empty("Belum ada tempat baru tercatat. Muncul setelah pemindaian OSM harian menemukan tempat yang baru ditambahkan.");
     } catch (e) { fail(elBaru, e); }
   }
 
@@ -209,14 +276,14 @@
     }).addTo(S.map);
     S.layers = L.layerGroup().addTo(S.map);
   }
+  const pinIcon = (size, cls = "") => L.divIcon({ className: "", html: `<span class="pin ${cls}"></span>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
 
   async function renderMap() {
     ensureMap();
     if (!S.map) return;
     S.map.invalidateSize();
     S.layers.clearLayers();
-    const css = getComputedStyle(document.documentElement);
-    const accent = css.getPropertyValue("--accent").trim(), good = css.getPropertyValue("--good").trim(), info = css.getPropertyValue("--info").trim();
+    const info = getComputedStyle(document.documentElement).getPropertyValue("--info").trim();
     for (const z of S.zonas) {
       L.circle([z.lat, z.lon], { radius: z.radius_m, color: info, weight: 1.5, dashArray: "5 5", fillOpacity: 0.04 })
         .bindTooltip(esc(z.nama)).addTo(S.layers);
@@ -226,35 +293,43 @@
       const max = Math.max(1, ...viral.map((r) => r.skor));
       for (const r of baru) {
         if (r.lat == null) continue;
-        L.circleMarker([r.lat, r.lon], { radius: 5, color: good, fillColor: good, fillOpacity: 0.8, weight: 1 })
-          .bindPopup(`<b>${esc(r.nama)}</b><br>Tempat baru · ${esc(r.zona || "")}`).addTo(S.layers);
+        L.marker([r.lat, r.lon], { icon: pinIcon(12, "new") })
+          .bindPopup(`<b>${esc(r.nama)}</b><br>🆕 Tempat baru · ${esc(r.zona || "")}`).addTo(S.layers);
       }
       for (const r of viral) {
         if (r.lat == null) continue;
         const url = safeUrl(r.contoh_url);
-        L.circleMarker([r.lat, r.lon], { radius: 7 + 13 * (r.skor / max), color: accent, fillColor: accent, fillOpacity: 0.55, weight: 2 })
-          .bindPopup(`<b>${esc(r.nama)}</b><br>${esc(r.zona || "")}<br>${r.mention_24j} sebutan/24 jam · skor ${r.skor.toFixed(2)}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">contoh konten</a>` : ""}`)
+        L.marker([r.lat, r.lon], { icon: pinIcon(Math.round(14 + 16 * (r.skor / max))), zIndexOffset: 1000 })
+          .bindPopup(`<b>🔥 ${esc(r.nama)}</b><br>${esc(r.zona || "")}<br>${r.mention_24j} sebutan/24 jam · skor ${r.skor.toFixed(2)}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">contoh konten →</a>` : ""}`)
           .addTo(S.layers);
       }
     } catch (e) { console.error(e); }
     if (S.me) L.marker([S.me.lat, S.me.lon]).bindPopup("Lokasi Anda").addTo(S.layers);
-    if (S.area && S.area.lat) S.map.setView([S.area.lat, S.area.lon], S.area.type === "zona" ? 14 : 12);
+    if (S.area && S.area.lat) S.map.flyTo([S.area.lat, S.area.lon], S.area.type === "zona" ? 14 : 12, { duration: REDUCED ? 0 : 0.8 });
     else S.map.fitBounds([[-6.65, 106.48], [-6.05, 107.18]]);
   }
 
   // ------------------------------------------------------------ wiring
-  function render() {
+  function moveIndicator() {
+    const b = document.querySelector(`.tabs button[data-tab="${S.tab}"]`), ind = $(".tab-ind");
+    if (!b || !ind) return;
+    ind.style.setProperty("--x", `${b.offsetLeft}px`);
+    ind.style.setProperty("--w", `${b.offsetWidth}px`);
+  }
+
+  function render(withStats = false) {
     for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === S.tab));
     for (const t of ["berita", "promo", "viral", "peta"]) $(`#tab-${t}`).hidden = t !== S.tab;
+    moveIndicator();
     saveHash();
+    if (withStats) renderStats();
     ({ berita: renderBerita, promo: renderPromo, viral: renderViral, peta: renderMap })[S.tab]();
   }
 
   function fillSelects() {
-    const sel = $("#area");
     const kota = S.wilayahs.map((w) => `<option value="k:${esc(w.kode)}">${esc(w.nama)}</option>`).join("");
     const zona = S.zonas.map((z) => `<option value="z:${z.id}">${esc(z.nama)}</option>`).join("");
-    sel.innerHTML = `<option value="all">Semua Jabodetabek</option><optgroup label="Kota / Kabupaten">${kota}</optgroup><optgroup label="Zona populer">${zona}</optgroup>`;
+    $("#area").innerHTML = `<option value="all">Semua Jabodetabek</option><optgroup label="Kota / Kabupaten">${kota}</optgroup><optgroup label="Zona populer">${zona}</optgroup>`;
     $("#lapor-zona").innerHTML = `<option value="">Pilih zona…</option>` + zona;
   }
 
@@ -273,26 +348,47 @@
     return best ? best.v : null;
   }
 
+  function currentTheme() {
+    const t = document.documentElement.dataset.theme;
+    if (t) return t;
+    return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  function syncThemeIcon() { $("#theme").textContent = currentTheme() === "dark" ? "☀️" : "🌙"; }
+
   function bind() {
-    $("#area").addEventListener("change", (e) => { S.area = areaFromValue(e.target.value); render(); });
+    $("#area").addEventListener("change", (e) => { S.area = areaFromValue(e.target.value); render(true); });
     for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => { S.tab = b.dataset.tab; render(); });
+    window.addEventListener("resize", moveIndicator);
     $("#more-berita").addEventListener("click", () => renderBerita(true));
     let t;
     $("#q").addEventListener("input", (e) => { clearTimeout(t); t = setTimeout(() => { S.q = e.target.value; renderBerita(); }, 300); });
 
+    $("#theme").addEventListener("click", () => {
+      const next = currentTheme() === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      store.set("theme", next);
+      syncThemeIcon();
+    });
+
+    const toTop = $("#to-top");
+    window.addEventListener("scroll", () => toTop.classList.toggle("show", window.scrollY > 600), { passive: true });
+    toTop.addEventListener("click", () => window.scrollTo({ top: 0 }));
+
     $("#near").addEventListener("click", () => {
       const btn = $("#near");
-      if (!navigator.geolocation) { btn.textContent = "Lokasi tidak didukung"; return; }
-      btn.disabled = true; btn.textContent = "Mencari…";
+      if (!navigator.geolocation) { toast("Browser ini tidak mendukung lokasi."); return; }
+      btn.disabled = true;
+      toast("📡 Mencari lokasi Anda…");
       navigator.geolocation.getCurrentPosition((pos) => {
         S.me = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         const v = nearest(S.me.lat, S.me.lon);
-        btn.disabled = false; btn.textContent = "📍 Dekat saya";
-        if (!v) { alert("Lokasi Anda di luar Jabodetabek."); return; }
+        btn.disabled = false;
+        if (!v) { toast("Lokasi Anda di luar Jabodetabek."); return; }
         $("#area").value = v; S.area = areaFromValue(v);
+        toast(`📍 Menampilkan area ${S.area.nama}`);
         if (S.tab === "berita" || S.tab === "promo") S.tab = "viral";
-        render();
-      }, () => { btn.disabled = false; btn.textContent = "📍 Dekat saya"; alert("Izin lokasi ditolak atau tidak tersedia."); },
+        render(true);
+      }, () => { btn.disabled = false; toast("Izin lokasi ditolak atau tidak tersedia."); },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
     });
 
@@ -303,24 +399,27 @@
       try {
         await data.lapor({ entitas_id: Number(b.dataset.lapor), zona_id: b.dataset.zona ? Number(b.dataset.zona) : null, jenis: "ramai" });
         store.set(`lapor:${b.dataset.lapor}`, String(Date.now()));
-        b.textContent = "✓ Terkirim";
-      } catch (err) { b.disabled = false; console.error(err); }
+        b.textContent = "✓ Terkirim"; b.classList.add("done");
+        toast("🔥 Terima kasih! Laporan masuk ke skor jam berikutnya.");
+      } catch (err) { b.disabled = false; toast("Gagal mengirim laporan."); console.error(err); }
     });
 
     $("#lapor").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const msg = $("#lapor-msg"), zona = Number($("#lapor-zona").value), nama = $("#lapor-nama").value.trim();
+      const zona = Number($("#lapor-zona").value), nama = $("#lapor-nama").value.trim();
       if (!zona || !nama) return;
       try {
         await data.lapor({ zona_id: zona, nama_tempat: nama.slice(0, 120), jenis: "ramai" });
-        msg.textContent = DEMO ? "Mode demo: laporan tidak disimpan." : "Terima kasih! Laporan masuk ke perhitungan skor jam berikutnya.";
+        toast(DEMO ? "Mode demo: laporan tidak disimpan." : "🙌 Terima kasih! Laporan masuk ke perhitungan skor.");
         $("#lapor-nama").value = "";
-      } catch (err) { msg.textContent = "Gagal mengirim laporan."; console.error(err); }
+      } catch (err) { toast("Gagal mengirim laporan."); console.error(err); }
     });
   }
 
   async function init() {
     $("#demo").hidden = !DEMO;
+    syncThemeIcon();
+    document.querySelectorAll(".stat").forEach((s, i) => s.style.setProperty("--i", i));
     if (C.TELEGRAM_BOT) $("#bot-link").innerHTML = `Bot Telegram: <a href="https://t.me/${encodeURIComponent(C.TELEGRAM_BOT)}" target="_blank" rel="noopener noreferrer">@${esc(C.TELEGRAM_BOT)}</a>`;
     try {
       const a = await data.areas();
@@ -332,7 +431,11 @@
     if (["berita", "promo", "viral", "peta"].includes(tab)) S.tab = tab;
     S.area = areaFromValue(area);
     $("#area").value = areaValue(S.area);
-    render();
+    render(true);
+    // fonts change tab widths once loaded
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveIndicator);
+    // refresh the live counters every 5 minutes
+    setInterval(renderStats, 5 * 60 * 1000);
   }
 
   init();
