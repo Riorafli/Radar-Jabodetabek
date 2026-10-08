@@ -120,11 +120,13 @@ create table if not exists skor (
   entitas_id    bigint not null references entitas(id) on delete cascade,
   zona_id       int references zona(id) on delete cascade,
   skor          double precision not null,
+  tier          smallint not null default 1,   -- 1 = viral, 2 = lagi dibicarakan
   mention_24j   int not null default 0,
   platform      int not null default 0,
   detail        jsonb not null default '{}',
   dihitung_pada timestamptz not null default now()
 );
+alter table skor add column if not exists tier smallint not null default 1;
 create index if not exists skor_zona on skor (zona_id, skor desc);
 
 create table if not exists zona_statistik (
@@ -203,7 +205,8 @@ select s.entitas_id, e.nama, e.tipe, s.zona_id, z.nama as zona,
        coalesce(e.lat, z.lat) as lat, coalesce(e.lon, z.lon) as lon,
        rank() over (partition by s.zona_id order by s.skor desc) as peringkat,
        (select i.url from item i where i.entitas_id = e.id and i.url is not null
-         order by i.published_at desc limit 1) as contoh_url
+         order by i.published_at desc limit 1) as contoh_url,
+       s.tier
 from skor s
 join entitas e on e.id = s.entitas_id
 left join zona z on z.id = s.zona_id;

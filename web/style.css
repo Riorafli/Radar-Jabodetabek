@@ -241,6 +241,13 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
   transform-origin: left; animation: grow 1s var(--ease) both; animation-delay: calc(.2s + min(var(--i, 0), 12) * 45ms); }
 @keyframes grow { from { transform: scaleX(0); } }
 .rank .btn { padding: 6px 12px; font-size: 13px; }
+.rank > li.tier-head { display: block; background: none; border: 0; box-shadow: none; padding: 14px 4px 6px; margin: 6px 0 0;
+  font-weight: 800; font-size: 15px; }
+.rank > li.tier-head::before { display: none; }
+.rank > li.tier-head:hover { transform: none; box-shadow: none; }
+.rank > li.t2 { --bar: var(--info); }
+.rank > li.t2 .no { background: var(--info-soft); color: var(--info); }
+.rank > li.t2 .bar > span { background: linear-gradient(90deg, color-mix(in srgb, var(--info) 55%, transparent), var(--info)); }
 .rank .btn.done { background: var(--good-soft); color: var(--good); border-color: transparent; }
 
 .lapor { background: var(--surface); border: 1px dashed color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: var(--radius); padding: 4px 16px 14px; margin-top: 28px; }

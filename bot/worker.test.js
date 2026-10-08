@@ -76,15 +76,17 @@ test("/viral queries Supabase with zone filter and formats the reply", async () 
     const u = String(url);
     const body = u.includes("/zona?") ? zonas
       : u.includes("/wilayah?") ? wilayahs
-      : [{ nama: "Kopi Kenangan", zona: "BSD City", skor: 2.1, mention_24j: 5, platform: 2, contoh_url: "https://youtu.be/x" }];
+      : [{ nama: "Kopi Kenangan", zona: "BSD City", skor: 2.1, tier: 1, mention_24j: 5, platform: 2, contoh_url: "https://youtu.be/x" },
+         { nama: "Bakmi Baru", zona: "BSD City", skor: 0.8, tier: 2, mention_24j: 0, platform: 1, detail: { mention_7h: 3 } }];
     return new Response(JSON.stringify(body), { status: 200 });
   };
   try {
     const out = await handle({ SUPABASE_URL: "https://p.supabase.co", SUPABASE_SERVICE_KEY: "k" },
       { message: { text: "/viral bsd", chat: { id: 5, type: "private" }, from: { id: 9 } } });
-    assert.match(out, /Viral di BSD City/);
-    assert.match(out, /1\. Kopi Kenangan \(BSD City\) - 5 sebutan, 2 platform/);
-    assert.ok(calls.some((c) => c.includes("v_viral?") && c.includes("zona_id=eq.2")));
+    assert.match(out, /Viral & lagi dibicarakan di BSD City/);
+    assert.match(out, /1\. 🔥 Kopi Kenangan \(BSD City\) - 5 sebutan\/24 jam/);
+    assert.match(out, /2\. 📈 Bakmi Baru \(BSD City\) - 3 sebutan\/7 hari/);
+    assert.ok(calls.some((c) => c.includes("v_viral?") && c.includes("zona_id=eq.2") && c.includes("order=tier.asc,skor.desc")));
   } finally {
     globalThis.fetch = realFetch;
   }

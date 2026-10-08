@@ -30,7 +30,7 @@ def main():
             cur.execute(
                 """select v.entitas_id, v.nama, coalesce(v.zona, w.nama, 'Jabodetabek'), v.skor, v.mention_24j, v.contoh_url
                    from v_viral v left join wilayah w on w.kode = v.kode_wilayah
-                   where v.skor >= %s
+                   where v.tier = 1 and v.skor >= %s
                      and ((%s::int is not null and v.zona_id = %s) or (%s::text is not null and v.kode_wilayah = %s))
                      and not exists (select 1 from notif_log n where n.chat_id=%s and n.entitas_id=v.entitas_id
                                      and n.tanggal=current_date)

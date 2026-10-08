@@ -104,9 +104,9 @@ promo:
 
 # YouTube Data API. Each search costs ~100 units (quota 10,000/day).
 # The collector runs every 2 h and uses `per_run` queries per run, rotating
-# through the list -> 12 runs x 4 = 48 searches/day.
+# through the list -> 12 runs x 5 = 60 searches/day (~6,100 units).
 youtube:
-  per_run: 4
+  per_run: 5
   max_results: 25
   queries:
     - kuliner viral jakarta
@@ -125,6 +125,14 @@ youtube:
     - cafe hits bintaro
     - kuliner malam jakarta
     - street food jakarta terbaru
+    - kuliner kemang terbaru
+    - cafe baru pik
+    - kuliner gading serpong
+    - kuliner alam sutera
+    - jajanan viral bekasi
+    - tempat makan baru depok
+    - kuliner jakarta barat viral
+    - kuliner jakarta timur viral
 
 # Google Trends via pytrends (unofficial; treated as bonus).
 trends:

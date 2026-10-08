@@ -259,3 +259,22 @@ def test_score_trends_and_reports():
 def test_score_ignores_old_and_unknown_sources():
     s = [_sig(1, 10, "youtube", 24 * 20)] * 5 + [_sig(1, 10, "osm_baru", 1)] * 5
     assert hitung_skor(s, NOW) == []
+
+
+def test_trending_fills_list_when_nothing_is_viral():
+    from pipeline.score import hitung_trending
+    s = [_sig(1, 10, "youtube", 30, 100000), _sig(2, 10, "youtube", 100, 50), _sig(3, 10, "berita", 200)]  # 3 is > 7 days
+    assert hitung_skor(s, NOW) == []
+    res = hitung_trending(s, NOW)
+    assert [r["entitas_id"] for r in res] == [1, 2]          # newer + more watched first, old one dropped
+    assert all(r["tier"] == 2 for r in res)
+    assert res[0]["detail"]["mention_7h"] == 1 and res[0]["mention_24j"] == 0
+
+
+def test_trending_excludes_entries_already_viral():
+    from pipeline.score import hitung_trending
+    s = [_sig(1, 10, "youtube", h) for h in (1, 2, 3)] + [_sig(1, 10, "berita", 4), _sig(2, 10, "youtube", 5)]
+    viral = hitung_skor(s, NOW)
+    assert [r["entitas_id"] for r in viral] == [1] and viral[0]["tier"] == 1
+    trending = hitung_trending(s, NOW, {(r["entitas_id"], r["zona_id"]) for r in viral})
+    assert [r["entitas_id"] for r in trending] == [2]

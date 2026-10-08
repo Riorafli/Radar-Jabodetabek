@@ -24,7 +24,12 @@ sumber_mention: [youtube, berita, reddit]
 # trends ratio (last day / previous days) above this counts as an extra platform
 trends_naik: 1.3
 
-# keep this many entries per zone
+# Fallback tier "lagi dibicarakan" (shown when/under the viral list):
+# mentions of the last trending_jam hours, newer ones weigh more.
+trending_jam: 168
+trending_paruh_jam: 48
+
+# keep this many entries per zone (per tier)
 top_per_zona: 50
 
 # Telegram notification threshold (pipeline/notify.py)

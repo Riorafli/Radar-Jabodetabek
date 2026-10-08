@@ -128,8 +128,8 @@
       return rest(`v_promo?select=id,brand,judul,menu,harga,harga_teks,selesai,syarat,url,sumber,kota_berlaku,sumber_input&order=published_at.desc&limit=60${areaQS(area, "promo")}`);
     },
     async viral(area) {
-      if (DEMO) return D().viral.filter((r) => areaMatch(r, area)).sort((a, b) => b.skor - a.skor).slice(0, 30);
-      return rest(`v_viral?select=entitas_id,nama,zona_id,zona,kode_wilayah,skor,mention_24j,platform,detail,lat,lon,contoh_url&order=skor.desc&limit=30${areaQS(area)}`);
+      if (DEMO) return D().viral.filter((r) => areaMatch(r, area)).sort((a, b) => (a.tier || 1) - (b.tier || 1) || b.skor - a.skor).slice(0, 30);
+      return rest(`v_viral?select=entitas_id,nama,zona_id,zona,kode_wilayah,skor,tier,mention_24j,platform,detail,lat,lon,contoh_url&order=tier.asc,skor.desc&limit=30${areaQS(area)}`);
     },
     async baru(area) {
       if (DEMO) return D().baru.filter((r) => areaMatch(r, area));
@@ -239,23 +239,31 @@
     try {
       let rows = await data.viral(S.area);
       if (S.me) rows = rows.map((r) => ({ ...r, jarak: r.lat ? haversine(S.me.lat, S.me.lon, r.lat, r.lon) : null }));
-      const max = Math.max(1, ...rows.map((r) => r.skor));
+      const maxOf = (t) => Math.max(0.001, ...rows.filter((r) => (r.tier || 1) === t).map((r) => r.skor));
+      const max = { 1: maxOf(1), 2: maxOf(2) };
+      let viralNo = 0;
       el.innerHTML = rows.map((r, i) => {
         const url = safeUrl(r.contoh_url);
         const src = (r.detail && r.detail.sumber) || [];
         const done = sudahLapor(r.entitas_id);
-        return `<li class="${i < 3 ? "top" : ""}" style="--i:${i}">
-          <span class="no ${i < 3 ? `medal m${i + 1}` : ""}">${i < 3 ? MEDAL[i] : i + 1}</span>
+        const tier = r.tier || 1;
+        const medal = tier === 1 && viralNo < 3 ? viralNo : -1;
+        if (tier === 1) viralNo++;
+        const head = tier === 2 && (i === 0 || (rows[i - 1].tier || 1) === 1)
+          ? `<li class="tier-head" style="--i:${i}">📈 Lagi dibicarakan <span class="muted">· paling banyak disebut 7 hari terakhir</span></li>` : "";
+        const jumlah = tier === 2 ? `${(r.detail && r.detail.mention_7h) || r.mention_24j} sebutan/7 hari` : `${r.mention_24j} sebutan/24 jam`;
+        return `${head}<li class="${medal >= 0 ? "top" : ""} ${tier === 2 ? "t2" : ""}" style="--i:${i}">
+          <span class="no ${medal >= 0 ? `medal m${medal + 1}` : ""}">${medal >= 0 ? MEDAL[medal] : i + 1}</span>
           <div>
             ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.nama)}</a>` : `<span class="title">${esc(r.nama)}</span>`}
-            <div class="meta">${r.zona ? `<span class="chip">📍 ${esc(r.zona)}</span>` : ""}
-              <span>${i < 3 ? '<span class="flame">🔥</span> ' : ""}${r.mention_24j} sebutan/24 jam</span>·<span>${r.platform} platform${src.length ? ` (${esc(src.join(", "))})` : ""}</span>
+            <div class="meta">${tier === 1 ? '<span class="chip urgent">🔥 Viral</span>' : ""}${r.zona || r.kode_wilayah ? `<span class="chip">📍 ${esc(r.zona || kodeNama(r.kode_wilayah))}</span>` : ""}
+              <span>${medal >= 0 ? '<span class="flame">🔥</span> ' : ""}${jumlah}</span>·<span>${r.platform} platform${src.length ? ` (${esc(src.join(", "))})` : ""}</span>
               ${r.jarak != null ? `·<span>${(r.jarak / 1000).toFixed(1)} km</span>` : ""}</div>
-            <div class="bar"><span style="width:${Math.max(4, (r.skor / max) * 100).toFixed(0)}%"></span></div>
+            <div class="bar"><span style="width:${Math.max(4, (r.skor / max[tier]) * 100).toFixed(0)}%"></span></div>
           </div>
           <button class="btn ghost ${done ? "done" : ""}" type="button" data-lapor="${r.entitas_id}" data-zona="${r.zona_id ?? ""}" ${done ? "disabled" : ""}>${done ? "✓ Terkirim" : "🔥 Ramai"}</button>
         </li>`;
-      }).join("") || empty(`Belum ada yang viral di ${areaName()}. Butuh beberapa sebutan dari beberapa sumber dalam 24 jam.`);
+      }).join("") || empty(`Belum ada tempat yang dibicarakan di ${areaName()} minggu ini. Coba pilih "Semua Jabodetabek".`);
     } catch (e) { fail(el, e); }
     try {
       const baru = await data.baru(S.area);
@@ -290,7 +298,7 @@
     }
     try {
       const [viral, baru] = await Promise.all([data.viral(S.area), data.baru(S.area)]);
-      const max = Math.max(1, ...viral.map((r) => r.skor));
+      const max = Math.max(0.001, ...viral.map((r) => r.skor));
       for (const r of baru) {
         if (r.lat == null) continue;
         L.marker([r.lat, r.lon], { icon: pinIcon(12, "new") })
@@ -300,7 +308,7 @@
         if (r.lat == null) continue;
         const url = safeUrl(r.contoh_url);
         L.marker([r.lat, r.lon], { icon: pinIcon(Math.round(14 + 16 * (r.skor / max))), zIndexOffset: 1000 })
-          .bindPopup(`<b>🔥 ${esc(r.nama)}</b><br>${esc(r.zona || "")}<br>${r.mention_24j} sebutan/24 jam · skor ${r.skor.toFixed(2)}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">contoh konten →</a>` : ""}`)
+          .bindPopup(`<b>${(r.tier || 1) === 1 ? "🔥" : "📈"} ${esc(r.nama)}</b><br>${esc(r.zona || "")}<br>${(r.tier || 1) === 1 ? `${r.mention_24j} sebutan/24 jam` : `${(r.detail && r.detail.mention_7h) || r.mention_24j} sebutan/7 hari`} · skor ${r.skor.toFixed(2)}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">contoh konten →</a>` : ""}`)
           .addTo(S.layers);
       }
     } catch (e) { console.error(e); }

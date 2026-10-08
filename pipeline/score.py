@@ -63,12 +63,43 @@ def hitung_skor(signals, now, trends_up=frozenset(), laporan=None, cfg=None):
         bonus = min(cfg["bonus_maks"], cfg["bonus_per_laporan"] * n_lap)
         skor = w["mention"] * z + w["engagement"] * growth + w["platform"] * platforms + bonus
         out.append({
-            "entitas_id": ent, "zona_id": k[1], "skor": round(skor, 4),
+            "entitas_id": ent, "zona_id": k[1], "skor": round(skor, 4), "tier": 1,
             "mention_24j": int(m24), "platform": platforms,
-            "detail": {"z": round(z, 3), "growth": round(growth, 3), "baseline": round(mean, 3),
+            "detail": {"tier": "viral", "z": round(z, 3), "growth": round(growth, 3), "baseline": round(mean, 3),
                        "sumber": sorted(sources24[k]), "laporan": n_lap,
                        "trends": ent in trends_up},
         })
+    out.sort(key=lambda r: -r["skor"])
+    return out
+
+
+def hitung_trending(signals, now, exclude=frozenset(), cfg=None):
+    """Fallback tier "lagi dibicarakan": most-mentioned places of the last
+    `trending_jam` hours that did not pass the viral threshold. Newer mentions
+    weigh more (half-life `trending_paruh_jam`) and big view counts add a bit,
+    so the Viral tab is never empty while there is any recent data."""
+    cfg = cfg or load_config("scoring")
+    mention_src = set(cfg["sumber_mention"])
+    jam = cfg.get("trending_jam", 168)
+    paruh = cfg.get("trending_paruh_jam", 48)
+    agg = defaultdict(lambda: {"s": 0.0, "n": 0, "n24": 0, "src": set()})
+    for ent, zona, sumber, waktu, nilai, eng in signals:
+        if sumber not in mention_src:
+            continue
+        umur = (now - waktu).total_seconds() / 3600
+        k = (ent, zona)
+        if umur < 0 or umur > jam or k in exclude:
+            continue
+        a = agg[k]
+        a["s"] += (nilai or 1) * 0.5 ** (umur / paruh) * (1 + math.log1p(eng or 0) / 10)
+        a["n"] += 1
+        a["n24"] += umur <= 24
+        a["src"].add(sumber)
+    out = [{
+        "entitas_id": k[0], "zona_id": k[1], "skor": round(a["s"], 4), "tier": 2,
+        "mention_24j": a["n24"], "platform": len(a["src"]),
+        "detail": {"tier": "trending", "mention_7h": a["n"], "sumber": sorted(a["src"])},
+    } for k, a in agg.items()]
     out.sort(key=lambda r: -r["skor"])
     return out
 
@@ -113,18 +144,20 @@ def main():
                     "and waktu > now() - interval '24 hours' group by 1, 2")
         laporan = {(e, z): n for e, z, n in cur.fetchall()}
 
-        hasil = hitung_skor(signals, now, trends_up, laporan, cfg)
+        viral = hitung_skor(signals, now, trends_up, laporan, cfg)
+        trending = hitung_trending(signals, now, {(r["entitas_id"], r["zona_id"]) for r in viral}, cfg)
         per_zona = defaultdict(int)
         rows = []
-        for r in hasil:
-            per_zona[r["zona_id"]] += 1
-            if per_zona[r["zona_id"]] <= cfg["top_per_zona"]:
-                rows.append((r["entitas_id"], r["zona_id"], r["skor"], r["mention_24j"], r["platform"], Json(r["detail"])))
+        for r in viral + trending:
+            key = (r["tier"], r["zona_id"])
+            per_zona[key] += 1
+            if per_zona[key] <= cfg["top_per_zona"]:
+                rows.append((r["entitas_id"], r["zona_id"], r["skor"], r["tier"], r["mention_24j"], r["platform"], Json(r["detail"])))
 
         cur.execute("delete from skor")
         if rows:
-            execute_values(cur, "insert into skor (entitas_id, zona_id, skor, mention_24j, platform, detail) values %s", rows)
-    log(f"skor: {len(signals)} sinyal -> {len(rows)} entri lolos ambang")
+            execute_values(cur, "insert into skor (entitas_id, zona_id, skor, tier, mention_24j, platform, detail) values %s", rows)
+    log(f"skor: {len(signals)} sinyal -> {len(viral)} viral, {len(trending)} lagi dibicarakan")
 
 
 if __name__ == "__main__":

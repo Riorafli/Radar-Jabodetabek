@@ -151,11 +151,13 @@ async function cmdPromo(env, arg) {
 async function cmdViral(env, arg) {
   const { area, error } = await resolve(env, arg);
   if (error) return error;
-  const rows = await sb(env, `v_viral?select=nama,zona,skor,mention_24j,platform,contoh_url&order=skor.desc&limit=10${areaFilter(area)}`);
-  if (!rows.length) return `Belum ada yang viral di ${judulArea(area)} (butuh minimal beberapa sebutan dari 2 sumber).`;
-  return `🔥 Viral di ${judulArea(area)}\n\n` + rows.map((r, i) =>
-    `${i + 1}. ${r.nama}${r.zona ? ` (${r.zona})` : ""} - ${r.mention_24j} sebutan, ${r.platform} platform` +
-    (r.contoh_url ? `\n   ${r.contoh_url}` : "")).join("\n");
+  const rows = await sb(env, `v_viral?select=nama,zona,skor,tier,mention_24j,platform,detail,contoh_url&order=tier.asc,skor.desc&limit=10${areaFilter(area)}`);
+  if (!rows.length) return `Belum ada data tempat yang dibicarakan di ${judulArea(area)}.`;
+  return `🔥 Viral & lagi dibicarakan di ${judulArea(area)}\n\n` + rows.map((r, i) => {
+    const jumlah = r.tier === 2 ? `${(r.detail && r.detail.mention_7h) || r.mention_24j} sebutan/7 hari` : `${r.mention_24j} sebutan/24 jam`;
+    return `${i + 1}. ${r.tier === 2 ? "📈" : "🔥"} ${r.nama}${r.zona ? ` (${r.zona})` : ""} - ${jumlah}` +
+      (r.contoh_url ? `\n   ${r.contoh_url}` : "");
+  }).join("\n");
 }
 
 async function cmdBaru(env, arg) {
