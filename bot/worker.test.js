@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import worker, { areaFilter, findArea, handle, isAdmin, parseCommand, parseTambahPromo, timeAgo } from "./worker.js";
+import worker, { areaFilter, belanjaQuery, findArea, handle, isAdmin, kategoriOf, parseCommand, parseTambahPromo, platformOf, timeAgo } from "./worker.js";
 
 const zonas = [
   { id: 1, nama: "Kemang", alias: ["kemang", "kemang raya"], kecuali: ["bogor"], kode_wilayah: "31.74" },
@@ -42,6 +42,20 @@ test("parseTambahPromo validates input", () => {
   assert.ok(parseTambahPromo("hanya brand").error);
   assert.ok(parseTambahPromo("A | B | C | 31-12-2026").error);
   assert.ok(parseTambahPromo("A | B | C | 2026-12-31 | bsd | ftp://x").error);
+});
+
+test("shopping helpers: kategori, platform, /belanja query", () => {
+  assert.equal(kategoriOf("cuci gudang"), "cuci_gudang");
+  assert.equal(kategoriOf("Shopee"), "marketplace");
+  assert.equal(kategoriOf("makanan"), "makanan");
+  assert.equal(kategoriOf("apa saja"), null);
+  assert.equal(platformOf("promo tiktok shop"), "TikTok Shop");
+  assert.match(belanjaQuery("shopee").qs, /kategori=eq\.marketplace&platform=cs\./);
+  assert.equal(belanjaQuery("cuci gudang").qs, "&kategori=eq.cuci_gudang");
+  assert.equal(belanjaQuery("bsd").areaArg, "bsd");
+  assert.equal(parseTambahPromo("Shopee | 10.10 | 90% | 2026-10-31 | | | marketplace").kategori, "marketplace");
+  assert.equal(parseTambahPromo("A | B").kategori, "makanan");
+  assert.ok(parseTambahPromo("A | B | | | | | xyz").error);
 });
 
 test("isAdmin trims ids", () => {

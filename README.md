@@ -28,7 +28,7 @@ GitHub Actions (cron)                         Supabase Postgres (+PostGIS, pg_tr
 | `config/brands.yaml` | 25 food brands + aliases (`kokenang` → Kopi Kenangan) |
 | `config/sources.yaml` | RSS feeds, BMKG, GDELT, promo pages, YouTube queries, Trends, Reddit, OSM |
 | `config/scoring.yaml` | Viral score weights (0.5/0.3/0.2), thresholds, notification settings |
-| `collectors/` | `rss`, `bmkg`, `gdelt`, `promo`, `youtube`, `trends`, `trends_now` (Google Trends "Trending Now" ID), `reddit`, `osm` |
+| `collectors/` | `rss`, `bmkg`, `gdelt`, `promo`, `belanja` (marketplace promos + cuci gudang from news RSS), `youtube`, `trends`, `trends_now` (Google Trends "Trending Now" ID), `reddit`, `osm` |
 | `pipeline/` | `geocode` (text → zone/city, LLM + Nominatim fallback), `extract_llm`, `entities`, `dedup`, `score`, `notify`, `cleanup`, `sync_config` |
 | `web/` | Static site: news / promo / viral / map tabs, area filter, "Dekat saya", crowd reports. Demo mode until configured. |
 | `bot/` | Telegram bot Worker: `/berita /promo /viral /baru /zona /langganan /berhenti /lapor /tambah_promo` |
@@ -143,6 +143,7 @@ python scripts/set_webhook.py
 | Add a brand alias | Edit `config/brands.yaml`, push. |
 | Add a news feed | Add to `config/sources.yaml` → `rss`. `filter_wilayah: true` for national feeds. |
 | Add a promo page | Add to `sources.yaml` → `promo`. Check robots.txt + ToS. The collector also enforces robots.txt. |
+| Marketplace / cuci gudang promo | Collected hourly by `collectors/belanja.py` from news RSS. Add one by hand in the bot: `/tambah_promo Shopee \| Flash sale 10.10 \| Diskon 90% \| 2026-10-31 \| \| https://… \| marketplace` |
 | Instagram-only promo | In the bot (admin): `/tambah_promo Brand \| Judul \| Diskon 20% \| 2026-12-31 \| bsd \| https://…` |
 | Tune "viral" | `config/scoring.yaml`. Review the top list weekly. Early on, with little data, try `min_mention_24j: 2`. |
 | Regenerate demo data | `python scripts/make_demo.py` |

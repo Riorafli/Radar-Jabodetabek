@@ -287,3 +287,37 @@ def test_trending_excludes_entries_already_viral():
     assert [r["entitas_id"] for r in viral] == [1] and viral[0]["tier"] == 1
     trending = hitung_trending(s, NOW, {(r["entitas_id"], r["zona_id"]) for r in viral})
     assert [r["entitas_id"] for r in trending] == [2]
+
+
+# --- shopping promos ------------------------------------------------------------
+def test_belanja_prefilter():
+    from collectors.belanja import kandidat
+    assert kandidat("Promo Shopee 10.10, voucher diskon dan flash sale", "")
+    assert kandidat("57 Brand Lokal Diskon Hingga 70% di Glamlocal Warehouse Sale", "")
+    assert kandidat("Tangga Multifungsi Diobral di Transmart Full Day Sale", "")
+    assert not kandidat("Shopee luncurkan fitur baru untuk UMKM", "")      # marketplace but no promo word
+    assert not kandidat("Harga cabai naik di pasar", "")
+
+
+def test_validate_belanja(m):
+    from pipeline.extract_llm import validate_belanja
+    today = date(2026, 10, 12)
+    mp = validate_belanja({"kategori": "marketplace", "judul": "Promo 10.10", "platform": ["shopee", "Tiktok"],
+                           "diskon_persen": "90", "selesai": "2026-10-15"}, date(2026, 10, 10), today, m)
+    assert mp["platform"] == ["Shopee", "TikTok Shop"] and mp["brand"] == "Shopee" and mp["diskon_persen"] == 90
+    assert mp["selesai_perkiraan"] is False and mp["lokasi"] is None and mp["kota_berlaku"] == []
+    cg = validate_belanja({"kategori": "cuci_gudang", "judul": "Glamlocal Warehouse Sale", "penyelenggara": "Glamlocal",
+                           "lokasi": "Kota Kasablanka", "kota": "Jakarta Selatan", "diskon_persen": 70},
+                          date(2026, 10, 11), today, m)
+    assert cg["kota_berlaku"] == ["31.74"] and cg["selesai"] == date(2026, 10, 14) and cg["selesai_perkiraan"] is True
+    assert validate_belanja({"kategori": "bukan", "judul": "x"}, today, today, m) is None
+    assert validate_belanja({"kategori": "marketplace", "judul": "Lama"}, date(2026, 9, 1), today, m) is None   # stale, no date
+    assert validate_belanja({"kategori": "marketplace", "judul": "Habis", "selesai": "2026-10-01"}, today, today, m) is None
+    assert validate_belanja({"kategori": "lainnya", "judul": "Diskon", "diskon_persen": 150}, today, today, m)["diskon_persen"] is None
+
+
+def test_gabung_produk():
+    from collectors.belanja import gabung_produk
+    assert gabung_produk("LED TV 43 inch, AC 1 PK", "ac 1 pk, Kulkas") == "LED TV 43 inch, AC 1 PK, Kulkas"
+    assert gabung_produk(None, "Sepeda") == "Sepeda" and gabung_produk(None, None) is None
+    assert len(gabung_produk(", ".join(f"Produk {i}" for i in range(60)), "x")) <= 240

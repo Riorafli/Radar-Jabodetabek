@@ -102,6 +102,32 @@ promo:
   - {nama: Starbucks, brand: Starbucks, url: https://www.starbucks.co.id/promotions, selector: "", aktif: false}
   - {nama: Grand Indonesia, brand: "", url: https://www.grand-indonesia.com/, selector: "", aktif: false}
 
+# Shopping promos (collectors/belanja.py): marketplace promos + cuci gudang /
+# warehouse sale / bazar. Marketplaces have no public feed and forbid scraping,
+# so promos come from the official RSS of news outlets (robots.txt allows).
+# These feeds are read IN ADDITION to every feed in `rss` above.
+belanja:
+  max_artikel_per_run: 24
+  rss:
+    - nama: Wolipop
+      url: https://wolipop.detik.com/rss
+    - nama: detikInet
+      url: https://inet.detik.com/rss
+    - nama: detikFinance
+      url: https://finance.detik.com/rss
+    - nama: CNN Indonesia Ekonomi
+      url: https://www.cnnindonesia.com/ekonomi/rss
+    - nama: CNN Indonesia Teknologi
+      url: https://www.cnnindonesia.com/teknologi/rss
+    - nama: CNBC Indonesia Tech
+      url: https://www.cnbcindonesia.com/tech/rss
+    - nama: Antara Tekno
+      url: https://www.antaranews.com/rss/tekno.xml
+    - nama: Tempo Bisnis
+      url: https://rss.tempo.co/bisnis
+  # Not used on purpose: Google News RSS (robots.txt disallows bots),
+  # Shopee/Tokopedia/Lazada pages (ToS forbids scraping, JS-only).
+
 # YouTube Data API. Each search costs ~100 units (quota 10,000/day).
 # The collector runs every 2 h and uses `per_run` queries per run, rotating
 # through the list -> 12 runs x 5 = 60 searches/day (~6,100 units).

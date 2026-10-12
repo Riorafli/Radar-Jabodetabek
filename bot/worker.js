@@ -12,6 +12,7 @@ const HELP = `Radar Jabodetabek - berita, promo makanan & tempat viral.
 
 /berita [zona|kota] - berita terkini, mis. /berita bsd
 /promo [zona|kota] - promo makanan, mis. /promo kemang
+/belanja [shopee|tokopedia|cuci gudang|zona] - promo marketplace & cuci gudang
 /viral [zona|kota] - lagi viral/ramai, mis. /viral depok
 /baru [zona|kota] - tempat makan baru (OSM)
 /zona - daftar zona
@@ -21,7 +22,7 @@ const HELP = `Radar Jabodetabek - berita, promo makanan & tempat viral.
 
 Data diperbarui tiap 15-60 menit; "ramai" adalah perkiraan, bukan real-time.`;
 
-const ADMIN_HELP = `/tambah_promo Brand | Judul | Harga/diskon | selesai YYYY-MM-DD | zona/kota (opsional) | url (opsional)`;
+const ADMIN_HELP = `/tambah_promo Brand | Judul | Harga/diskon | selesai YYYY-MM-DD | zona/kota (opsional) | url (opsional) | kategori: makanan/marketplace/cuci gudang/lainnya (opsional)`;
 
 // ---------------------------------------------------------------- helpers
 export function normalize(text) {
@@ -72,13 +73,26 @@ export function rupiah(n) {
   return n == null ? "" : "Rp" + Math.round(n).toLocaleString("id-ID");
 }
 
+export const PLATFORMS = ["Shopee", "Tokopedia", "Lazada", "Blibli", "TikTok Shop", "Bukalapak", "Zalora", "JD.ID"];
+export function kategoriOf(text) {
+  const t = normalize(text);
+  if (/ (cuci|gudang|warehouse|clearance|obral|bazar|bazaar|sale) /.test(t)) return "cuci_gudang";
+  if (/ (marketplace|online) /.test(t) || PLATFORMS.some((p) => t.includes(normalize(p)))) return "marketplace";
+  if (/ (makanan|kuliner|food) /.test(t)) return "makanan";
+  if (/ (lainnya|lain) /.test(t)) return "lainnya";
+  return null;
+}
+export const platformOf = (text) => PLATFORMS.find((p) => normalize(text).includes(normalize(p))) || null;
+
 export function parseTambahPromo(arg) {
   const p = arg.split("|").map((s) => s.trim());
-  const [brand, judul, harga, selesai, area, url] = p;
+  const [brand, judul, harga, selesai, area, url, kat] = p;
   if (!brand || !judul) return { error: "Format: " + ADMIN_HELP };
   if (selesai && !/^\d{4}-\d{2}-\d{2}$/.test(selesai)) return { error: "Tanggal selesai harus YYYY-MM-DD" };
   if (url && !/^https?:\/\//.test(url)) return { error: "URL harus diawali http:// atau https://" };
-  return { brand, judul, harga: harga || null, selesai: selesai || null, area: area || null, url: url || null };
+  const kategori = kat ? kategoriOf(kat) : "makanan";
+  if (!kategori) return { error: "Kategori harus makanan, marketplace, cuci gudang, atau lainnya" };
+  return { brand, judul, harga: harga || null, selesai: selesai || null, area: area || null, url: url || null, kategori };
 }
 
 export function areaFilter(area, kind) {
@@ -139,7 +153,7 @@ async function cmdBerita(env, arg) {
 async function cmdPromo(env, arg) {
   const { area, error } = await resolve(env, arg);
   if (error) return error;
-  const rows = await sb(env, `v_promo?select=brand,judul,harga,harga_teks,selesai,url&order=published_at.desc&limit=8${areaFilter(area, "promo")}`);
+  const rows = await sb(env, `v_promo?select=brand,judul,harga,harga_teks,selesai,url&kategori=eq.makanan&order=published_at.desc&limit=8${areaFilter(area, "promo")}`);
   if (!rows.length) return `Belum ada promo aktif untuk ${judulArea(area)}.`;
   return `🍜 Promo ${judulArea(area)}\n\n` + rows.map((r) => {
     const harga = r.harga_teks || rupiah(r.harga);
@@ -211,6 +225,32 @@ export function isAdmin(env, userId) {
   return userId != null && admins.includes(String(userId));
 }
 
+export function belanjaQuery(arg) {
+  const plat = platformOf(arg || "");
+  if (plat) return { judul: `🛒 Promo ${plat}`, qs: `&kategori=eq.marketplace&platform=cs.${encodeURIComponent(`{"${plat}"}`)}` };
+  if (kategoriOf(arg || "") === "cuci_gudang") return { judul: "🏷️ Cuci gudang & sale", qs: "&kategori=eq.cuci_gudang", areaArg: "" };
+  if (kategoriOf(arg || "") === "marketplace") return { judul: "🛒 Promo marketplace", qs: "&kategori=eq.marketplace" };
+  return { judul: "🛍️ Promo belanja", qs: "&kategori=in.(marketplace,cuci_gudang,lainnya)", areaArg: arg || "" };
+}
+
+async function cmdBelanja(env, arg) {
+  const q = belanjaQuery(arg);
+  let area = null;
+  if (q.areaArg) {
+    const r = await resolve(env, q.areaArg);
+    if (r.error) return r.error;
+    area = r.area;
+  }
+  const rows = await sb(env, `v_promo?select=brand,judul,harga_teks,selesai,selesai_perkiraan,platform,lokasi,kategori,url&order=published_at.desc&limit=8${q.qs}${areaFilter(area, "promo")}`);
+  if (!rows.length) return `Belum ada promo belanja yang cocok${area ? ` di ${area.nama}` : ""}.`;
+  return `${q.judul}${area ? ` · ${area.nama}` : ""}\n\n` + rows.map((r) =>
+    `• ${r.platform && r.platform.length ? `[${r.platform.join(", ")}] ` : ""}${r.judul}` +
+    (r.harga_teks && !r.judul.includes(r.harga_teks) ? ` (${r.harga_teks})` : "") +
+    (r.lokasi ? `\n  📍 ${r.lokasi}` : "") +
+    (r.selesai ? `\n  s.d. ${r.selesai}${r.selesai_perkiraan ? " (perkiraan)" : ""}` : "") +
+    (r.url ? `\n  ${r.url}` : "")).join("\n\n");
+}
+
 async function cmdTambahPromo(env, userId, arg) {
   if (!isAdmin(env, userId)) return "Perintah ini khusus admin.";
   const p = parseTambahPromo(arg);
@@ -235,7 +275,8 @@ async function cmdTambahPromo(env, userId, arg) {
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify({
       item_id: item.id, brand: p.brand, menu: p.judul, harga_teks: p.harga, selesai: p.selesai,
-      kota_berlaku: kode ? [kode] : [], sumber_input: "manual",
+      kota_berlaku: kode ? [kode] : [], sumber_input: "manual", kategori: p.kategori,
+      platform: p.kategori === "marketplace" && platformOf(p.brand) ? [platformOf(p.brand)] : [],
     }),
   });
   return `✅ Promo disimpan (#${item.id}): ${judul}`;
@@ -253,6 +294,7 @@ export async function handle(env, update) {
         (env.WEB_URL ? `\n\nWeb: ${env.WEB_URL}` : "");
     case "/berita": return cmdBerita(env, arg);
     case "/promo": return cmdPromo(env, arg);
+    case "/belanja": return cmdBelanja(env, arg);
     case "/viral": return cmdViral(env, arg);
     case "/baru": return cmdBaru(env, arg);
     case "/zona": return cmdZona(env);

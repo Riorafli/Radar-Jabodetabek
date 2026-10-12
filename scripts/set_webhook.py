@@ -14,6 +14,7 @@ from pipeline.common import env, http  # noqa: E402
 COMMANDS = [
     ("berita", "Berita terkini, mis. /berita bsd"),
     ("promo", "Promo makanan, mis. /promo kemang"),
+    ("belanja", "Promo marketplace & cuci gudang, mis. /belanja shopee"),
     ("viral", "Tempat viral/ramai, mis. /viral depok"),
     ("baru", "Tempat makan baru"),
     ("zona", "Daftar zona"),

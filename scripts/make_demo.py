@@ -54,6 +54,17 @@ PROMO = [
     {"brand": "Contoh Bakmi", "judul": "Bakmi ayam Rp20 ribu saat grand opening", "menu": "Bakmi ayam", "harga": 20000,
      "harga_teks": "Rp20.000", "selesai": "2026-10-12", "syarat": "Hanya outlet BSD.", "kota_berlaku": ["36.74"],
      "sumber": "Kurasi manual", "sumber_input": "manual"},
+    {"brand": "Shopee", "judul": "Contoh: Flash sale tanggal kembar, voucher hingga 90%", "menu": None, "harga": None,
+     "harga_teks": "Diskon hingga 90%", "selesai": "2026-10-31", "syarat": None, "kota_berlaku": [], "sumber": "Contoh Media",
+     "sumber_input": "scrape", "kategori": "marketplace", "platform": ["Shopee"], "produk": "Gadget & fashion",
+     "diskon_persen": 90},
+    {"brand": "Tokopedia", "judul": "Contoh: Cashback gadget hingga Rp3,5 juta", "menu": None, "harga": None,
+     "harga_teks": "Cashback Rp3,5 juta", "selesai": "2026-10-20", "syarat": None, "kota_berlaku": [], "sumber": "Contoh Media",
+     "sumber_input": "scrape", "kategori": "marketplace", "platform": ["Tokopedia", "TikTok Shop"], "produk": "Smartphone"},
+    {"brand": "Contoh Brand Lokal", "judul": "Contoh: Warehouse sale 50 brand lokal", "menu": None, "harga": None,
+     "harga_teks": "Diskon hingga 70%", "selesai": "2026-10-19", "syarat": None, "kota_berlaku": ["31.74"],
+     "sumber": "Contoh Media", "sumber_input": "scrape", "kategori": "cuci_gudang", "lokasi": "Contoh Mall",
+     "diskon_persen": 70, "selesai_perkiraan": True},
 ]
 
 VIRAL = [

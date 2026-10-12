@@ -95,8 +95,21 @@ create table if not exists promo (
   selesai       date,
   syarat        text,
   kota_berlaku  text[] not null default '{}',   -- kode wilayah; empty = all Jabodetabek
-  sumber_input  text not null default 'scrape'  -- scrape | manual
+  sumber_input  text not null default 'scrape', -- scrape | manual
+  kategori      text not null default 'makanan', -- makanan | marketplace | cuci_gudang | lainnya
+  platform      text[] not null default '{}',   -- Shopee, Tokopedia, ... (marketplace)
+  produk        text,
+  lokasi        text,                           -- venue for cuci gudang
+  diskon_persen int,
+  selesai_perkiraan boolean not null default false  -- end date assumed (source gave none)
 );
+alter table promo add column if not exists kategori text not null default 'makanan';
+alter table promo add column if not exists platform text[] not null default '{}';
+alter table promo add column if not exists produk text;
+alter table promo add column if not exists lokasi text;
+alter table promo add column if not exists diskon_persen int;
+alter table promo add column if not exists selesai_perkiraan boolean not null default false;
+create index if not exists promo_kategori on promo (kategori);
 create index if not exists promo_selesai on promo (selesai);
 
 -- ---------------------------------------------------------------- signals & scores
@@ -193,7 +206,8 @@ create or replace view v_promo with (security_invoker = true) as
 select i.id, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
        i.zona_id, i.kode_wilayah,
        p.brand, p.menu, p.harga, p.harga_teks, p.mulai, p.selesai, p.syarat,
-       p.kota_berlaku, p.sumber_input
+       p.kota_berlaku, p.sumber_input,
+       p.kategori, p.platform, p.produk, p.lokasi, p.diskon_persen, p.selesai_perkiraan, i.lat, i.lon
 from item i
 join promo p on p.item_id = i.id
 where p.selesai is null or p.selesai >= (now() at time zone 'Asia/Jakarta')::date;

@@ -1,7 +1,7 @@
 name: promo
 on:
   schedule:
-    - cron: "10 */3 * * *"
+    - cron: "10 * * * *"   # hourly; food pages only hit the LLM when they change
   workflow_dispatch:
 concurrency: { group: promo, cancel-in-progress: false }
 jobs:
@@ -19,3 +19,5 @@ jobs:
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt
       - run: python -m collectors.promo
+        continue-on-error: true
+      - run: python -m collectors.belanja

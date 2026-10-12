@@ -329,3 +329,40 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .b1 { opacity: .22; } :root:not([data-theme="light"]) .b2 { opacity: .14; }
 }
+
+/* ============================================================ promo filters */
+.filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 4px; }
+.chips::-webkit-scrollbar { display: none; }
+.fchip { font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; color: var(--text);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
+  transition: transform .2s var(--ease), background .2s, border-color .2s, color .2s, box-shadow .2s; }
+.fchip:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--accent); }
+.fchip .n { font-size: 11px; font-weight: 700; margin-left: 2px; padding: 1px 7px; border-radius: 999px; background: var(--bg-2); color: var(--muted); }
+.fchip.on { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 3px 12px rgba(232, 89, 12, .3); }
+.fchip.on .n { background: rgba(255, 255, 255, .25); color: #fff; }
+.fchip:disabled { opacity: .45; cursor: default; }
+.chips.sub .fchip { font-size: 13px; padding: 4px 11px; }
+.fchip.plat.on { background: var(--pc); box-shadow: 0 3px 12px color-mix(in srgb, var(--pc) 40%, transparent); }
+.filter-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.sort { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.sort select { padding: 6px 10px; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 600; }
+.toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+.link-btn { font: inherit; font-weight: 700; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 4px; }
+.link-btn:hover { text-decoration: underline; }
+#promo-count { margin: 4px 0 12px; }
+
+.promo .ribbon { position: absolute; top: 12px; right: -34px; transform: rotate(35deg); width: 120px; text-align: center;
+  font-size: 13px; font-weight: 800; color: #fff; padding: 3px 0; background: linear-gradient(135deg, #e03131, var(--accent));
+  box-shadow: 0 2px 8px rgba(224, 49, 49, .35); }
+.kchip { display: inline-block; font-size: 11px; font-weight: 700; color: var(--muted); }
+.plats { display: flex; gap: 6px; flex-wrap: wrap; }
+.pchip { font-size: 11px; font-weight: 800; color: #fff; background: var(--pc); padding: 2px 9px; border-radius: 6px; letter-spacing: .02em; }
+.chip.soft { background: var(--bg-2); color: var(--muted); }
+.promo.k-cuci_gudang::before { background: linear-gradient(90deg, #7048e8, #ae3ec9); }
+.promo.k-marketplace::before { background: linear-gradient(90deg, #ee4d2d, #f59f00); }
+.promo.k-lainnya::before { background: linear-gradient(90deg, var(--info), #15aabf); }
+.pin.sale { background: #7048e8; }
+.pin.sale::before, .pin.sale::after { border-color: #7048e8; }
+.lg.sale { background: #7048e8; }

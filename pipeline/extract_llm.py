@@ -249,3 +249,104 @@ def extract_locations(texts):
         if 0 <= i < len(texts):
             out[i] = _short(r.get("lokasi"), 120)
     return out
+
+
+# --- shopping promos (marketplace / cuci gudang) ------------------------------
+KATEGORI_BELANJA = ("marketplace", "cuci_gudang", "lainnya")
+PLATFORM = {"shopee": "Shopee", "tokopedia": "Tokopedia", "lazada": "Lazada", "blibli": "Blibli",
+            "tiktok shop": "TikTok Shop", "tiktokshop": "TikTok Shop", "tiktok": "TikTok Shop",
+            "bukalapak": "Bukalapak", "zalora": "Zalora", "jd.id": "JD.ID"}
+UMUR_TANPA_TANGGAL = {"marketplace": 5, "cuci_gudang": 3, "lainnya": 3}  # assumed run time when no end date
+
+BELANJA_PROMPT = """Kamu memilah berita Indonesia tentang PROMO BELANJA. Tanggal hari ini: {today}.
+Untuk setiap artikel (tanggal terbit, judul, ringkasan), tentukan kategori:
+- "marketplace": promo/diskon/flash sale/voucher/cashback di toko online (Shopee, Tokopedia, Lazada, Blibli, TikTok Shop, Bukalapak, Zalora, dll)
+- "cuci_gudang": SALE DI LOKASI FISIK: cuci gudang, warehouse sale, clearance sale, obral, bazar diskon, midnight sale,
+  big sale, full day sale, mega sale di toko, supermarket, hypermarket, department store, mal, atau gedung acara
+- "lainnya": promo belanja lain tanpa lokasi fisik atau platform online tertentu (mis. promo kartu kredit/bank)
+- "bukan": bukan info promo yang bisa dimanfaatkan (berita bisnis, PHK, regulasi, gosip, ulasan produk tanpa promo)
+Kembalikan JSON: {{"hasil": [{{"no": 1, "kategori": "...", "judul": "judul promo singkat",
+ "acara": "nama acara/kampanye promo, sama persis untuk artikel tentang acara yang sama (mis. 'Transmart Full Day Sale', 'Shopee 10.10 Brand Festival') atau null",
+ "platform": ["Shopee"], "penyelenggara": "brand/toko/mal penyelenggara atau null",
+ "produk": "produk utama yang didiskon atau null", "diskon_teks": "mis. 'Diskon hingga 70%' atau null",
+ "diskon_persen": angka 1-99 atau null, "harga": angka rupiah tanpa titik atau null,
+ "mulai": "YYYY-MM-DD" atau null, "selesai": "YYYY-MM-DD" atau null,
+ "lokasi": "nama tempat/mal (untuk cuci_gudang) atau null", "kota": "nama kota atau null"}}]}}
+Aturan: jangan mengarang, isi null jika tidak disebut. Hitung tanggal relatif ("hari ini", "besok", "akhir pekan ini")
+dari tanggal terbit artikel. Acara satu hari (mis. "Full Day Sale hari ini/besok"): mulai = selesai = tanggal acara itu.
+
+{lines}"""
+
+
+def _platforms(v):
+    out = []
+    for x in (v if isinstance(v, list) else [v] if v else []):
+        if not isinstance(x, str):
+            continue
+        k = x.strip().lower()
+        name = PLATFORM.get(k) or next((n for key, n in PLATFORM.items() if key in k), None)
+        if name and name not in out:
+            out.append(name)
+    return out[:3]
+
+
+def validate_belanja(r, terbit, today=None, matcher=None):
+    """Clean one LLM row for a shopping promo, or None if unusable/expired."""
+    today = today or today_wib()
+    if not isinstance(r, dict) or r.get("kategori") not in KATEGORI_BELANJA:
+        return None
+    kat = r["kategori"]
+    judul = _short(r.get("judul"), 160)
+    if not judul:
+        return None
+    platform = _platforms(r.get("platform"))
+    if kat == "marketplace" and not platform:
+        platform = _platforms([judul])
+    mulai, selesai = _parse_date(r.get("mulai")), _parse_date(r.get("selesai"))
+    if selesai and selesai > today + timedelta(days=120):
+        selesai = None
+    perkiraan = False
+    if not selesai:
+        selesai = max(terbit, mulai or terbit) + timedelta(days=UMUR_TANPA_TANGGAL[kat])
+        perkiraan = True
+    if selesai < today or (mulai and selesai < mulai):
+        return None
+    try:
+        diskon = int(float(r.get("diskon_persen")))
+        diskon = diskon if 1 <= diskon <= 99 else None
+    except (TypeError, ValueError):
+        diskon = None
+    lokasi, kota = _short(r.get("lokasi"), 120), _short(r.get("kota"), 60)
+    kota_kode = matcher.kode_from_names([x for x in (kota, lokasi) if x]) if matcher and kat != "marketplace" else []
+    return {
+        "kategori": kat, "judul": judul, "acara": _short(r.get("acara"), 120), "platform": platform,
+        "brand": _short(r.get("penyelenggara"), 80) or (platform[0] if platform else None) or "Promo",
+        "produk": _short(r.get("produk"), 120), "diskon_teks": _short(r.get("diskon_teks"), 80),
+        "diskon_persen": diskon, "harga": _parse_harga(r.get("harga")),
+        "mulai": mulai, "selesai": selesai, "selesai_perkiraan": perkiraan,
+        "lokasi": lokasi if kat != "marketplace" else None, "kota": kota, "kota_berlaku": kota_kode,
+    }
+
+
+def extract_belanja(articles, matcher=None, chunk=12):
+    """articles: [{judul, ringkasan, terbit(datetime)}] -> list of validated
+    dicts / None (not a promo), one per article processed. Stops at the first
+    chunk the LLM fails on (callers retry the rest later). None if nothing ran."""
+    out = []
+    for i in range(0, len(articles), chunk):
+        part = articles[i:i + chunk]
+        lines = "\n".join(f"{n + 1}. [terbit {a['terbit'].date().isoformat()}] {a['judul']} -- {a['ringkasan'][:500]}"
+                          for n, a in enumerate(part))
+        data = ask_json(BELANJA_PROMPT.format(today=today_wib().isoformat(), lines=lines))
+        if data is None:
+            break
+        rows = [None] * len(part)
+        for r in (data.get("hasil", []) if isinstance(data, dict) else []):
+            try:
+                n = int(r.get("no")) - 1
+            except (TypeError, ValueError, AttributeError):
+                continue
+            if 0 <= n < len(part):
+                rows[n] = validate_belanja(r, part[n]["terbit"].date(), matcher=matcher)
+        out += rows
+    return out if out else None

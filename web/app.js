@@ -125,7 +125,7 @@
     },
     async promo(area) {
       if (DEMO) return D().promo.filter((r) => areaMatch(r, area, "promo"));
-      return rest(`v_promo?select=id,brand,judul,menu,harga,harga_teks,selesai,syarat,url,sumber,kota_berlaku,sumber_input&order=published_at.desc&limit=60${areaQS(area, "promo")}`);
+      return rest(`v_promo?select=id,brand,judul,menu,harga,harga_teks,selesai,syarat,url,sumber,kota_berlaku,sumber_input,kategori,platform,produk,lokasi,diskon_persen,selesai_perkiraan,lat,lon,published_at&order=published_at.desc&limit=300${areaQS(area, "promo")}`);
     },
     async viral(area) {
       if (DEMO) return D().viral.filter((r) => areaMatch(r, area)).sort((a, b) => (a.tier || 1) - (b.tier || 1) || b.skor - a.skor).slice(0, 30);
@@ -151,7 +151,9 @@
   };
 
   // ------------------------------------------------------------ state
-  const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null };
+  const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null,
+    promos: [], pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false } };
+  try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
 
   function areaFromValue(v) {
     if (!v || v === "all") return null;
@@ -206,35 +208,104 @@
 
   const kodeNama = (k) => (S.wilayahs.find((w) => w.kode === k) || {}).nama || k;
 
-  function sisaChip(selesai) {
+  function sisaChip(selesai, perkiraan) {
     const d = daysLeft(selesai);
     if (d == null) return `<span class="chip good">Periode tidak disebut</span>`;
+    if (perkiraan) return `<span class="chip soft" title="Sumber tidak menyebut tanggal berakhir">± s.d. ${esc(tgl(selesai))}</span>`;
     if (d <= 0) return `<span class="chip urgent">⏰ Berakhir hari ini</span>`;
     if (d <= 3) return `<span class="chip urgent">⏰ ${d} hari lagi</span>`;
     return `<span class="chip">s.d. ${esc(tgl(selesai))}</span>`;
   }
 
+  const KAT = {
+    makanan: { ikon: "🍜", nama: "Makanan" },
+    marketplace: { ikon: "🛒", nama: "Marketplace" },
+    cuci_gudang: { ikon: "🏷️", nama: "Cuci gudang & sale" },
+    lainnya: { ikon: "💳", nama: "Lainnya" },
+  };
+  const PLAT_WARNA = { Shopee: "#ee4d2d", Tokopedia: "#03ac0e", Lazada: "#1a1aa6", Blibli: "#0095da",
+    "TikTok Shop": "#fe2c55", Bukalapak: "#e31e52", Zalora: "#222", "JD.ID": "#e1251b" };
+  const kat = (r) => r.kategori || "makanan";
+  const diskonOf = (r) => r.diskon_persen || Number(((r.harga_teks || r.judul || "").match(/(\d{1,2})\s*%/) || [])[1]) || 0;
+
   async function renderPromo() {
     const el = $("#list-promo");
-    $("#h-promo").textContent = `Promo makanan · ${areaName()}`;
+    $("#h-promo").textContent = `Promo & diskon · ${areaName()}`;
     el.innerHTML = skeleton(6);
+    $("#promo-count").textContent = "";
     try {
-      const rows = await data.promo(S.area);
-      el.innerHTML = rows.map((r, i) => {
-        const url = safeUrl(r.url);
-        const harga = r.harga_teks || rupiah(r.harga);
-        const title = r.menu || r.judul;
-        return `<li class="promo" style="--i:${i};--h:${hue(r.brand)}">
-          <div class="promo-head"><span class="avatar">${esc(initials(r.brand))}</span>
-            <div><div class="promo-brand">${esc(r.brand)}</div>${r.sumber_input === "manual" ? '<span class="chip good">✓ kurasi</span>' : ""}</div></div>
-          <span class="promo-title">${esc(title)}</span>
-          ${harga ? `<span class="promo-price">${esc(harga)}</span>` : ""}
-          ${r.syarat ? `<span class="promo-syarat">${esc(r.syarat)}</span>` : ""}
-          <span class="meta">${sisaChip(r.selesai)}<span>${r.kota_berlaku && r.kota_berlaku.length ? esc(r.kota_berlaku.map(kodeNama).join(", ")) : "Semua kota"}</span></span>
-          ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Lihat di ${esc(r.sumber || "sumber")} <span>→</span></a>` : ""}
-        </li>`;
-      }).join("") || empty(`Belum ada promo aktif untuk ${areaName()}.`);
+      S.promos = await data.promo(S.area);
+      drawPromo();
     } catch (e) { fail(el, e); }
+  }
+
+  /** filter + sort the cached promos and redraw (no network) */
+  function drawPromo() {
+    const f = S.pf, all = S.promos;
+    // category chips with counts
+    const counts = { semua: all.length };
+    for (const r of all) counts[kat(r)] = (counts[kat(r)] || 0) + 1;
+    $("#f-kat").innerHTML = [["semua", "✨", "Semua"], ...Object.entries(KAT).map(([k, v]) => [k, v.ikon, v.nama])]
+      .map(([k, ikon, nama]) => `<button type="button" data-k="${k}" class="fchip ${f.k === k ? "on" : ""}" ${!counts[k] && k !== "semua" ? "disabled" : ""}>
+        ${ikon} ${esc(nama)} <span class="n">${counts[k] || 0}</span></button>`).join("");
+    // platform chips (marketplace)
+    const mp = all.filter((r) => kat(r) === "marketplace");
+    const plats = {};
+    for (const r of mp) for (const p of (r.platform && r.platform.length ? r.platform : ["Lainnya"])) plats[p] = (plats[p] || 0) + 1;
+    const showPlat = (f.k === "semua" || f.k === "marketplace") && Object.keys(plats).length > 0;
+    $("#f-plat").hidden = !showPlat;
+    if (!plats[f.p] && f.p !== "semua") f.p = "semua";
+    $("#f-plat").innerHTML = showPlat ? [["semua", mp.length], ...Object.entries(plats).sort((a, b) => b[1] - a[1])]
+      .map(([p, n]) => `<button type="button" data-p="${esc(p)}" class="fchip plat ${f.p === p ? "on" : ""}" style="--pc:${PLAT_WARNA[p] || "var(--accent)"}">
+        ${p === "semua" ? "🛒 Semua platform" : esc(p)} <span class="n">${n}</span></button>`).join("") : "";
+    $("#f-sort").value = f.s;
+    $("#f-pasti").checked = f.pasti;
+    $("#f-reset").hidden = f.k === "semua" && f.p === "semua" && f.s === "baru" && !f.q && !f.pasti;
+
+    const q = f.q.trim().toLowerCase();
+    let rows = all.filter((r) =>
+      (f.k === "semua" || kat(r) === f.k) &&
+      (f.p === "semua" || (kat(r) === "marketplace" && ((r.platform && r.platform.length ? r.platform : ["Lainnya"]).includes(f.p)))) &&
+      (!f.pasti || (r.selesai && !r.selesai_perkiraan)) &&
+      (!q || [r.brand, r.judul, r.menu, r.produk, r.lokasi, ...(r.platform || [])].some((x) => (x || "").toLowerCase().includes(q))));
+    const last = (v) => (v == null ? Infinity : v);
+    if (f.s === "akhir") rows.sort((a, b) => last(daysLeft(a.selesai)) - last(daysLeft(b.selesai)));
+    if (f.s === "diskon") rows.sort((a, b) => diskonOf(b) - diskonOf(a));
+    if (f.s === "harga") rows.sort((a, b) => last(a.harga) - last(b.harga));
+
+    $("#promo-count").textContent = all.length ? `Menampilkan ${rows.length} dari ${all.length} promo` : "";
+    const el = $("#list-promo");
+    el.innerHTML = rows.map((r, i) => {
+      const url = safeUrl(r.url);
+      const k = kat(r);
+      const harga = r.harga_teks || rupiah(r.harga);
+      const title = k === "makanan" ? (r.menu || r.judul) : r.judul;
+      const plat = (r.platform || []).map((p) => `<span class="pchip" style="--pc:${PLAT_WARNA[p] || "var(--accent)"}">${esc(p)}</span>`).join("");
+      const d = diskonOf(r);
+      const where = r.lokasi ? `📍 ${esc(r.lokasi)}${r.kota_berlaku && r.kota_berlaku.length ? `, ${esc(kodeNama(r.kota_berlaku[0]))}` : ""}`
+        : k === "marketplace" ? "🌐 Online" : r.kota_berlaku && r.kota_berlaku.length ? esc(r.kota_berlaku.map(kodeNama).join(", ")) : "Semua kota";
+      const linkTxt = k === "makanan" ? `Lihat di ${esc(r.sumber || "sumber")}` : `Baca info lengkap (${esc(r.sumber || "sumber")})`;
+      return `<li class="promo k-${k}" style="--i:${i};--h:${hue(r.brand)}">
+        ${d ? `<span class="ribbon">-${d}%</span>` : ""}
+        <div class="promo-head"><span class="avatar">${esc(initials(r.brand))}</span>
+          <div><div class="promo-brand">${esc(r.brand)}</div>
+            <span class="kchip">${KAT[k].ikon} ${esc(KAT[k].nama)}</span>${r.sumber_input === "manual" ? ' <span class="chip good">✓ kurasi</span>' : ""}</div></div>
+        ${plat ? `<div class="plats">${plat}</div>` : ""}
+        <span class="promo-title">${esc(title)}</span>
+        ${r.produk && k !== "makanan" && !r.judul.toLowerCase().includes(r.produk.toLowerCase()) ? `<span class="promo-syarat">🎁 ${esc(r.produk)}</span>` : ""}
+        ${harga ? `<span class="promo-price">${esc(harga)}</span>` : ""}
+        ${r.syarat ? `<span class="promo-syarat">${esc(r.syarat)}</span>` : ""}
+        <span class="meta">${sisaChip(r.selesai, r.selesai_perkiraan)}<span>${where}</span></span>
+        ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${linkTxt} <span>→</span></a>` : ""}
+      </li>`;
+    }).join("") || empty(all.length ? "Tidak ada promo yang cocok dengan filter ini." : `Belum ada promo aktif untuk ${areaName()}.`);
+  }
+
+  function setPF(patch) {
+    Object.assign(S.pf, patch);
+    const { q, ...keep } = S.pf;
+    store.set("promoFilter", JSON.stringify(keep));
+    drawPromo();
   }
 
   const sudahLapor = (id) => Date.now() - Number(store.get(`lapor:${id}`) || 0) < 6 * 3600 * 1000;
@@ -330,7 +401,14 @@
         .bindTooltip(esc(z.nama)).addTo(S.layers);
     }
     try {
-      const [viral, baru] = await Promise.all([data.viral(S.area), data.baru(S.area)]);
+      const [viral, baru, promos] = await Promise.all([data.viral(S.area), data.baru(S.area), data.promo(S.area)]);
+      for (const r of promos) {
+        if (r.lat == null || kat(r) !== "cuci_gudang") continue;
+        const url = safeUrl(r.url);
+        L.marker([r.lat, r.lon], { icon: pinIcon(16, "sale"), zIndexOffset: 500 })
+          .bindPopup(`<b>🏷️ ${esc(r.judul)}</b><br>${esc(r.lokasi || "")}${r.harga_teks ? `<br>${esc(r.harga_teks)}` : ""}<br>s.d. ${esc(tgl(r.selesai))}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">info lengkap →</a>` : ""}`)
+          .addTo(S.layers);
+      }
       const max = Math.max(0.001, ...viral.map((r) => r.skor));
       for (const r of baru) {
         if (r.lat == null) continue;
@@ -401,6 +479,13 @@
     for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => { S.tab = b.dataset.tab; render(); });
     window.addEventListener("resize", moveIndicator);
     $("#more-berita").addEventListener("click", () => renderBerita(true));
+    $("#f-kat").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) setPF({ k: b.dataset.k, p: "semua" }); });
+    $("#f-plat").addEventListener("click", (e) => { const b = e.target.closest("button[data-p]"); if (b) setPF({ p: b.dataset.p }); });
+    $("#f-sort").addEventListener("change", (e) => setPF({ s: e.target.value }));
+    $("#f-pasti").addEventListener("change", (e) => setPF({ pasti: e.target.checked }));
+    $("#f-reset").addEventListener("click", () => { $("#pq").value = ""; setPF({ k: "semua", p: "semua", s: "baru", q: "", pasti: false }); });
+    let tp;
+    $("#pq").addEventListener("input", (e) => { clearTimeout(tp); tp = setTimeout(() => setPF({ q: e.target.value }), 200); });
     let t;
     $("#q").addEventListener("input", (e) => { clearTimeout(t); t = setTimeout(() => { S.q = e.target.value; renderBerita(); }, 300); });
 

@@ -34,7 +34,7 @@
     <nav class="wrap tabs" role="tablist">
       <span class="tab-ind" aria-hidden="true"></span>
       <button role="tab" data-tab="berita" aria-selected="true">📰 Berita</button>
-      <button role="tab" data-tab="promo">🍜 Promo</button>
+      <button role="tab" data-tab="promo">🏷️ Promo</button>
       <button role="tab" data-tab="viral">🔥 Viral</button>
       <button role="tab" data-tab="peta">🗺️ Peta</button>
     </nav>
@@ -50,7 +50,7 @@
     <div class="wrap hero-in">
       <p class="live"><span class="live-dot"></span> LIVE <span id="updated" class="muted"></span></p>
       <h1 class="hero-title">Apa yang lagi <span class="grad">rame</span> di <span id="hero-area">Jabodetabek</span>?</h1>
-      <p class="hero-sub">Berita terkini, promo makanan, dan tempat viral, diperbarui otomatis tiap 15 menit.</p>
+      <p class="hero-sub">Berita terkini, promo makanan &amp; marketplace, cuci gudang, dan tempat viral, diperbarui otomatis.</p>
       <div class="stats">
         <div class="stat"><b data-count="berita">0</b><span>berita</span></div>
         <div class="stat"><b data-count="promo">0</b><span>promo aktif</span></div>
@@ -71,7 +71,27 @@
     </section>
 
     <section id="tab-promo" class="panel" hidden>
-      <div class="panel-head"><h2 id="h-promo">Promo makanan</h2></div>
+      <div class="panel-head">
+        <h2 id="h-promo">Promo &amp; diskon</h2>
+        <div class="search"><span aria-hidden="true">🔎</span><input id="pq" type="search" placeholder="Cari brand, produk, lokasi…" aria-label="Cari promo"></div>
+      </div>
+      <div class="filters">
+        <div id="f-kat" class="chips" role="group" aria-label="Kategori promo"></div>
+        <div id="f-plat" class="chips sub" role="group" aria-label="Platform" hidden></div>
+        <div class="filter-row">
+          <label class="sort">Urutkan
+            <select id="f-sort">
+              <option value="baru">Terbaru</option>
+              <option value="akhir">Segera berakhir</option>
+              <option value="diskon">Diskon terbesar</option>
+              <option value="harga">Harga termurah</option>
+            </select>
+          </label>
+          <label class="toggle"><input id="f-pasti" type="checkbox"> Hanya yang tanggalnya jelas</label>
+          <button id="f-reset" class="link-btn" type="button" hidden>Reset filter</button>
+        </div>
+      </div>
+      <p id="promo-count" class="note"></p>
       <ul id="list-promo" class="grid"></ul>
     </section>
 
@@ -97,7 +117,7 @@
     <section id="tab-peta" class="panel" hidden>
       <div class="panel-head"><h2>Peta tempat ramai</h2></div>
       <div id="map" role="region" aria-label="Peta"></div>
-      <p class="legend"><span class="lg hot"></span> viral (besar = skor tinggi) <span class="lg new"></span> tempat baru <span class="lg zone"></span> zona</p>
+      <p class="legend"><span class="lg hot"></span> viral (besar = skor tinggi) <span class="lg new"></span> tempat baru <span class="lg sale"></span> cuci gudang / sale <span class="lg zone"></span> zona</p>
     </section>
   </main>
 
