@@ -52,7 +52,8 @@
   function countUp(el, to) {
     const from = Number(el.dataset.v || 0);
     el.dataset.v = to;
-    if (REDUCED || from === to) { el.textContent = to.toLocaleString("id-ID"); return; }
+    // no animation when reduced motion is on or the tab is hidden (rAF does not run there)
+    if (REDUCED || from === to || document.hidden) { el.textContent = to.toLocaleString("id-ID"); return; }
     const t0 = performance.now(), dur = 900;
     const step = (t) => {
       const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
