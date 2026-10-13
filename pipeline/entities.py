@@ -2,7 +2,7 @@
 from pipeline.common import load_config
 from pipeline.geocode import normalize
 
-SIMILARITY = 0.55  # pg_trgm similarity needed to treat two place names as the same
+SIMILARITY = 0.7  # pg_trgm similarity needed to treat two place names as the same (0.55 merged different places)
 
 
 class BrandMatcher:

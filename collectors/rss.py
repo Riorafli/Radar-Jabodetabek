@@ -20,7 +20,12 @@ def parse_entry(e, feed, matcher):
     if not link or not judul:
         return None
     ringkasan = strip_dateline(clean_html(e.get("summary") or e.get("description"), 300))
-    m = matcher.match(judul, ringkasan)
+    m = matcher.match(judul)
+    if not m.ok:
+        m = matcher.match(ringkasan)
+        # "... dari Jakarta menuju Dubai" in a national story is not Jabodetabek news
+        if feed.get("filter_wilayah") and m.kode_wilayah == "31" and not m.zona and m.alias in ("jakarta", "ibu kota"):
+            m = type(m)()
     if feed.get("filter_wilayah") and not m.ok:
         return None
     t = e.get("published_parsed") or e.get("updated_parsed")

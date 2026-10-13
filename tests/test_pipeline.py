@@ -360,3 +360,18 @@ def test_outlet_query_is_overpass_safe():
     assert pola(["McDonald's", "Bakmi GM"]) == "McDonald.s|Bakmi GM"
     q = query(["KFC"])
     assert '["name"~"KFC",i]' in q and '["brand"~"KFC",i]' in q and "(-6.85,106.35,-5.95,107.35)" in q
+
+
+def test_is_area_name(m):
+    assert m.is_area_name("Blok M") and m.is_area_name("kelapa gading") and m.is_area_name("Jaksel")
+    assert not m.is_area_name("Blok M Square") and not m.is_area_name("Bakso Plakor")
+
+
+def test_generic_jakarta_in_summary_is_not_enough(m):
+    e = _entry("Bandara Riyadh Dibombardir Houthi, Begini Operasional Penerbangan",
+               "Layanan operasional dari Jakarta menuju Dubai tetap aman terkendali.")
+    assert parse_entry(e, {"filter_wilayah": True}, m) is None
+    e3 = _entry("Pramono minta guru disanksi tegas", "Gubernur DKI Jakarta meminta sanksi tegas.")
+    assert parse_entry(e3, {"filter_wilayah": True}, m)["kode_wilayah"] == "31"     # 'DKI' is specific
+    e2 = _entry("Banjir rendam rumah warga", "Banjir terjadi di Cipondoh, Kota Tangerang.")
+    assert parse_entry(e2, {"filter_wilayah": True}, m)["kode_wilayah"] == "36.71"

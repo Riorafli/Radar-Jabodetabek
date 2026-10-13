@@ -93,6 +93,18 @@ class Matcher:
                 return m
         return m
 
+    VENUE_WORDS = (" square ", " mall ", " mal ", " plaza ", " hub ", " avenue ", " park ", " pasar ", " aeon ", " ice ",
+                   " breeze ", " living world ", " xchange ", " literasi ", " jungleland ")
+
+    def is_area_name(self, name):
+        """'Blok M', 'Kelapa Gading', 'Jaksel' -> True (an area, not a place).
+        Zone aliases that are venues ('blok m square', 'pik avenue') are places."""
+        t = normalize(name)
+        s = t.strip()
+        if not s or any(w in t for w in self.VENUE_WORDS):
+            return False
+        return any(s == a for a, *_ in self.zona_alias) or any(s == a for a, _ in self.kota_alias)
+
     def kode_from_names(self, names):
         """Map free-text city names (e.g. from the LLM) to kode list."""
         out = []

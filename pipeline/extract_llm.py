@@ -202,10 +202,14 @@ def extract_promos(text, brand_hint="", matcher=None):
 
 
 # --- places / locations -----------------------------------------------------
-PLACES_PROMPT = """Untuk setiap judul konten kuliner Indonesia di bawah, sebutkan nama TEMPAT MAKAN
-atau BRAND spesifik yang dibahas (bukan nama makanan umum seperti "bakso" atau "kopi"),
-dan lokasinya (nama daerah/kota) jika disebut.
-Kembalikan JSON: {{"hasil": [ {{"no": 1, "tempat": ["Nama Tempat"], "lokasi": "Kemang" atau null}} ]}}
+PLACES_PROMPT = """Untuk setiap judul konten Indonesia di bawah:
+1. "kuliner": true hanya jika kontennya tentang makanan/minuman/tempat makan; false untuk properti, rumah dijual,
+   jalan-jalan/belanja tanpa fokus kuliner, berita, game, dll.
+2. "tempat": nama TEMPAT MAKAN, BRAND, atau PUSAT KULINER spesifik yang dibahas (mis. "Bakso Plakor", "Blok M Square").
+   BUKAN nama makanan umum ("bakso", "kopi"), BUKAN nama daerah/kecamatan/jalan ("Blok M", "Kelapa Gading", "Kemang"),
+   BUKAN perumahan, sekolah, kantor, atau mal tanpa konteks kuliner.
+3. "lokasi": nama daerah/kota jika disebut.
+Kembalikan JSON: {{"hasil": [ {{"no": 1, "kuliner": true, "tempat": ["Nama Tempat"], "lokasi": "Kemang" atau null}} ]}}
 Jika tidak ada tempat spesifik, "tempat": []. Jangan mengarang.
 
 {lines}"""
@@ -225,6 +229,8 @@ def extract_places(titles):
         except (TypeError, ValueError):
             continue
         if 0 <= i < len(titles):
+            if r.get("kuliner") is False:
+                continue  # not food content: no places from it
             tempat = [_short(t, 80) for t in (r.get("tempat") or []) if isinstance(t, str)]
             empty[i] = {"tempat": [t for t in tempat if t and len(t) >= 3], "lokasi": _short(r.get("lokasi"), 80)}
     return empty

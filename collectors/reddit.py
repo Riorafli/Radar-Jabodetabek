@@ -68,7 +68,7 @@ def main():
             item_id = insert_item(cur, "post", judul, f"https://www.reddit.com{p.get('permalink', '')}",
                                   f"Reddit r/{p.get('subreddit')}", body, waktu, m.kode_wilayah, zona_id,
                                   label_status="teks", hash_key=f"reddit:{p.get('id')}")
-            for nama in dict.fromkeys(brands.find(judul, body) + pl["tempat"]):
+            for nama in dict.fromkeys(brands.find(judul, body) + [p for p in pl["tempat"] if not matcher.is_area_name(p)]):
                 ent = find_or_create(cur, nama, zona_id, m.kode_wilayah, brands=brands)
                 add_signal(cur, ent, "reddit", p.get("id", ""), zona_id, m.kode_wilayah, 1, eng, waktu)
                 n += 1

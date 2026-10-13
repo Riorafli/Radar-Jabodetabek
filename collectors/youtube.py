@@ -97,7 +97,7 @@ def main():
                 cur.execute("update item set meta = jsonb_set(meta, '{stats}', %s) where hash_dedup = %s",
                             (Json(v.get("stats", {})), sha1(f"yt:{vid}")))
 
-            names = brands.find(judul, desc) + [p for p in pl["tempat"]]
+            names = brands.find(judul, desc) + [p for p in pl["tempat"] if not matcher.is_area_name(p)]
             seen = set()
             for nama in names:
                 ent = find_or_create(cur, nama, zona_id, m.kode_wilayah, brands=brands)
