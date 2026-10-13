@@ -125,6 +125,23 @@ belanja:
       url: https://www.antaranews.com/rss/tekno.xml
     - nama: Tempo Bisnis
       url: https://rss.tempo.co/bisnis
+  # Automatic marketplace products from YouTube (uses YOUTUBE_API_KEY).
+  # One search (~100 units) every `setiap_jam` hours -> 8/day with 3.
+  youtube:
+    setiap_jam: 3
+    per_run: 1
+    max_results: 15
+    min_views: 2000
+    hari: 3
+    # tested 2026-10-13: these return Indonesian product videos
+    # ("racun tokopedia", "promo lazada" return almost nothing; "shopee haul" is mostly Brazil)
+    queries:
+      - racun shopee
+      - racun tiktok shop
+      - flash sale shopee
+      - spill produk tiktok shop
+      - racun shopee murah
+      - barang viral shopee
   # Not used on purpose: Google News RSS (robots.txt disallows bots),
   # Shopee/Tokopedia/Lazada pages (ToS forbids scraping, JS-only).
 

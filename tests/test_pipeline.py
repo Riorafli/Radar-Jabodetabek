@@ -321,3 +321,10 @@ def test_gabung_produk():
     assert gabung_produk("LED TV 43 inch, AC 1 PK", "ac 1 pk, Kulkas") == "LED TV 43 inch, AC 1 PK, Kulkas"
     assert gabung_produk(None, "Sepeda") == "Sepeda" and gabung_produk(None, None) is None
     assert len(gabung_produk(", ".join(f"Produk {i}" for i in range(60)), "x")) <= 240
+
+
+def test_belanja_youtube_schedule():
+    from collectors.belanja import giliran_youtube
+    jam = lambda h: datetime(2026, 10, 13, h, 10, tzinfo=timezone.utc)
+    assert [h for h in range(24) if giliran_youtube(jam(h), 3)] == [0, 3, 6, 9, 12, 15, 18, 21]
+    assert giliran_youtube(jam(5), 1)

@@ -260,11 +260,14 @@ UMUR_TANPA_TANGGAL = {"marketplace": 5, "cuci_gudang": 3, "lainnya": 3}  # assum
 
 BELANJA_PROMPT = """Kamu memilah berita Indonesia tentang PROMO BELANJA. Tanggal hari ini: {today}.
 Untuk setiap artikel (tanggal terbit, judul, ringkasan), tentukan kategori:
-- "marketplace": promo/diskon/flash sale/voucher/cashback di toko online (Shopee, Tokopedia, Lazada, Blibli, TikTok Shop, Bukalapak, Zalora, dll)
+- "marketplace": promo/diskon/flash sale/voucher/cashback di toko online (Shopee, Tokopedia, Lazada, Blibli, TikTok Shop, Bukalapak, Zalora, dll),
+  termasuk video/artikel rekomendasi produk murah atau "racun" marketplace yang menyebut produk tertentu
 - "cuci_gudang": SALE DI LOKASI FISIK: cuci gudang, warehouse sale, clearance sale, obral, bazar diskon, midnight sale,
   big sale, full day sale, mega sale di toko, supermarket, hypermarket, department store, mal, atau gedung acara
 - "lainnya": promo belanja lain tanpa lokasi fisik atau platform online tertentu (mis. promo kartu kredit/bank)
-- "bukan": bukan info promo yang bisa dimanfaatkan (berita bisnis, PHK, regulasi, gosip, ulasan produk tanpa promo)
+- "bukan": bukan info promo yang bisa dimanfaatkan (berita bisnis, PHK, regulasi, gosip, ulasan produk tanpa promo,
+  tutorial, challenge, vlog, atau konten hiburan yang tidak menyebut produk spesifik yang bisa dibeli)
+Untuk "marketplace", "produk" wajib berisi nama produk spesifik (merek/jenis barang), bukan kategori umum seperti "makeup".
 Kembalikan JSON: {{"hasil": [{{"no": 1, "kategori": "...", "judul": "judul promo singkat",
  "acara": "nama acara/kampanye promo, sama persis untuk artikel tentang acara yang sama (mis. 'Transmart Full Day Sale', 'Shopee 10.10 Brand Festival') atau null",
  "platform": ["Shopee"], "penyelenggara": "brand/toko/mal penyelenggara atau null",

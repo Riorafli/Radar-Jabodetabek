@@ -8,6 +8,10 @@ and picks articles about:
   - lainnya       other usable shopping promos (supermarket, bank card, ...)
 Gemini turns each article into structured data. Every article goes to the LLM
 at most once (remembered in halaman_cache, also when rejected).
+
+Marketplace products are also found automatically on YouTube ("racun shopee",
+"flash sale shopee hari ini", ...) every `belanja.youtube.setiap_jam` hours:
+recent, well-watched videos -> Gemini extracts product, platform, price.
 """
 import re
 from datetime import datetime, timedelta, timezone
@@ -104,13 +108,65 @@ def gabung(cur, p, judul):
     return True
 
 
+def giliran_youtube(now, setiap_jam):
+    """Run the YouTube search only every N hours to stay inside the free quota."""
+    return setiap_jam <= 1 or now.hour % setiap_jam == 0
+
+
+def ambil_youtube(cfg, now):
+    """Recent, popular marketplace-promo videos as 'articles' for the same pipeline."""
+    from collectors.youtube import pick_queries
+
+    yt = cfg.get("belanja", {}).get("youtube", {})
+    key = env("YOUTUBE_API_KEY")
+    if not key or not yt.get("queries"):
+        return []
+    if not (env("BELANJA_YT_PAKSA") or giliran_youtube(now, int(yt.get("setiap_jam", 3)))):
+        return []
+    api = "https://www.googleapis.com/youtube/v3"
+    after = (now - timedelta(days=int(yt.get("hari", 3)))).strftime("%Y-%m-%dT%H:%M:%SZ")
+    videos = {}
+    for q in pick_queries(yt["queries"], int(yt.get("per_run", 1)), now):
+        try:
+            r = http().get(f"{api}/search", params={
+                "key": key, "q": q, "part": "snippet", "type": "video", "regionCode": "ID", "relevanceLanguage": "id",
+                "order": "viewCount", "publishedAfter": after, "maxResults": int(yt.get("max_results", 15))}, timeout=30)
+            r.raise_for_status()
+        except Exception as e:
+            log(f"belanja youtube '{q}': gagal ({e})")
+            continue
+        for it in r.json().get("items", []):
+            if it["id"].get("videoId"):
+                videos[it["id"]["videoId"]] = it["snippet"]
+        log(f"belanja youtube '{q}': {len(r.json().get('items', []))} video")
+    if not videos:
+        return []
+    views = {}
+    try:
+        r = http().get(f"{api}/videos", params={"key": key, "part": "statistics", "id": ",".join(list(videos)[:50])}, timeout=30)
+        r.raise_for_status()
+        views = {v["id"]: int(v.get("statistics", {}).get("viewCount", 0) or 0) for v in r.json().get("items", [])}
+    except Exception as e:
+        log(f"belanja youtube stats: gagal ({e})")
+    min_views = int(yt.get("min_views", 2000))
+    arts = []
+    for vid, sn in videos.items():
+        if views.get(vid, 0) < min_views:
+            continue
+        terbit = datetime.strptime(sn["publishedAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        arts.append({"url": f"https://www.youtube.com/watch?v={vid}", "judul": clean_html(sn.get("title"), 300),
+                     "ringkasan": clean_html(sn.get("description"), 1200), "terbit": min(terbit, now), "sumber": "YouTube"})
+    log(f"belanja youtube: {len(arts)} video >= {min_views} views")
+    return arts
+
+
 def main():
     if not extract_llm.available():
         log("belanja: GEMINI_API_KEY / GROQ_API_KEY belum diisi, dilewati")
         return
     cfg = load_config("sources")
     now = datetime.now(timezone.utc)
-    arts = ambil_artikel(cfg, now)
+    arts = ambil_artikel(cfg, now) + ambil_youtube(cfg, now)
     max_llm = int(cfg.get("belanja", {}).get("max_artikel_per_run", 24))
     matcher = Matcher()
     with db() as cur:

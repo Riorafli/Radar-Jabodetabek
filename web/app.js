@@ -284,7 +284,8 @@
       const d = diskonOf(r);
       const where = r.lokasi ? `📍 ${esc(r.lokasi)}${r.kota_berlaku && r.kota_berlaku.length ? `, ${esc(kodeNama(r.kota_berlaku[0]))}` : ""}`
         : k === "marketplace" ? "🌐 Online" : r.kota_berlaku && r.kota_berlaku.length ? esc(r.kota_berlaku.map(kodeNama).join(", ")) : "Semua kota";
-      const linkTxt = k === "makanan" ? `Lihat di ${esc(r.sumber || "sumber")}` : `Baca info lengkap (${esc(r.sumber || "sumber")})`;
+      const linkTxt = r.sumber === "YouTube" ? "▶ Tonton videonya di YouTube"
+        : k === "makanan" ? `Lihat di ${esc(r.sumber || "sumber")}` : `Baca info lengkap (${esc(r.sumber || "sumber")})`;
       return `<li class="promo k-${k}" style="--i:${i};--h:${hue(r.brand)}">
         ${d ? `<span class="ribbon">-${d}%</span>` : ""}
         <div class="promo-head"><span class="avatar">${esc(initials(r.brand))}</span>
