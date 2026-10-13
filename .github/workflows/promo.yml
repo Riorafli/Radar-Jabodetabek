@@ -22,3 +22,5 @@ jobs:
       - run: python -m collectors.promo
         continue-on-error: true
       - run: python -m collectors.belanja
+        continue-on-error: true
+      - run: python -m pipeline.food_tags

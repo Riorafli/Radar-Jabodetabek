@@ -366,3 +366,13 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
 .pin.sale { background: #7048e8; }
 .pin.sale::before, .pin.sale::after { border-color: #7048e8; }
 .lg.sale { background: #7048e8; }
+
+/* ============================================================ food filters */
+#f-food .sep { flex: none; width: 1px; margin: 4px 2px; background: var(--line); }
+.note.small { font-size: 12px; margin: -2px 2px 0; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip.halal { background: var(--good-soft); color: var(--good); }
+.chip.nonhalal { background: #ffe3e3; color: #c92a2a; }
+:root[data-theme="dark"] .chip.nonhalal { background: #3b1717; color: #ff8787; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chip.nonhalal { background: #3b1717; color: #ff8787; } }
+.near { font-size: 13px; font-weight: 700; color: var(--info); }

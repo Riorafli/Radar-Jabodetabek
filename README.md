@@ -145,6 +145,7 @@ python scripts/set_webhook.py
 | Add a promo page | Add to `sources.yaml` → `promo`. Check robots.txt + ToS. The collector also enforces robots.txt. |
 | Marketplace / cuci gudang promo | Collected hourly by `collectors/belanja.py` from news RSS. Add one by hand in the bot: `/tambah_promo Shopee \| Flash sale 10.10 \| Diskon 90% \| 2026-10-31 \| \| https://… \| marketplace` |
 | Instagram-only promo | In the bot (admin): `/tambah_promo Brand \| Judul \| Diskon 20% \| 2026-12-31 \| bsd \| https://…` |
+| Halal labels | Set `halal: true` per brand in `config/brands.yaml` only after checking the certificate at bpjph.halal.go.id. Promos without a clear signal get no label. |
 | Tune "viral" | `config/scoring.yaml`. Review the top list weekly. Early on, with little data, try `min_mention_24j: 2`. |
 | Regenerate demo data | `python scripts/make_demo.py` |
 | Run one collector locally | Fill `.env`, then e.g. `python -m collectors.rss` |

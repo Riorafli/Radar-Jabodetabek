@@ -125,7 +125,12 @@
     },
     async promo(area) {
       if (DEMO) return D().promo.filter((r) => areaMatch(r, area, "promo"));
-      return rest(`v_promo?select=id,brand,judul,menu,harga,harga_teks,selesai,syarat,url,sumber,kota_berlaku,sumber_input,kategori,platform,produk,lokasi,diskon_persen,selesai_perkiraan,lat,lon,published_at&order=published_at.desc&limit=300${areaQS(area, "promo")}`);
+      return rest(`v_promo?select=id,brand,judul,menu,harga,harga_teks,selesai,syarat,url,sumber,kota_berlaku,sumber_input,kategori,platform,produk,lokasi,diskon_persen,selesai_perkiraan,lat,lon,published_at,jenis,halal&order=published_at.desc&limit=300${areaQS(area, "promo")}`);
+    },
+    async outlets(brands) {
+      if (DEMO || !brands.length) return [];
+      const pats = brands.slice(0, 60).map((b) => `nama.ilike."*${b.replace(/[^A-Za-z0-9]+/g, "*")}*"`);
+      return rest(`entitas?select=nama,lat,lon,kode_wilayah&osm_id=not.is.null&lat=not.is.null&or=(${encodeURIComponent(pats.join(","))})&limit=5000`);
     },
     async viral(area) {
       if (DEMO) return D().viral.filter((r) => areaMatch(r, area)).sort((a, b) => (a.tier || 1) - (b.tier || 1) || b.skor - a.skor).slice(0, 30);
@@ -152,7 +157,8 @@
 
   // ------------------------------------------------------------ state
   const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null,
-    promos: [], pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false } };
+    promos: [], outlets: [], outletKey: null,
+    pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
 
   function areaFromValue(v) {
@@ -235,9 +241,48 @@
     $("#promo-count").textContent = "";
     try {
       S.promos = await data.promo(S.area);
+      if (S.me) await ensureOutlets();
       drawPromo();
     } catch (e) { fail(el, e); }
   }
+
+  // ---- "terdekat": nearest outlet of the promo brand (OSM outlets) ----
+  const brandRx = (b) => new RegExp(String(b).replace(/[^A-Za-z0-9]+/g, ".*"), "i");
+  async function ensureOutlets() {
+    const brands = [...new Set(S.promos.filter((r) => kat(r) === "makanan").map((r) => (r.brand || "").trim())
+      .filter((b) => b.replace(/[^A-Za-z0-9]/g, "").length >= 3))];
+    const key = brands.join("|");
+    if (S.outletKey === key) return;
+    S.outletKey = key;
+    try { S.outlets = await data.outlets(brands); } catch (e) { S.outlets = []; console.error(e); }
+  }
+  function nearestFor(r) {
+    if (!S.me) return null;
+    if (r.lat != null) return { d: haversine(S.me.lat, S.me.lon, r.lat, r.lon), nama: r.lokasi || r.brand };
+    let best = null;
+    if (kat(r) === "makanan" && r.brand && S.outlets.length) {
+      const rx = brandRx(r.brand);
+      for (const o of S.outlets) {
+        if (!rx.test(o.nama)) continue;
+        const d = haversine(S.me.lat, S.me.lon, o.lat, o.lon);
+        if (!best || d < best.d) best = { d, nama: o.kode_wilayah ? `${o.nama} (${kodeNama(o.kode_wilayah)})` : o.nama };
+      }
+    }
+    if (best) return best;
+    const w = (r.kota_berlaku || []).length && S.wilayahs.find((x) => x.kode === r.kota_berlaku[0]);
+    return w && w.lat != null ? { d: haversine(S.me.lat, S.me.lon, w.lat, w.lon), nama: `pusat ${w.nama}`, kira: true } : null;
+  }
+  function mintaLokasi() {
+    return new Promise((res) => {
+      if (S.me) return res(true);
+      if (!navigator.geolocation) { toast("Browser ini tidak mendukung lokasi."); return res(false); }
+      toast("📡 Mencari lokasi Anda…");
+      navigator.geolocation.getCurrentPosition((p) => { S.me = { lat: p.coords.latitude, lon: p.coords.longitude }; res(true); },
+        () => { toast("Izin lokasi ditolak. Urutan terdekat butuh lokasi Anda."); res(false); },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+    });
+  }
+  const JENIS = { makanan: "🍔 Makanan", minuman: "🥤 Minuman", campuran: "🍽️ Makanan & minuman" };
 
   /** filter + sort the cached promos and redraw (no network) */
   function drawPromo() {
@@ -258,20 +303,38 @@
     $("#f-plat").innerHTML = showPlat ? [["semua", mp.length], ...Object.entries(plats).sort((a, b) => b[1] - a[1])]
       .map(([p, n]) => `<button type="button" data-p="${esc(p)}" class="fchip plat ${f.p === p ? "on" : ""}" style="--pc:${PLAT_WARNA[p] || "var(--accent)"}">
         ${p === "semua" ? "🛒 Semua platform" : esc(p)} <span class="n">${n}</span></button>`).join("") : "";
+    // food chips: jenis + halal (only for the Makanan category)
+    const food = all.filter((r) => kat(r) === "makanan");
+    const cj = { semua: food.length }, ch = { semua: food.length };
+    for (const r of food) { cj[r.jenis || "campuran"] = (cj[r.jenis || "campuran"] || 0) + 1; if (r.halal) ch[r.halal] = (ch[r.halal] || 0) + 1; }
+    const showFood = f.k === "makanan" && food.length > 0;
+    const chip = (t, v, label, n) => `<button type="button" data-${t}="${v}" class="fchip ${f[t] === v ? "on" : ""}" ${!n && v !== "semua" ? "disabled" : ""}>${label} <span class="n">${n || 0}</span></button>`;
+    $("#f-food").hidden = !showFood;
+    $("#halal-note").hidden = !showFood;
+    $("#f-food").innerHTML = showFood
+      ? chip("j", "semua", "🍽️ Semua jenis", cj.semua) + chip("j", "makanan", "🍔 Makanan", cj.makanan) + chip("j", "minuman", "🥤 Minuman", cj.minuman)
+        + '<span class="sep" aria-hidden="true"></span>'
+        + chip("h", "semua", "Semua status", ch.semua) + chip("h", "halal", "✅ Halal", ch.halal) + chip("h", "non_halal", "🚫 Non-halal", ch.non_halal)
+      : "";
+    if (f.s === "dekat" && !S.me) f.s = "baru";
     $("#f-sort").value = f.s;
     $("#f-pasti").checked = f.pasti;
-    $("#f-reset").hidden = f.k === "semua" && f.p === "semua" && f.s === "baru" && !f.q && !f.pasti;
+    $("#f-reset").hidden = f.k === "semua" && f.p === "semua" && f.s === "baru" && !f.q && !f.pasti && f.j === "semua" && f.h === "semua";
 
     const q = f.q.trim().toLowerCase();
     let rows = all.filter((r) =>
       (f.k === "semua" || kat(r) === f.k) &&
       (f.p === "semua" || (kat(r) === "marketplace" && ((r.platform && r.platform.length ? r.platform : ["Lainnya"]).includes(f.p)))) &&
       (!f.pasti || (r.selesai && !r.selesai_perkiraan)) &&
+      (f.k !== "makanan" || f.j === "semua" || (r.jenis || "campuran") === f.j) &&
+      (f.k !== "makanan" || f.h === "semua" || r.halal === f.h) &&
       (!q || [r.brand, r.judul, r.menu, r.produk, r.lokasi, ...(r.platform || [])].some((x) => (x || "").toLowerCase().includes(q))));
     const last = (v) => (v == null ? Infinity : v);
     if (f.s === "akhir") rows.sort((a, b) => last(daysLeft(a.selesai)) - last(daysLeft(b.selesai)));
     if (f.s === "diskon") rows.sort((a, b) => diskonOf(b) - diskonOf(a));
     if (f.s === "harga") rows.sort((a, b) => last(a.harga) - last(b.harga));
+    const near = new Map(S.me ? rows.map((r) => [r, nearestFor(r)]) : []);
+    if (f.s === "dekat") rows.sort((a, b) => last(near.get(a) && near.get(a).d) - last(near.get(b) && near.get(b).d));
 
     $("#promo-count").textContent = all.length ? `Menampilkan ${rows.length} dari ${all.length} promo` : "";
     const el = $("#list-promo");
@@ -296,7 +359,11 @@
         ${r.produk && k !== "makanan" && !r.judul.toLowerCase().includes(r.produk.toLowerCase()) ? `<span class="promo-syarat">🎁 ${esc(r.produk)}</span>` : ""}
         ${harga ? `<span class="promo-price">${esc(harga)}</span>` : ""}
         ${r.syarat ? `<span class="promo-syarat">${esc(r.syarat)}</span>` : ""}
+        ${k === "makanan" ? `<div class="tags">${r.jenis ? `<span class="chip soft">${JENIS[r.jenis] || ""}</span>` : ""}${
+          r.halal === "halal" ? '<span class="chip halal" title="Dari teks promo atau sertifikasi brand yang tercatat">✅ Halal</span>'
+          : r.halal === "non_halal" ? '<span class="chip nonhalal">🚫 Non-halal</span>' : ""}</div>` : ""}
         <span class="meta">${sisaChip(r.selesai, r.selesai_perkiraan)}<span>${where}</span></span>
+        ${near.get(r) ? `<span class="near">🏪 ${esc(near.get(r).nama)} · ${(near.get(r).d / 1000).toFixed(1).replace(".", ",")} km${near.get(r).kira ? " (perkiraan)" : ""}</span>` : ""}
         ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${linkTxt} <span>→</span></a>` : ""}
       </li>`;
     }).join("") || empty(all.length ? "Tidak ada promo yang cocok dengan filter ini." : `Belum ada promo aktif untuk ${areaName()}.`);
@@ -482,9 +549,20 @@
     $("#more-berita").addEventListener("click", () => renderBerita(true));
     $("#f-kat").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) setPF({ k: b.dataset.k, p: "semua" }); });
     $("#f-plat").addEventListener("click", (e) => { const b = e.target.closest("button[data-p]"); if (b) setPF({ p: b.dataset.p }); });
-    $("#f-sort").addEventListener("change", (e) => setPF({ s: e.target.value }));
+    $("#f-sort").addEventListener("change", async (e) => {
+      const s = e.target.value;
+      if (s === "dekat") {
+        if (!(await mintaLokasi())) { e.target.value = S.pf.s; return; }
+        await ensureOutlets();
+      }
+      setPF({ s });
+    });
+    $("#f-food").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-j],button[data-h]");
+      if (b) setPF(b.dataset.j ? { j: b.dataset.j } : { h: b.dataset.h });
+    });
     $("#f-pasti").addEventListener("change", (e) => setPF({ pasti: e.target.checked }));
-    $("#f-reset").addEventListener("click", () => { $("#pq").value = ""; setPF({ k: "semua", p: "semua", s: "baru", q: "", pasti: false }); });
+    $("#f-reset").addEventListener("click", () => { $("#pq").value = ""; setPF({ k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" }); });
     let tp;
     $("#pq").addEventListener("input", (e) => { clearTimeout(tp); tp = setTimeout(() => setPF({ q: e.target.value }), 200); });
     let t;

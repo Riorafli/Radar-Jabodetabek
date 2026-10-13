@@ -125,6 +125,9 @@ def test_validate_promo(m):
     # brand from page hint, garbage date ignored, absurd price dropped
     p = validate_promo({"judul": "Diskon", "periode_selesai": "besok", "harga": 10**12}, "McDonald's", today=today)
     assert p["brand"] == "McDonald's" and p["selesai"] is None and p["harga"] is None
+    # only valid outside Jabodetabek -> dropped; nationwide -> kept for all cities
+    assert validate_promo({"brand": "Office Coffee", "judul": "Cashback", "kota_berlaku": ["Banjarmasin"]}, today=today, matcher=m) is None
+    assert validate_promo({"brand": "X", "judul": "Y", "kota_berlaku": ["Seluruh Indonesia"]}, today=today, matcher=m)["kota_berlaku"] == []
     # missing title -> unusable
     assert validate_promo({"brand": "X"}, today=today) is None
     assert validate_promo("not a dict", today=today) is None
@@ -328,3 +331,32 @@ def test_belanja_youtube_schedule():
     jam = lambda h: datetime(2026, 10, 13, h, 10, tzinfo=timezone.utc)
     assert [h for h in range(24) if giliran_youtube(jam(h), 3)] == [0, 3, 6, 9, 12, 15, 18, 21]
     assert giliran_youtube(jam(5), 1)
+
+
+# --- food promo tags ------------------------------------------------------------------
+def test_food_jenis():
+    from pipeline.food_tags import jenis_of
+    assert jenis_of("Kopi Kenangan Buy 1 Get 1 es kopi susu") == "minuman"
+    assert jenis_of("McDonald's Paket HeBat burger + cola") == "makanan"     # combo counts as a meal
+    assert jenis_of("Diskon 30% di restoran Jepang pilihan") == "makanan"
+    assert jenis_of("Starbucks Diskon 50%", "minuman") == "minuman"          # brand default
+    assert jenis_of("Cashback 20%") == "campuran"
+    assert jenis_of("McDonald's 2 Fanta McFloat", "makanan") == "minuman"   # drink words beat the brand default
+
+
+def test_food_halal_never_guessed():
+    from pipeline.food_tags import halal_of
+    assert halal_of("Paket Babi Panggang Karo") == "non_halal"
+    assert halal_of("Free flow beer setiap Jumat") == "non_halal"
+    assert halal_of("Menu baru bersertifikat halal") == "halal"
+    assert halal_of("Promo menu non-halal spesial") == "non_halal"
+    assert halal_of("HokBen paket hemat", True) == "halal"
+    assert halal_of("Diskon 30% restoran Jepang") is None                    # unknown stays unknown
+    assert halal_of("Hamburger keju") is None                                # 'ham' inside a word is not pork
+
+
+def test_outlet_query_is_overpass_safe():
+    from collectors.outlet import pola, query
+    assert pola(["McDonald's", "Bakmi GM"]) == "McDonald.s|Bakmi GM"
+    q = query(["KFC"])
+    assert '["name"~"KFC",i]' in q and '["brand"~"KFC",i]' in q and "(-6.85,106.35,-5.95,107.35)" in q

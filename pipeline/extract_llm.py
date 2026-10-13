@@ -169,6 +169,9 @@ def validate_promo(p, brand_hint="", today=None, matcher=None):
     if not isinstance(kota, list):
         kota = [kota]
     kota_kode = matcher.kode_from_names([str(k) for k in kota]) if matcher else []
+    umum = ("nasional", "indonesia", "semua", "seluruh", "all", "online", "jabodetabek", "jakarta raya")
+    if matcher and kota and not kota_kode and not any(u in str(k).lower() for k in kota for u in umum):
+        return None  # only valid in cities outside Jabodetabek (e.g. a Banjarmasin cafe on a bank promo page)
     return {
         "brand": brand,
         "judul": judul,

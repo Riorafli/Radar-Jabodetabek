@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import worker, { areaFilter, belanjaQuery, findArea, handle, isAdmin, kategoriOf, parseCommand, parseTambahPromo, platformOf, timeAgo } from "./worker.js";
+import worker, { areaFilter, belanjaQuery, promoFilterArg, findArea, handle, isAdmin, kategoriOf, parseCommand, parseTambahPromo, platformOf, timeAgo } from "./worker.js";
 
 const zonas = [
   { id: 1, nama: "Kemang", alias: ["kemang", "kemang raya"], kecuali: ["bogor"], kode_wilayah: "31.74" },
@@ -56,6 +56,13 @@ test("shopping helpers: kategori, platform, /belanja query", () => {
   assert.equal(parseTambahPromo("Shopee | 10.10 | 90% | 2026-10-31 | | | marketplace").kategori, "marketplace");
   assert.equal(parseTambahPromo("A | B").kategori, "makanan");
   assert.ok(parseTambahPromo("A | B | | | | | xyz").error);
+});
+
+test("promoFilterArg picks jenis/halal words and leaves the area", () => {
+  assert.deepEqual(promoFilterArg("minuman halal kemang"), { jenis: "minuman", halal: "halal", area: "kemang" });
+  assert.deepEqual(promoFilterArg("non halal bsd"), { halal: "non_halal", area: "bsd" });
+  assert.deepEqual(promoFilterArg("makanan"), { jenis: "makanan", area: "" });
+  assert.deepEqual(promoFilterArg("jaksel"), { area: "jaksel" });
 });
 
 test("isAdmin trims ids", () => {

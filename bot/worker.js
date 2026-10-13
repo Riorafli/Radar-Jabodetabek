@@ -11,7 +11,7 @@
 const HELP = `Radar Jabodetabek - berita, promo makanan & tempat viral.
 
 /berita [zona|kota] - berita terkini, mis. /berita bsd
-/promo [zona|kota] - promo makanan, mis. /promo kemang
+/promo [minuman|makanan] [halal|non halal] [zona|kota] - promo makanan, mis. /promo minuman halal kemang
 /belanja [shopee|tokopedia|cuci gudang|zona] - promo marketplace & cuci gudang
 /viral [zona|kota] - lagi viral/ramai, mis. /viral depok
 /baru [zona|kota] - tempat makan baru (OSM)
@@ -150,14 +150,28 @@ async function cmdBerita(env, arg) {
   return `📰 Berita ${judulArea(area)}\n\n` + rows.map((r) => `• ${r.judul}\n  ${r.sumber}, ${timeAgo(r.published_at)}\n  ${r.url}`).join("\n\n");
 }
 
+/** "/promo minuman halal kemang" -> { jenis: "minuman", halal: "halal", area: "kemang" } */
+export function promoFilterArg(arg) {
+  let rest = normalize(arg);
+  const f = {};
+  for (const [w, k, v] of [[" non halal ", "halal", "non_halal"], [" nonhalal ", "halal", "non_halal"], [" halal ", "halal", "halal"],
+    [" minuman ", "jenis", "minuman"], [" minum ", "jenis", "minuman"], [" makanan ", "jenis", "makanan"], [" makan ", "jenis", "makanan"]]) {
+    if (rest.includes(w)) { f[k] = f[k] || v; rest = rest.replace(w, " "); }
+  }
+  return { ...f, area: rest.trim() };
+}
+
 async function cmdPromo(env, arg) {
-  const { area, error } = await resolve(env, arg);
+  const pf = promoFilterArg(arg);
+  const { area, error } = await resolve(env, pf.area);
   if (error) return error;
-  const rows = await sb(env, `v_promo?select=brand,judul,harga,harga_teks,selesai,url&kategori=eq.makanan&order=published_at.desc&limit=8${areaFilter(area, "promo")}`);
-  if (!rows.length) return `Belum ada promo aktif untuk ${judulArea(area)}.`;
-  return `🍜 Promo ${judulArea(area)}\n\n` + rows.map((r) => {
+  const qs = (pf.jenis ? `&jenis=eq.${pf.jenis}` : "") + (pf.halal ? `&halal=eq.${pf.halal}` : "");
+  const rows = await sb(env, `v_promo?select=brand,judul,harga,harga_teks,selesai,url,halal&kategori=eq.makanan${qs}&order=published_at.desc&limit=8${areaFilter(area, "promo")}`);
+  const label = [pf.jenis, pf.halal === "halal" ? "halal" : pf.halal ? "non-halal" : ""].filter(Boolean).join(" ");
+  if (!rows.length) return `Belum ada promo ${label ? `${label} ` : ""}aktif untuk ${judulArea(area)}.`;
+  return `🍜 Promo ${label ? `${label} ` : ""}${judulArea(area)}\n\n` + rows.map((r) => {
     const harga = r.harga_teks || rupiah(r.harga);
-    return `• ${r.judul}` + (harga && !r.judul.includes(harga) ? ` (${harga})` : "") +
+    return `• ${r.halal === "halal" ? "✅ " : r.halal === "non_halal" ? "🚫 " : ""}${r.judul}` + (harga && !r.judul.includes(harga) ? ` (${harga})` : "") +
       (r.selesai ? `\n  s.d. ${r.selesai}` : "") + (r.url ? `\n  ${r.url}` : "");
   }).join("\n\n");
 }
