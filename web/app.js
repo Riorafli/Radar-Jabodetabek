@@ -150,6 +150,19 @@
       const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       return rest(`item?select=judul,url,ringkasan,meta,published_at&sumber=eq.${encodeURIComponent("Google Trends")}&published_at=gt.${encodeURIComponent(since)}&order=published_at.desc&limit=40`);
     },
+    async saham() {
+      if (DEMO) return [];
+      return rest("saham?select=*&order=kode");
+    },
+    async sahamRiwayat() {
+      if (DEMO) return [];
+      const since = new Date(Date.now() - 75 * 86400000).toISOString().slice(0, 10);
+      return rest(`saham_harian?select=kode,tanggal,close&tanggal=gte.${since}&order=tanggal&limit=10000`);
+    },
+    async sahamBerita(kode) {
+      if (DEMO) return [];
+      return rest(`saham_berita?select=judul,url,sumber,terbit&kode=cs.${encodeURIComponent(`{"${kode}"}`)}&order=terbit.desc&limit=6`);
+    },
     async lapor(body) {
       if (DEMO) return;
       await rest("laporan", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ ...body, sumber: "web" }) });
@@ -159,6 +172,7 @@
   // ------------------------------------------------------------ state
   const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null,
     promos: [], outlets: [], outletKey: null,
+    sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false },
     pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
 
@@ -447,6 +461,98 @@
     } catch (e) { el.innerHTML = `<li class="empty">Gagal memuat trending.</li>`; console.error(e); }
   }
 
+  // ------------------------------------------------------------ saham
+  const fmtNum = (n, d = 0) => (n == null ? "–" : Number(n).toLocaleString("id-ID", { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const fmtPct = (n) => (n == null ? "–" : `${n > 0 ? "+" : ""}${fmtNum(n, 2)}%`);
+  const arah = (n) => (n > 0 ? "naik" : n < 0 ? "turun" : "datar");
+  const panah = (n) => (n > 0 ? "▲" : n < 0 ? "▼" : "■");
+  function sparkline(vals, w = 90, h = 28) {
+    if (!vals || vals.length < 2) return `<span class="spark-empty" style="width:${w}px"></span>`;
+    const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
+    const pts = vals.map((v, i) => `${((i / (vals.length - 1)) * w).toFixed(1)},${(h - 2 - ((v - min) / span) * (h - 4)).toFixed(1)}`).join(" ");
+    return `<svg class="spark ${vals[vals.length - 1] >= vals[0] ? "naik" : "turun"}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline points="${pts}"/></svg>`;
+  }
+
+  async function renderSaham() {
+    const el = $("#list-saham");
+    if (!S.sh.loaded) el.innerHTML = skeleton(6);
+    try {
+      const [rows, hist] = await Promise.all([data.saham(), data.sahamRiwayat()]);
+      S.sh.rows = rows;
+      S.sh.hist = {};
+      for (const h of hist) (S.sh.hist[h.kode] = S.sh.hist[h.kode] || []).push(Number(h.close));
+      S.sh.loaded = true;
+      drawSaham();
+    } catch (e) { fail(el, e); }
+  }
+
+  function drawSaham() {
+    const sh = S.sh, el = $("#list-saham");
+    const ihsg = sh.rows.find((r) => r.kode === "IHSG");
+    const list = sh.rows.filter((r) => r.kode !== "IHSG" && r.harga != null);
+    if (!list.length && !ihsg) {
+      $("#ihsg").innerHTML = "";
+      $("#movers").innerHTML = "";
+      $("#f-sektor").innerHTML = "";
+      el.innerHTML = empty("Data saham belum tersedia. Sumber datanya (Google Sheet) belum disambungkan.");
+      return;
+    }
+    const tw = (r) => (r.waktu_data ? new Date(r.waktu_data).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+    $("#ihsg").innerHTML = ihsg ? `
+      <div class="ihsg-main"><span class="lbl">IHSG</span><b class="val">${fmtNum(ihsg.harga, 2)}</b>
+        <span class="pill ${arah(ihsg.persen)}">${panah(ihsg.perubahan)} ${fmtNum(Math.abs(ihsg.perubahan || 0), 2)} (${fmtPct(ihsg.persen)})</span></div>
+      ${sparkline(sh.hist.IHSG, 320, 64)}
+      <span class="note">Indeks Harga Saham Gabungan · data ${esc(tw(ihsg))} WIB · grafik 70 hari</span>` : "";
+    const naik = [...list].filter((r) => r.persen > 0).sort((a, b) => b.persen - a.persen).slice(0, 3);
+    const turun = [...list].filter((r) => r.persen < 0).sort((a, b) => a.persen - b.persen).slice(0, 3);
+    const mv = (r) => `<button type="button" class="mover ${arah(r.persen)}" data-kode="${esc(r.kode)}"><b>${esc(r.kode)}</b> ${fmtPct(r.persen)}</button>`;
+    $("#movers").innerHTML = (naik.length ? `<div><span class="lbl">▲ Naik terbanyak</span>${naik.map(mv).join("")}</div>` : "")
+      + (turun.length ? `<div><span class="lbl">▼ Turun terbanyak</span>${turun.map(mv).join("")}</div>` : "");
+    const sek = {};
+    for (const r of list) if (r.sektor) sek[r.sektor] = (sek[r.sektor] || 0) + 1;
+    $("#f-sektor").innerHTML = [["semua", list.length], ...Object.entries(sek).sort()].map(([s, n]) =>
+      `<button type="button" data-s="${esc(s)}" class="fchip ${sh.sektor === s ? "on" : ""}">${s === "semua" ? "Semua sektor" : esc(s)} <span class="n">${n}</span></button>`).join("");
+    $("#s-sort").value = sh.sort;
+    const q = sh.q.trim().toLowerCase();
+    const rows = list.filter((r) => (sh.sektor === "semua" || r.sektor === sh.sektor)
+      && (!q || r.kode.toLowerCase().includes(q) || (r.nama || "").toLowerCase().includes(q)));
+    const by = { kode: (a, b) => a.kode.localeCompare(b.kode), naik: (a, b) => (b.persen ?? -1e9) - (a.persen ?? -1e9),
+      turun: (a, b) => (a.persen ?? 1e9) - (b.persen ?? 1e9), volume: (a, b) => (b.volume || 0) - (a.volume || 0) };
+    rows.sort(by[sh.sort]);
+    el.innerHTML = rows.map((r, i) => `<li class="saham-row" data-kode="${esc(r.kode)}" style="--i:${i}">
+      <button type="button" class="sh-btn" aria-expanded="false">
+        <span class="sh-id"><b>${esc(r.kode)}</b><span>${esc(r.nama || "")}</span></span>
+        ${sparkline(sh.hist[r.kode])}
+        <span class="sh-harga">${fmtNum(r.harga)}</span>
+        <span class="pill ${arah(r.persen)}">${fmtPct(r.persen)}</span>
+      </button>
+      <div class="sh-detail" hidden></div>
+    </li>`).join("") || empty("Tidak ada saham yang cocok.");
+  }
+
+  async function bukaSaham(li) {
+    const det = li.querySelector(".sh-detail"), btn = li.querySelector(".sh-btn");
+    const open = det.hidden;
+    det.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+    if (!open || det.dataset.ok) return;
+    const r = S.sh.rows.find((x) => x.kode === li.dataset.kode);
+    if (!r) return;
+    det.innerHTML = `${sparkline(S.sh.hist[r.kode], 320, 70)}
+      <dl class="ohlc"><div><dt>Buka</dt><dd>${fmtNum(r.buka)}</dd></div><div><dt>Tertinggi</dt><dd>${fmtNum(r.tertinggi)}</dd></div>
+        <div><dt>Terendah</dt><dd>${fmtNum(r.terendah)}</dd></div><div><dt>Tutup kemarin</dt><dd>${fmtNum(r.tutup_kemarin)}</dd></div>
+        <div><dt>Perubahan</dt><dd class="${arah(r.perubahan)}">${panah(r.perubahan)} ${fmtNum(Math.abs(r.perubahan || 0))}</dd></div>
+        <div><dt>Volume</dt><dd>${fmtNum(r.volume)}</dd></div></dl>
+      <p class="note">${r.sektor ? `Sektor ${esc(r.sektor)} · ` : ""}<a href="https://www.google.com/finance/quote/${encodeURIComponent(r.kode)}:IDX" target="_blank" rel="noopener noreferrer">Lihat di Google Finance →</a></p>
+      <h4>📰 Berita terkait</h4><ul class="sh-news"><li class="note">Memuat…</li></ul>`;
+    det.dataset.ok = "1";
+    try {
+      const news = await data.sahamBerita(r.kode);
+      det.querySelector(".sh-news").innerHTML = news.map((n) => `<li><a href="${esc(safeUrl(n.url) || "#")}" target="_blank" rel="noopener noreferrer">${esc(n.judul)}</a>
+        <span class="note">${esc(n.sumber || "")} · ${timeAgo(n.terbit)}</span></li>`).join("") || `<li class="note">Belum ada berita 7 hari terakhir.</li>`;
+    } catch (e) { det.querySelector(".sh-news").innerHTML = `<li class="note">Gagal memuat berita.</li>`; }
+  }
+
   // ------------------------------------------------------------ map
   function ensureMap() {
     if (S.map || !window.L) return;
@@ -507,11 +613,11 @@
 
   function render(withStats = false) {
     for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === S.tab));
-    for (const t of ["berita", "promo", "viral", "peta"]) $(`#tab-${t}`).hidden = t !== S.tab;
+    for (const t of ["berita", "promo", "viral", "saham", "peta"]) $(`#tab-${t}`).hidden = t !== S.tab;
     moveIndicator();
     saveHash();
     if (withStats) renderStats();
-    ({ berita: renderBerita, promo: renderPromo, viral: renderViral, peta: renderMap })[S.tab]();
+    ({ berita: renderBerita, promo: renderPromo, viral: renderViral, saham: renderSaham, peta: renderMap })[S.tab]();
   }
 
   function fillSelects() {
@@ -548,6 +654,18 @@
     for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => { S.tab = b.dataset.tab; render(); });
     window.addEventListener("resize", moveIndicator);
     $("#more-berita").addEventListener("click", () => renderBerita(true));
+    $("#f-sektor").addEventListener("click", (e) => { const b = e.target.closest("button[data-s]"); if (b) { S.sh.sektor = b.dataset.s; drawSaham(); } });
+    $("#s-sort").addEventListener("change", (e) => { S.sh.sort = e.target.value; drawSaham(); });
+    let ts;
+    $("#sq").addEventListener("input", (e) => { clearTimeout(ts); ts = setTimeout(() => { S.sh.q = e.target.value; drawSaham(); }, 200); });
+    $("#list-saham").addEventListener("click", (e) => { const li = e.target.closest(".sh-btn") && e.target.closest(".saham-row"); if (li) bukaSaham(li); });
+    $("#movers").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-kode]");
+      if (!b) return;
+      S.sh.sektor = "semua"; S.sh.q = ""; $("#sq").value = ""; drawSaham();
+      const li = document.querySelector(`.saham-row[data-kode="${CSS.escape(b.dataset.kode)}"]`);
+      if (li) { li.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "center" }); bukaSaham(li); }
+    });
     $("#f-kat").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) setPF({ k: b.dataset.k, p: "semua" }); });
     $("#f-plat").addEventListener("click", (e) => { const b = e.target.closest("button[data-p]"); if (b) setPF({ p: b.dataset.p }); });
     $("#f-sort").addEventListener("change", async (e) => {
@@ -634,7 +752,7 @@
     fillSelects();
     bind();
     const [tab, area] = location.hash.slice(1).split("/");
-    if (["berita", "promo", "viral", "peta"].includes(tab)) S.tab = tab;
+    if (["berita", "promo", "viral", "saham", "peta"].includes(tab)) S.tab = tab;
     S.area = areaFromValue(area);
     $("#area").value = areaValue(S.area);
     render(true);

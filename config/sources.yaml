@@ -232,6 +232,24 @@ trends:
 google_trends_now:
   url: https://trends.google.com/trending/rss?geo=ID
 
+# Stocks (tab Saham). Prices come from YOUR Google Sheet (GOOGLEFINANCE,
+# ~20 min delayed) published as CSV - see README "Saham". Paste the two
+# "Publish to web" CSV links here. Empty = prices skipped, news still collected.
+saham:
+  csv_kutipan: ""
+  csv_riwayat: ""
+  # headlines that read like advice are skipped - this site gives no investment advice
+  judul_dilewati: "rekomendasi|target harga|layak (dibeli|dikoleksi|dicermati)|saham pilihan|pilihan saham|cuan|top picks?|saham (yang )?(bisa|wajib) (dibeli|dikoleksi|dicermati)|emas antam"
+  rss:
+    - nama: CNBC Indonesia Market
+      url: https://www.cnbcindonesia.com/market/rss
+    - nama: Antara Bursa
+      url: https://www.antaranews.com/rss/ekonomi-bursa.xml
+    - nama: Kontan Investasi
+      url: https://investasi.kontan.co.id/rss
+    - nama: CNN Indonesia Ekonomi
+      url: https://www.cnnindonesia.com/ekonomi/rss
+
 # Reddit (optional; needs REDDIT_CLIENT_ID/SECRET, app-only OAuth).
 reddit:
   subreddits: [indonesia, jakarta]

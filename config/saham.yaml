@@ -1,0 +1,46 @@
+# Watched IDX stocks (tab Saham). kata_kunci: extra words that link a news
+# headline to the stock; ALL-CAPS words match case-sensitively ("BCA"), others
+# match whole words in any case ("Telkom"). After editing, regenerate the Google
+# Sheet template: python scripts/make_saham_template.py
+saham:
+  - {kode: BBCA, nama: Bank Central Asia, sektor: Keuangan, kata_kunci: [BCA]}
+  - {kode: BBRI, nama: Bank Rakyat Indonesia, sektor: Keuangan, kata_kunci: [BRI]}
+  - {kode: BMRI, nama: Bank Mandiri, sektor: Keuangan, kata_kunci: [Bank Mandiri]}
+  - {kode: BBNI, nama: Bank Negara Indonesia, sektor: Keuangan, kata_kunci: [BNI]}
+  - {kode: BRIS, nama: Bank Syariah Indonesia, sektor: Keuangan, kata_kunci: [BSI]}
+  - {kode: ARTO, nama: Bank Jago, sektor: Keuangan, kata_kunci: [Bank Jago]}
+  - {kode: TLKM, nama: Telkom Indonesia, sektor: Infrastruktur, kata_kunci: [Telkom]}
+  - {kode: ISAT, nama: Indosat Ooredoo Hutchison, sektor: Infrastruktur, kata_kunci: [Indosat]}
+  - {kode: TOWR, nama: Sarana Menara Nusantara, sektor: Infrastruktur, kata_kunci: [Protelindo]}
+  - {kode: JSMR, nama: Jasa Marga, sektor: Infrastruktur, kata_kunci: [Jasa Marga]}
+  - {kode: BREN, nama: Barito Renewables Energy, sektor: Infrastruktur, kata_kunci: [Barito Renewables]}
+  - {kode: ASII, nama: Astra International, sektor: Industri, kata_kunci: [Astra International]}
+  - {kode: UNTR, nama: United Tractors, sektor: Industri, kata_kunci: [United Tractors]}
+  - {kode: GOTO, nama: GoTo Gojek Tokopedia, sektor: Teknologi, kata_kunci: [GoTo]}
+  - {kode: BUKA, nama: Bukalapak, sektor: Teknologi, kata_kunci: [Bukalapak]}
+  - {kode: EMTK, nama: Elang Mahkota Teknologi, sektor: Teknologi, kata_kunci: [Emtek]}
+  - {kode: UNVR, nama: Unilever Indonesia, sektor: Konsumen, kata_kunci: [Unilever]}
+  - {kode: ICBP, nama: Indofood CBP, sektor: Konsumen, kata_kunci: [Indofood CBP]}
+  - {kode: INDF, nama: Indofood Sukses Makmur, sektor: Konsumen, kata_kunci: [Indofood]}
+  - {kode: MYOR, nama: Mayora Indah, sektor: Konsumen, kata_kunci: [Mayora]}
+  - {kode: CPIN, nama: Charoen Pokphand Indonesia, sektor: Konsumen, kata_kunci: [Charoen Pokphand]}
+  - {kode: AMRT, nama: Sumber Alfaria Trijaya, sektor: Konsumen, kata_kunci: [Alfamart]}
+  - {kode: MAPI, nama: Mitra Adiperkasa, sektor: Konsumen, kata_kunci: [Mitra Adiperkasa]}
+  - {kode: ACES, nama: Aspirasi Hidup Indonesia, sektor: Konsumen, kata_kunci: [Aspirasi Hidup]}
+  - {kode: KLBF, nama: Kalbe Farma, sektor: Kesehatan, kata_kunci: [Kalbe]}
+  - {kode: SIDO, nama: Industri Jamu Sido Muncul, sektor: Kesehatan, kata_kunci: [Sido Muncul]}
+  - {kode: ADRO, nama: AlamTri Resources Indonesia, sektor: Energi, kata_kunci: [AlamTri]}
+  - {kode: PTBA, nama: Bukit Asam, sektor: Energi, kata_kunci: [Bukit Asam]}
+  - {kode: ITMG, nama: Indo Tambangraya Megah, sektor: Energi, kata_kunci: [Indo Tambangraya]}
+  - {kode: MEDC, nama: Medco Energi Internasional, sektor: Energi, kata_kunci: [Medco]}
+  - {kode: PGAS, nama: Perusahaan Gas Negara, sektor: Energi, kata_kunci: [PGN]}
+  - {kode: ANTM, nama: Aneka Tambang, sektor: Bahan Baku, kata_kunci: [Aneka Tambang]}  # not 'Antam': daily gold-price news
+  - {kode: INCO, nama: Vale Indonesia, sektor: Bahan Baku, kata_kunci: [Vale Indonesia]}
+  - {kode: MDKA, nama: Merdeka Copper Gold, sektor: Bahan Baku, kata_kunci: [Merdeka Copper]}
+  - {kode: AMMN, nama: Amman Mineral Internasional, sektor: Bahan Baku, kata_kunci: [Amman Mineral]}
+  - {kode: TPIA, nama: Chandra Asri Pacific, sektor: Bahan Baku, kata_kunci: [Chandra Asri]}
+  - {kode: SMGR, nama: Semen Indonesia, sektor: Bahan Baku, kata_kunci: [Semen Indonesia]}
+  - {kode: BSDE, nama: Bumi Serpong Damai, sektor: Properti, kata_kunci: [Bumi Serpong Damai, Sinar Mas Land]}
+  - {kode: CTRA, nama: Ciputra Development, sektor: Properti, kata_kunci: [Ciputra]}
+  - {kode: SMRA, nama: Summarecon Agung, sektor: Properti, kata_kunci: [Summarecon]}
+  - {kode: PWON, nama: Pakuwon Jati, sektor: Properti, kata_kunci: [Pakuwon]}

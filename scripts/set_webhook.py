@@ -17,6 +17,7 @@ COMMANDS = [
     ("belanja", "Promo marketplace & cuci gudang, mis. /belanja shopee"),
     ("viral", "Tempat viral/ramai, mis. /viral depok"),
     ("baru", "Tempat makan baru"),
+    ("saham", "Harga saham BEI, mis. /saham BBCA"),
     ("zona", "Daftar zona"),
     ("langganan", "Notifikasi tempat viral di suatu zona"),
     ("berhenti", "Hapus semua langganan"),

@@ -196,6 +196,39 @@ create table if not exists notif_log (
   primary key (chat_id, entitas_id, tanggal)
 );
 
+-- ---------------------------------------------------------------- stocks (tab Saham)
+create table if not exists saham (
+  kode          text primary key,       -- BBCA ... ; IHSG = composite index
+  nama          text,
+  sektor        text,
+  harga         numeric,
+  perubahan     numeric,
+  persen        numeric,
+  volume        numeric,
+  tertinggi     numeric,
+  terendah      numeric,
+  buka          numeric,
+  tutup_kemarin numeric,
+  waktu_data    timestamptz,             -- trade time reported by the source (delayed)
+  diperbarui    timestamptz not null default now()
+);
+create table if not exists saham_harian (
+  kode    text not null,
+  tanggal date not null,
+  close   numeric not null,
+  primary key (kode, tanggal)
+);
+create table if not exists saham_berita (
+  id     bigserial primary key,
+  url    text unique not null,
+  judul  text not null,
+  sumber text,
+  terbit timestamptz not null default now(),
+  kode   text[] not null default '{}'
+);
+create index if not exists saham_berita_kode on saham_berita using gin (kode);
+create index if not exists saham_berita_terbit on saham_berita (terbit desc);
+
 -- ---------------------------------------------------------------- views for web/bot
 create or replace view v_berita with (security_invoker = true) as
 select i.id, i.tipe, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
@@ -243,7 +276,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['wilayah','kawasan','kawasan_wilayah','zona','entitas',
-                           'item','promo','skor','zona_statistik'] loop
+                           'item','promo','skor','zona_statistik','saham','saham_harian','saham_berita'] loop
     execute format('alter table %I enable row level security', t);
     if not exists (select 1 from pg_policies where tablename = t and policyname = 'baca publik') then
       execute format('create policy "baca publik" on %I for select using (true)', t);

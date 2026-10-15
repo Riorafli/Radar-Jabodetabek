@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import worker, { areaFilter, belanjaQuery, promoFilterArg, findArea, handle, isAdmin, kategoriOf, parseCommand, parseTambahPromo, platformOf, timeAgo } from "./worker.js";
+import worker, { areaFilter, belanjaQuery, formatSaham, promoFilterArg, findArea, handle, isAdmin, kategoriOf, parseCommand, parseTambahPromo, platformOf, timeAgo } from "./worker.js";
 
 const zonas = [
   { id: 1, nama: "Kemang", alias: ["kemang", "kemang raya"], kecuali: ["bogor"], kode_wilayah: "31.74" },
@@ -63,6 +63,13 @@ test("promoFilterArg picks jenis/halal words and leaves the area", () => {
   assert.deepEqual(promoFilterArg("non halal bsd"), { halal: "non_halal", area: "bsd" });
   assert.deepEqual(promoFilterArg("makanan"), { jenis: "makanan", area: "" });
   assert.deepEqual(promoFilterArg("jaksel"), { area: "jaksel" });
+});
+
+test("formatSaham shows price, direction and range", () => {
+  const out = formatSaham({ kode: "BBCA", nama: "Bank Central Asia", harga: 9875, perubahan: 125, persen: 1.28, buka: 9750, tertinggi: 9900, terendah: 9725, volume: 51234500 });
+  assert.match(out, /BBCA · Bank Central Asia/);
+  assert.match(out, /Harga: 9\.875  ▲ \+1,28%/);
+  assert.match(out, /Volume: 51\.234\.500/);
 });
 
 test("isAdmin trims ids", () => {

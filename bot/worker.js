@@ -15,6 +15,7 @@ const HELP = `Radar Jabodetabek - berita, promo makanan & tempat viral.
 /belanja [shopee|tokopedia|cuci gudang|zona] - promo marketplace & cuci gudang
 /viral [zona|kota] - lagi viral/ramai, mis. /viral depok
 /baru [zona|kota] - tempat makan baru (OSM)
+/saham [kode] - harga saham BEI, mis. /saham BBCA (data tertunda, bukan saran investasi)
 /zona - daftar zona
 /langganan <zona|kota> - notifikasi tempat viral
 /berhenti - hapus semua langganan
@@ -296,6 +297,33 @@ async function cmdTambahPromo(env, userId, arg) {
   return `✅ Promo disimpan (#${item.id}): ${judul}`;
 }
 
+const idr = (n, d = 0) => (n == null ? "-" : Number(n).toLocaleString("id-ID", { minimumFractionDigits: d, maximumFractionDigits: d }));
+const pct = (n) => (n == null ? "-" : `${n > 0 ? "+" : ""}${idr(n, 2)}%`);
+export function formatSaham(r) {
+  const a = r.perubahan > 0 ? "▲" : r.perubahan < 0 ? "▼" : "■";
+  return `📈 ${r.kode}${r.nama ? ` · ${r.nama}` : ""}\nHarga: ${idr(r.harga, r.kode === "IHSG" ? 2 : 0)}  ${a} ${pct(r.persen)}\n`
+    + `Buka ${idr(r.buka)} · Tertinggi ${idr(r.tertinggi)} · Terendah ${idr(r.terendah)}\nVolume: ${idr(r.volume)}`;
+}
+const CATATAN_SAHAM = "\n\n(Data Google Finance, tertunda ±20 menit. Bukan saran investasi.)";
+
+async function cmdSaham(env, arg) {
+  const kode = (arg || "").toUpperCase().replace(/[^A-Z]/g, "");
+  if (kode) {
+    const rows = await sb(env, `saham?select=*&kode=eq.${kode}`);
+    if (!rows.length) return `Kode ${kode} tidak ada di daftar pantauan. Coba /saham untuk ringkasan.`;
+    return formatSaham(rows[0]) + CATATAN_SAHAM;
+  }
+  const rows = await sb(env, "saham?select=kode,nama,harga,perubahan,persen&harga=not.is.null");
+  if (!rows.length) return "Data saham belum tersedia.";
+  const ihsg = rows.find((r) => r.kode === "IHSG");
+  const list = rows.filter((r) => r.kode !== "IHSG" && r.persen != null);
+  const naik = [...list].sort((a, b) => b.persen - a.persen).slice(0, 3);
+  const turun = [...list].sort((a, b) => a.persen - b.persen).slice(0, 3);
+  return (ihsg ? `IHSG ${idr(ihsg.harga, 2)} (${pct(ihsg.persen)})\n\n` : "")
+    + `▲ Naik terbanyak: ${naik.map((r) => `${r.kode} ${pct(r.persen)}`).join(", ")}\n`
+    + `▼ Turun terbanyak: ${turun.map((r) => `${r.kode} ${pct(r.persen)}`).join(", ")}\n\nDetail: /saham BBCA` + CATATAN_SAHAM;
+}
+
 export async function handle(env, update) {
   const msg = update.message || update.edited_message;
   if (!msg?.text) return null;
@@ -312,6 +340,7 @@ export async function handle(env, update) {
     case "/viral": return cmdViral(env, arg);
     case "/baru": return cmdBaru(env, arg);
     case "/zona": return cmdZona(env);
+    case "/saham": return cmdSaham(env, arg);
     case "/langganan": return cmdLangganan(env, chatId, arg);
     case "/berhenti": return cmdBerhenti(env, chatId);
     case "/lapor": return cmdLapor(env, arg);

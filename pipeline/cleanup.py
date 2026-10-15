@@ -35,6 +35,8 @@ def main():
         ("statistik zona lama", "delete from zona_statistik where tanggal < current_date - 180"),
         ("halaman_cache lama", "delete from halaman_cache where diambil < now() - interval '90 days'"),
         ("geocode_cache lama", "delete from geocode_cache where dibuat < now() - interval '180 days'"),
+        ("berita saham lama", "delete from saham_berita where terbit < now() - interval '30 days'"),
+        ("harga harian lama", "delete from saham_harian where tanggal < current_date - 400"),
         ("tempat tanpa sinyal", """delete from entitas e where e.tipe='tempat' and e.osm_id is null
              and e.dibuat < now() - interval '60 days'
              and not exists (select 1 from sinyal s where s.entitas_id=e.id)

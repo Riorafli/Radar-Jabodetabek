@@ -428,3 +428,43 @@ def test_belanja_outside_jabodetabek_dropped(m):
     today = date(2026, 10, 15)
     assert validate_belanja({"kategori": "lainnya", "judul": "Diskon fitness", "kota": "Jambi"}, today, today, m) is None
     assert validate_belanja({"kategori": "lainnya", "judul": "Cashback", "kota": "Seluruh Indonesia"}, today, today, m)
+
+
+# --- saham --------------------------------------------------------------------------------
+def test_saham_parse_kutipan():
+    from collectors.saham import parse_kutipan
+    csv_text = ("kode,simbol,nama,harga,perubahan,persen,volume,tertinggi,terendah,buka,tutup_kemarin,waktu\n"
+                "IHSG,IDX:COMPOSITE,IDX Composite,\"5,943.21\",12.5,0.21,,5950,5900,5930,5930.71,2026-10-15 15:59\n"
+                "BBCA,IDX:BBCA,Bank Central Asia,9875,125,1.28,51234500,9900,9725,9750,9750,2026-10-15 15:49\n"
+                "AMMN,IDX:AMMN,,#N/A,,,,,,,,\n")
+    rows = parse_kutipan(csv_text)
+    assert [r["kode"] for r in rows] == ["IHSG", "BBCA"]          # #N/A row skipped
+    assert rows[0]["harga"] == 5943.21 and rows[1]["volume"] == 51234500
+    assert rows[1]["waktu"].hour == 15 and rows[1]["waktu"].utcoffset().total_seconds() == 7 * 3600
+
+
+def test_saham_parse_riwayat():
+    from collectors.saham import parse_riwayat
+    text = ("IHSG,,,BBCA,,\n"
+            "Date,Close,,Date,Close,\n"
+            "10/13/2026 16:00:00,5920.1,,10/13/2026 16:00:00,9800,\n"
+            "10/14/2026 16:00:00,5930.7,,10/14/2026 16:00:00,#N/A,\n")
+    out = parse_riwayat(text)
+    assert ("IHSG", date(2026, 10, 14), 5930.7) in out
+    assert ("BBCA", date(2026, 10, 13), 9800.0) in out and len(out) == 3
+
+
+def test_saham_news_matching():
+    from collectors.saham import kode_disebut, pola_saham
+    pola = pola_saham([{"kode": "BBCA", "kata_kunci": ["BCA"]}, {"kode": "BUKA", "kata_kunci": ["Bukalapak"]},
+                       {"kode": "TLKM", "kata_kunci": ["Telkom"]}])
+    assert kode_disebut("Laba BCA naik, saham BBCA menguat", pola) == ["BBCA"]
+    assert kode_disebut("IHSG dibuka melemah, toko buka lebih pagi", pola) == []      # 'buka' is not BUKA
+    assert kode_disebut("telkom luncurkan layanan baru", pola) == ["TLKM"]
+    assert kode_disebut("Saham BBCA-W naik", pola) == []                              # warrant code is not BBCA
+
+
+def test_saham_template_matches_watch_list():
+    from collectors.saham import daftar_saham
+    kode = [s["kode"] for s in daftar_saham()]
+    assert len(kode) == len(set(kode)) and "BBCA" in kode and all(k.isupper() and 4 == len(k) for k in kode)

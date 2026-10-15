@@ -36,6 +36,7 @@
       <button role="tab" data-tab="berita" aria-selected="true">📰 Berita</button>
       <button role="tab" data-tab="promo">🏷️ Promo</button>
       <button role="tab" data-tab="viral">🔥 Viral</button>
+      <button role="tab" data-tab="saham">📈 Saham</button>
       <button role="tab" data-tab="peta">🗺️ Peta</button>
     </nav>
   </header>
@@ -117,6 +118,30 @@
           <button class="btn" type="submit">Laporkan</button>
         </div>
       </form>
+    </section>
+
+    <section id="tab-saham" class="panel" hidden>
+      <div class="panel-head">
+        <h2>Saham BEI</h2>
+        <div class="search"><span aria-hidden="true">🔎</span><input id="sq" type="search" placeholder="Cari kode / nama…" aria-label="Cari saham"></div>
+      </div>
+      <p class="note disclaimer">⚠️ Data dari Google Finance, tertunda ±20 menit. Hanya informasi, <b>bukan rekomendasi atau saran investasi</b>.</p>
+      <div id="ihsg" class="ihsg"></div>
+      <div id="movers" class="movers"></div>
+      <div class="filters">
+        <div id="f-sektor" class="chips" role="group" aria-label="Sektor"></div>
+        <div class="filter-row">
+          <label class="sort">Urutkan
+            <select id="s-sort">
+              <option value="kode">Kode A–Z</option>
+              <option value="naik">Naik terbesar</option>
+              <option value="turun">Turun terbesar</option>
+              <option value="volume">Volume terbesar</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <ul id="list-saham" class="list saham-list"></ul>
     </section>
 
     <section id="tab-peta" class="panel" hidden>

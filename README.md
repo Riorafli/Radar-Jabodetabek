@@ -161,6 +161,26 @@ python scripts/set_webhook.py
 | Overpass | fair use | 20 queries/day at 03:00 WIB, 5 s apart |
 | Supabase | 500 MB | daily cleanup (02:30 WIB): news > 14 days, videos > 30 days, expired promos, signals > 30 days. Change with repo variables `RETENSI_BERITA_HARI` / `RETENSI_POST_HARI`. |
 
+## Saham (stock tab) - one-time Google Sheets setup
+
+Free IDX prices come from **your own Google Sheet** using `GOOGLEFINANCE`
+(about 20 minutes delayed). Twelve Data's free plan does not include IDX,
+idx.co.id blocks bots, and Yahoo's robots.txt forbids them.
+
+1. `python scripts/make_saham_template.py` (already done: see `templates/`).
+2. sheets.new → **File → Settings → Locale: United States** → Save.
+   Same dialog, tab **Calculation → Recalculation: On change and every minute** → Save.
+3. **File → Import → Upload** `templates/saham.csv` → *Replace current sheet*,
+   keep "Convert text to numbers, dates, and formulas" ticked. Rename the tab `saham`.
+4. **File → Import → Upload** `templates/riwayat.csv` → *Insert new sheet(s)*.
+5. **File → Share → Publish to web**: choose tab `saham`, format **CSV**, Publish, copy the link.
+   Repeat for tab `riwayat`.
+6. Paste both links into `config/sources.yaml` → `saham.csv_kutipan` / `saham.csv_riwayat`, push.
+
+If the IHSG row shows nothing, change its symbol (cell B2) from `IDX:COMPOSITE`
+to `INDEXIDX:COMPOSITE`. The site only shows data - no buy/sell advice; headlines
+that read like advice ("rekomendasi", "target harga") are skipped.
+
 ## Things to know
 
 - **Region codes:** the blueprint lists `31.71–31.75` without the order. Verified against BMKG

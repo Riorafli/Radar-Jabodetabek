@@ -1,0 +1,20 @@
+name: saham
+on:
+  schedule:
+    - cron: "*/30 2-10 * * 1-5"   # trading days 09:00-17:30 WIB, every 30 min
+    - cron: "0 */4 * * 0,6"       # weekends: news only changes
+  workflow_dispatch:
+concurrency: { group: saham, cancel-in-progress: false }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CONTACT_EMAIL: ${{ secrets.CONTACT_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - run: python -m collectors.saham
