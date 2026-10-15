@@ -273,9 +273,12 @@ Untuk setiap artikel (tanggal terbit, judul, ringkasan), tentukan kategori:
   termasuk video/artikel rekomendasi produk murah atau "racun" marketplace yang menyebut produk tertentu
 - "cuci_gudang": SALE DI LOKASI FISIK: cuci gudang, warehouse sale, clearance sale, obral, bazar diskon, midnight sale,
   big sale, full day sale, mega sale di toko, supermarket, hypermarket, department store, mal, atau gedung acara
+  termasuk lelang/obral di pasar (mis. Tanah Abang) dan cuci gudang akhir tahun di dealer
 - "lainnya": promo belanja lain tanpa lokasi fisik atau platform online tertentu (mis. promo kartu kredit/bank)
 - "bukan": bukan info promo yang bisa dimanfaatkan (berita bisnis, PHK, regulasi, gosip, ulasan produk tanpa promo,
-  tutorial, challenge, vlog, atau konten hiburan yang tidak menyebut produk spesifik yang bisa dibeli)
+  tutorial, challenge, vlog, atau konten hiburan yang tidak menyebut produk spesifik yang bisa dibeli,
+  iklan jual-beli properti/gudang/rumah, dan online shop TANPA lokasi fisik yang jualan lewat live/WhatsApp/kirim paket.
+  Penjual yang punya lapak/toko fisik (mis. kios di Pasar Tanah Abang, showroom) tetap "cuci_gudang" walau mencantumkan nomor WA)
 Untuk "marketplace", "produk" wajib berisi nama produk spesifik (merek/jenis barang), bukan kategori umum seperti "makeup".
 Kembalikan JSON: {{"hasil": [{{"no": 1, "kategori": "...", "judul": "judul promo singkat",
  "acara": "nama acara/kampanye promo, sama persis untuk artikel tentang acara yang sama (mis. 'Transmart Full Day Sale', 'Shopee 10.10 Brand Festival') atau null",
@@ -302,7 +305,7 @@ def _platforms(v):
     return out[:3]
 
 
-def validate_belanja(r, terbit, today=None, matcher=None):
+def validate_belanja(r, terbit, today=None, matcher=None, umur=None):
     """Clean one LLM row for a shopping promo, or None if unusable/expired."""
     today = today or today_wib()
     if not isinstance(r, dict) or r.get("kategori") not in KATEGORI_BELANJA:
@@ -319,7 +322,7 @@ def validate_belanja(r, terbit, today=None, matcher=None):
         selesai = None
     perkiraan = False
     if not selesai:
-        selesai = max(terbit, mulai or terbit) + timedelta(days=UMUR_TANPA_TANGGAL[kat])
+        selesai = max(terbit, mulai or terbit) + timedelta(days=umur or UMUR_TANPA_TANGGAL[kat])
         perkiraan = True
     if selesai < today or (mulai and selesai < mulai):
         return None
@@ -329,6 +332,8 @@ def validate_belanja(r, terbit, today=None, matcher=None):
     except (TypeError, ValueError):
         diskon = None
     lokasi, kota = _short(r.get("lokasi"), 120), _short(r.get("kota"), 60)
+    if kat == "cuci_gudang" and not (lokasi or kota):
+        return None  # a physical sale without a place is useless
     kota_kode = matcher.kode_from_names([x for x in (kota, lokasi) if x]) if matcher and kat != "marketplace" else []
     return {
         "kategori": kat, "judul": judul, "acara": _short(r.get("acara"), 120), "platform": platform,
@@ -340,7 +345,7 @@ def validate_belanja(r, terbit, today=None, matcher=None):
     }
 
 
-def extract_belanja(articles, matcher=None, chunk=12):
+def extract_belanja(articles, matcher=None, chunk=6):  # 12 per call lost accuracy
     """articles: [{judul, ringkasan, terbit(datetime)}] -> list of validated
     dicts / None (not a promo), one per article processed. Stops at the first
     chunk the LLM fails on (callers retry the rest later). None if nothing ran."""
@@ -359,6 +364,6 @@ def extract_belanja(articles, matcher=None, chunk=12):
             except (TypeError, ValueError, AttributeError):
                 continue
             if 0 <= n < len(part):
-                rows[n] = validate_belanja(r, part[n]["terbit"].date(), matcher=matcher)
+                rows[n] = validate_belanja(r, part[n]["terbit"].date(), matcher=matcher, umur=part[n].get("umur"))
         out += rows
     return out if out else None

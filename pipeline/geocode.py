@@ -134,6 +134,12 @@ class Matcher:
         return min(cands, key=lambda w: haversine_m(lat, lon, w["lat"], w["lon"]))["kode"]
 
 
+def rapikan_kode(kode):
+    """['31', '31.71'] -> ['31.71']: drop a province code when a city in it is known."""
+    kode = list(dict.fromkeys(k for k in kode if k))
+    return [k for k in kode if not any(o != k and o.startswith(k + ".") for o in kode)]
+
+
 def in_bbox(lat, lon):
     return BBOX[1] <= lat <= BBOX[3] and BBOX[0] <= lon <= BBOX[2]
 

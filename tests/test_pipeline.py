@@ -375,3 +375,34 @@ def test_generic_jakarta_in_summary_is_not_enough(m):
     assert parse_entry(e3, {"filter_wilayah": True}, m)["kode_wilayah"] == "31"     # 'DKI' is specific
     e2 = _entry("Banjir rendam rumah warga", "Banjir terjadi di Cipondoh, Kota Tangerang.")
     assert parse_entry(e2, {"filter_wilayah": True}, m)["kode_wilayah"] == "36.71"
+
+
+def test_cuci_gudang_needs_a_place(m):
+    from pipeline.extract_llm import validate_belanja
+    today = date(2026, 10, 15)
+    assert validate_belanja({"kategori": "cuci_gudang", "judul": "Cuci gudang akhir tahun"}, today, today, m) is None
+    ok = validate_belanja({"kategori": "cuci_gudang", "judul": "Lelang gamis cuci gudang", "lokasi": "Pasar Tanah Abang",
+                           "harga": 35000}, today, today, m)
+    assert ok["kota_berlaku"] == ["31.71"] and ok["harga"] == 35000
+
+
+def test_youtube_groups_backward_compatible():
+    from collectors.belanja import grup_youtube
+    assert grup_youtube({"queries": ["racun shopee"], "per_run": 1})[0]["nama"] == "marketplace"
+    assert [g["nama"] for g in grup_youtube({"grup": [{"nama": "a"}, {"nama": "b"}]})] == ["a", "b"]
+    assert grup_youtube({}) == []
+
+
+def test_belanja_validity_override(m):
+    from pipeline.extract_llm import validate_belanja
+    today = date(2026, 10, 15)
+    r = {"kategori": "cuci_gudang", "judul": "Lelang gamis", "lokasi": "Pasar Tanah Abang"}
+    assert validate_belanja(r, date(2026, 10, 11), today, m) is None                    # 3-day default: over
+    assert validate_belanja(r, date(2026, 10, 11), today, m, umur=7)["selesai"] == date(2026, 10, 18)
+
+
+def test_rapikan_kode():
+    from pipeline.geocode import rapikan_kode
+    assert rapikan_kode(["31", "31.71"]) == ["31.71"]
+    assert rapikan_kode(["31.74", "36.74", "31.74"]) == ["31.74", "36.74"]
+    assert rapikan_kode(["31"]) == ["31"]

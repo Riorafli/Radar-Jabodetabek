@@ -125,31 +125,53 @@ belanja:
       url: https://www.antaranews.com/rss/tekno.xml
     - nama: Tempo Bisnis
       url: https://rss.tempo.co/bisnis
-  # Automatic marketplace products from YouTube (uses YOUTUBE_API_KEY).
-  # One search (~100 units) every `setiap_jam` hours -> 8/day with 3.
+  # Automatic shopping finds from YouTube (uses YOUTUBE_API_KEY). Every
+  # `setiap_jam` hours each group runs `per_run` searches (~100 units each):
+  # 2 groups x 8 runs/day = 16 searches/day.
   youtube:
     setiap_jam: 3
-    per_run: 1
     max_results: 15
-    min_views: 2000
-    hari: 3
-    # tested 2026-10-13: these return Indonesian product videos
-    # ("racun tokopedia", "promo lazada" return almost nothing; "shopee haul" is mostly Brazil)
-    queries:
-      - racun shopee
-      - racun tiktok shop
-      - flash sale shopee
-      - spill produk tiktok shop
-      - racun shopee murah
-      - barang viral shopee
+    grup:
+      # tested 2026-10-13: Indonesian product videos ("racun tokopedia",
+      # "promo lazada" return almost nothing; "shopee haul" is mostly Brazil)
+      - nama: marketplace
+        per_run: 1
+        urut: viewCount
+        hari: 3
+        min_views: 2000
+        queries:
+          - racun shopee
+          - racun tiktok shop
+          - flash sale shopee
+          - spill produk tiktok shop
+          - racun shopee murah
+          - barang viral shopee
+      # tested 2026-10-15: Tanah Abang clearance, dealer year-end clearance,
+      # store warehouse sales. Few views, so newest first and a low view floor.
+      # ("bazar diskon", "obral besar", "midnight sale mall" return nothing)
+      - nama: cuci_gudang
+        per_run: 1
+        urut: date
+        hari: 7
+        min_views: 30
+        # markets/showrooms run these sales for days: assume 7 days when no end date
+        # (news items keep 3 days - those are usually one-day events)
+        berlaku_hari: 7
+        queries:
+          - cuci gudang jakarta
+          - warehouse sale jakarta
+          - cuci gudang bekasi
+          - cuci gudang tangerang
+          - cuci gudang depok
+          - cuci gudang bogor
   # Not used on purpose: Google News RSS (robots.txt disallows bots),
   # Shopee/Tokopedia/Lazada pages (ToS forbids scraping, JS-only).
 
 # YouTube Data API. Each search costs ~100 units (quota 10,000/day).
 # The collector runs every 2 h and uses `per_run` queries per run, rotating
-# through the list -> 12 runs x 5 = 60 searches/day (~6,100 units).
+# through the list -> 12 runs x 4 = 48 searches/day (~4,900 units).
 youtube:
-  per_run: 5
+  per_run: 4
   max_results: 25
   queries:
     - kuliner viral jakarta

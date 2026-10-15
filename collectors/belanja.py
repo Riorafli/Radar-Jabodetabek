@@ -20,7 +20,7 @@ import feedparser
 
 from pipeline import extract_llm
 from pipeline.common import clean_html, db, env, http, load_config, log, sha1
-from pipeline.geocode import Match, Matcher, nominatim, zona_ids
+from pipeline.geocode import Match, Matcher, nominatim, rapikan_kode, zona_ids
 from pipeline.items import insert_item
 
 MARKETPLACE = re.compile(r"\b(shopee|tokopedia|lazada|blibli|tiktok ?shop|bukalapak|zalora|jd\.id)\b", re.I)
@@ -113,50 +113,65 @@ def giliran_youtube(now, setiap_jam):
     return setiap_jam <= 1 or now.hour % setiap_jam == 0
 
 
+def grup_youtube(yt):
+    """Config groups; an old single-list config still works."""
+    if yt.get("grup"):
+        return yt["grup"]
+    if not yt.get("queries"):
+        return []
+    return [{"nama": "marketplace", "queries": yt["queries"], "per_run": yt.get("per_run", 1),
+             "urut": "viewCount", "hari": yt.get("hari", 3), "min_views": yt.get("min_views", 2000)}]
+
+
 def ambil_youtube(cfg, now):
-    """Recent, popular marketplace-promo videos as 'articles' for the same pipeline."""
+    """Recent shopping videos (marketplace finds, cuci gudang) as 'articles' for the same pipeline."""
     from collectors.youtube import pick_queries
 
     yt = cfg.get("belanja", {}).get("youtube", {})
     key = env("YOUTUBE_API_KEY")
-    if not key or not yt.get("queries"):
+    grup = grup_youtube(yt)
+    if not key or not grup:
         return []
     if not (env("BELANJA_YT_PAKSA") or giliran_youtube(now, int(yt.get("setiap_jam", 3)))):
         return []
     api = "https://www.googleapis.com/youtube/v3"
-    after = (now - timedelta(days=int(yt.get("hari", 3)))).strftime("%Y-%m-%dT%H:%M:%SZ")
-    videos = {}
-    for q in pick_queries(yt["queries"], int(yt.get("per_run", 1)), now):
-        try:
-            r = http().get(f"{api}/search", params={
-                "key": key, "q": q, "part": "snippet", "type": "video", "regionCode": "ID", "relevanceLanguage": "id",
-                "order": "viewCount", "publishedAfter": after, "maxResults": int(yt.get("max_results", 15))}, timeout=30)
-            r.raise_for_status()
-        except Exception as e:
-            log(f"belanja youtube '{q}': gagal ({e})")
-            continue
-        for it in r.json().get("items", []):
-            if it["id"].get("videoId"):
-                videos[it["id"]["videoId"]] = it["snippet"]
-        log(f"belanja youtube '{q}': {len(r.json().get('items', []))} video")
-    if not videos:
-        return []
-    views = {}
-    try:
-        r = http().get(f"{api}/videos", params={"key": key, "part": "statistics", "id": ",".join(list(videos)[:50])}, timeout=30)
-        r.raise_for_status()
-        views = {v["id"]: int(v.get("statistics", {}).get("viewCount", 0) or 0) for v in r.json().get("items", [])}
-    except Exception as e:
-        log(f"belanja youtube stats: gagal ({e})")
-    min_views = int(yt.get("min_views", 2000))
     arts = []
-    for vid, sn in videos.items():
-        if views.get(vid, 0) < min_views:
+    for g in grup:
+        after = (now - timedelta(days=int(g.get("hari", 3)))).strftime("%Y-%m-%dT%H:%M:%SZ")
+        videos = {}
+        for q in pick_queries(g.get("queries", []), int(g.get("per_run", 1)), now):
+            try:
+                r = http().get(f"{api}/search", params={
+                    "key": key, "q": q, "part": "snippet", "type": "video", "regionCode": "ID", "relevanceLanguage": "id",
+                    "order": g.get("urut", "viewCount"), "publishedAfter": after,
+                    "maxResults": int(yt.get("max_results", 15))}, timeout=30)
+                r.raise_for_status()
+            except Exception as ex:
+                log(f"belanja youtube '{q}': gagal ({ex})")
+                continue
+            for it in r.json().get("items", []):
+                if it["id"].get("videoId"):
+                    videos[it["id"]["videoId"]] = it["snippet"]
+            log(f"belanja youtube [{g.get('nama')}] '{q}': {len(r.json().get('items', []))} video")
+        if not videos:
             continue
-        terbit = datetime.strptime(sn["publishedAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        arts.append({"url": f"https://www.youtube.com/watch?v={vid}", "judul": clean_html(sn.get("title"), 300),
-                     "ringkasan": clean_html(sn.get("description"), 1200), "terbit": min(terbit, now), "sumber": "YouTube"})
-    log(f"belanja youtube: {len(arts)} video >= {min_views} views")
+        views = {}
+        try:
+            r = http().get(f"{api}/videos", params={"key": key, "part": "statistics", "id": ",".join(list(videos)[:50])}, timeout=30)
+            r.raise_for_status()
+            views = {v["id"]: int(v.get("statistics", {}).get("viewCount", 0) or 0) for v in r.json().get("items", [])}
+        except Exception as ex:
+            log(f"belanja youtube stats: gagal ({ex})")
+        min_views = int(g.get("min_views", 2000))
+        n0 = len(arts)
+        for vid, sn in videos.items():
+            if views.get(vid, 0) < min_views:
+                continue
+            terbit = datetime.strptime(sn["publishedAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            arts.append({"url": f"https://www.youtube.com/watch?v={vid}", "judul": clean_html(sn.get("title"), 300),
+                         "ringkasan": clean_html(sn.get("description"), 1200), "terbit": min(terbit, now), "sumber": "YouTube",
+                         "umur": g.get("berlaku_hari")})
+        log(f"belanja youtube [{g.get('nama')}]: {len(arts) - n0} video >= {min_views} views")
     return arts
 
 
@@ -209,6 +224,7 @@ def main():
             kota = p["kota_berlaku"]
             if m and m.kode_wilayah and m.kode_wilayah not in kota:
                 kota = [m.kode_wilayah] + kota
+            kota = rapikan_kode(kota)
             judul = p["acara"] or p["judul"]
             if gabung(cur, p, judul):
                 jumlah["gabung"] += 1
