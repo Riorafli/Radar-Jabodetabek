@@ -287,6 +287,7 @@ Kembalikan JSON: {{"hasil": [{{"no": 1, "kategori": "...", "judul": "judul promo
  "diskon_persen": angka 1-99 atau null, "harga": angka rupiah tanpa titik atau null,
  "mulai": "YYYY-MM-DD" atau null, "selesai": "YYYY-MM-DD" atau null,
  "lokasi": "nama tempat/mal (untuk cuci_gudang) atau null", "kota": "nama kota atau null"}}]}}
+Promo yang hanya berlaku di luar Jabodetabek (Jakarta, Bogor, Depok, Tangerang, Bekasi) = "bukan".
 Aturan: jangan mengarang, isi null jika tidak disebut. Hitung tanggal relatif ("hari ini", "besok", "akhir pekan ini")
 dari tanggal terbit artikel. Acara satu hari (mis. "Full Day Sale hari ini/besok"): mulai = selesai = tanggal acara itu.
 
@@ -335,6 +336,9 @@ def validate_belanja(r, terbit, today=None, matcher=None, umur=None):
     if kat == "cuci_gudang" and not (lokasi or kota):
         return None  # a physical sale without a place is useless
     kota_kode = matcher.kode_from_names([x for x in (kota, lokasi) if x]) if matcher and kat != "marketplace" else []
+    umum = ("nasional", "indonesia", "semua", "seluruh", "jabodetabek", "online")
+    if matcher and kat != "marketplace" and kota and not kota_kode and not any(u in kota.lower() for u in umum):
+        return None  # only outside Jabodetabek (e.g. Jambi, Yogyakarta)
     return {
         "kategori": kat, "judul": judul, "acara": _short(r.get("acara"), 120), "platform": platform,
         "brand": _short(r.get("penyelenggara"), 80) or (platform[0] if platform else None) or "Promo",
@@ -367,3 +371,42 @@ def extract_belanja(articles, matcher=None, chunk=6):  # 12 per call lost accura
                 rows[n] = validate_belanja(r, part[n]["terbit"].date(), matcher=matcher, umur=part[n].get("umur"))
         out += rows
     return out if out else None
+
+
+TOKO_PROMPT = """Kamu membaca halaman promo RESMI toko/mal Indonesia: {nama}. Tanggal hari ini: {today}.
+Ambil setiap promo BELANJA (bukan makanan restoran) yang masih atau akan berlaku. Kembalikan JSON:
+{{"promo": [{{"kategori": "cuci_gudang" atau "lainnya", "judul": "judul promo singkat",
+ "acara": "nama acara sale (mis. 'Matahari Big Sale') atau null", "produk": "produk/kategori barang yang didiskon atau null",
+ "diskon_teks": "mis. 'Diskon hingga 70%' atau null", "diskon_persen": angka 1-99 atau null, "harga": angka rupiah atau null,
+ "mulai": "YYYY-MM-DD" atau null, "selesai": "YYYY-MM-DD" atau null,
+ "lokasi": "cabang/mal jika disebut atau null", "kota": "nama kota jika disebut atau null"}}]}}
+- "cuci_gudang": sale besar di toko/mal (big sale, clearance, cuci gudang, midnight sale, obral, diskon besar musiman)
+- "lainnya": promo lain yang bisa dipakai pembeli (cashback kartu bank, promo member, potongan harga mingguan)
+Hanya promo membeli BARANG di toko/mal itu sendiri. Lewati promo mitra/merchant lain (klinik, hotel, karaoke, fitness,
+tiket wisata, layanan), promo yang sudah berakhir, dan promo yang hanya berlaku di luar Jabodetabek
+(Jakarta, Bogor, Depok, Tangerang, Bekasi). Jangan mengarang. Maksimal 15 promo terpenting. Jika tidak ada, {{"promo": []}}.
+
+TEKS:
+{text}"""
+
+
+def extract_toko(text, nama, lokasi_default=None, kota_default=None, umur=7, matcher=None):
+    """Promos on an official store/mall page -> validated dicts. None if the LLM failed.
+    A chain page without a branch uses `lokasi_default` (e.g. 'Semua toko Matahari')."""
+    data = ask_json(TOKO_PROMPT.format(nama=nama, today=today_wib().isoformat(), text=text[:12000]))
+    if data is None:
+        return None
+    items = data.get("promo", []) if isinstance(data, dict) else []
+    out = []
+    for r in items:
+        if not isinstance(r, dict):
+            continue
+        r = dict(r)
+        r["lokasi"] = r.get("lokasi") or lokasi_default
+        r["kota"] = r.get("kota") or kota_default
+        r["penyelenggara"] = r.get("penyelenggara") or nama
+        v = validate_belanja(r, today_wib(), matcher=matcher, umur=umur)
+        if v:
+            out.append(v)
+    return out
+

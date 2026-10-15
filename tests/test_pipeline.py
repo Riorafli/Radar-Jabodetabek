@@ -406,3 +406,25 @@ def test_rapikan_kode():
     assert rapikan_kode(["31", "31.71"]) == ["31.71"]
     assert rapikan_kode(["31.74", "36.74", "31.74"]) == ["31.74", "36.74"]
     assert rapikan_kode(["31"]) == ["31"]
+
+
+def test_extract_toko_defaults(m, monkeypatch):
+    from pipeline import extract_llm as X
+    monkeypatch.setattr(X, "today_wib", lambda: date(2026, 10, 15))
+    monkeypatch.setattr(X, "ask_json", lambda prompt: {"promo": [
+        {"kategori": "cuci_gudang", "judul": "Big Sale akhir pekan", "diskon_persen": 70},
+        {"kategori": "lainnya", "judul": "Cashback kartu", "selesai": "2026-10-31"},
+        {"kategori": "cuci_gudang", "judul": "Sale lama", "selesai": "2026-09-01"}]})
+    out = X.extract_toko("teks", "Matahari", "Semua toko Matahari", None, 7, m)
+    assert [p["judul"] for p in out] == ["Big Sale akhir pekan", "Cashback kartu"]   # expired one dropped
+    assert out[0]["lokasi"] == "Semua toko Matahari" and out[0]["brand"] == "Matahari"
+    assert out[0]["selesai"] == date(2026, 10, 22) and out[0]["selesai_perkiraan"] is True
+    mall = X.extract_toko("teks", "Kota Kasablanka", "Kota Kasablanka", "Jakarta Selatan", 7, m)
+    assert mall[0]["kota_berlaku"] == ["31.74"]
+
+
+def test_belanja_outside_jabodetabek_dropped(m):
+    from pipeline.extract_llm import validate_belanja
+    today = date(2026, 10, 15)
+    assert validate_belanja({"kategori": "lainnya", "judul": "Diskon fitness", "kota": "Jambi"}, today, today, m) is None
+    assert validate_belanja({"kategori": "lainnya", "judul": "Cashback", "kota": "Seluruh Indonesia"}, today, today, m)

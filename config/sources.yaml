@@ -125,6 +125,27 @@ belanja:
       url: https://www.antaranews.com/rss/tekno.xml
     - nama: Tempo Bisnis
       url: https://rss.tempo.co/bisnis
+  # Official store / mall promo pages (tested 2026-10-15: open, robots.txt
+  # allows, readable without JavaScript). Read hourly; the LLM only runs when
+  # the page text changes. lokasi/kota = default when a promo names no branch.
+  halaman:
+    - nama: Matahari
+      url: https://www.matahari.com/promo
+      lokasi: Semua toko Matahari
+    - nama: Hypermart
+      url: https://www.hypermart.co.id/promo
+      lokasi: Semua toko Hypermart
+      aktif: false   # page last updated Dec 2022 (checked 2026-10-15)
+    - nama: IKEA
+      url: https://www.ikea.co.id/in/penawaran
+      lokasi: Semua toko IKEA
+    - nama: Kota Kasablanka
+      url: https://www.kotakasablanka.co.id/events
+      lokasi: Kota Kasablanka
+      kota: Jakarta Selatan
+  # Not available on 2026-10-15 (404 / JS-only / errors): Transmart, ACE,
+  # Informa, Sogo, Erafone, Pondok Indah Mall, Central Park.
+
   # Automatic shopping finds from YouTube (uses YOUTUBE_API_KEY). Every
   # `setiap_jam` hours each group runs `per_run` searches (~100 units each):
   # 2 groups x 8 runs/day = 16 searches/day.

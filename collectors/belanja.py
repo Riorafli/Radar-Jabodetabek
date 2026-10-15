@@ -175,6 +175,49 @@ def ambil_youtube(cfg, now):
     return arts
 
 
+def ambil_halaman_toko(cur, cfg, matcher, now):
+    """Official store/mall promo pages (belanja.halaman). Same rules as the food
+    promo pages: robots.txt respected, the LLM only runs when the page text changed.
+    Returns [(article, promo)] ready for the shared save loop."""
+    from collectors.promo import allowed, page_text
+
+    pairs = []
+    for h in [x for x in cfg.get("belanja", {}).get("halaman", []) if x.get("aktif", True)]:
+        url = h["url"]
+        if not allowed(url):
+            log(f"belanja toko {h['nama']}: dilarang robots.txt")
+            continue
+        try:
+            r = http().get(url, timeout=40)
+            r.raise_for_status()
+        except Exception as e:
+            log(f"belanja toko {h['nama']}: gagal unduh ({e})")
+            continue
+        text = page_text(r.text, h.get("selector", ""))
+        if len(text) < 200:
+            log(f"belanja toko {h['nama']}: teks terlalu sedikit ({len(text)})")
+            continue
+        hash_ = sha1(text)
+        cur.execute("select hash from halaman_cache where url = %s", (url,))
+        row = cur.fetchone()
+        if row and row[0] == hash_:
+            log(f"belanja toko {h['nama']}: tidak berubah")
+            continue
+        promos = extract_llm.extract_toko(text, h["nama"], h.get("lokasi"), h.get("kota"), int(h.get("berlaku_hari", 7)), matcher)
+        if promos is None:
+            log(f"belanja toko {h['nama']}: LLM gagal, dicoba lagi run berikutnya")
+            continue
+        cur.execute("""insert into halaman_cache (url, hash) values (%s,%s)
+                       on conflict (url) do update set hash=excluded.hash, diambil=now()""", (url, hash_))
+        for p in promos:
+            # one URL per promo so each gets its own item (the fragment does not change the page)
+            a = {"url": f"{url}#{sha1(p['judul'])[:10]}", "judul": p["judul"], "ringkasan": "", "terbit": now,
+                 "sumber": h["nama"], "halaman": True}
+            pairs.append((a, p))
+        log(f"belanja toko {h['nama']}: {len(promos)} promo")
+    return pairs
+
+
 def main():
     if not extract_llm.available():
         log("belanja: GEMINI_API_KEY / GROQ_API_KEY belum diisi, dilewati")
@@ -193,24 +236,25 @@ def main():
         done |= {u for u in urls if sha1(u) in ada}
         todo = [a for a in arts if a["url"] not in done][:max_llm]
         log(f"belanja: {len(arts)} kandidat, {len(todo)} baru untuk diproses")
-        if not todo:
-            return
         zid = zona_ids(cur)
-        hasil = extract_llm.extract_belanja(todo, matcher)
+        hasil = extract_llm.extract_belanja(todo, matcher) if todo else []
         if hasil is None:
-            log("belanja: LLM gagal, dicoba lagi run berikutnya")
-            return
+            log("belanja: LLM gagal untuk artikel/video, dicoba lagi run berikutnya")
+            hasil = []
+        pairs = list(zip(todo, hasil)) + ambil_halaman_toko(cur, cfg, matcher, now)
         geocode_sisa = int(env("BELANJA_GEOCODE_LIMIT", 5))
         jumlah = {"marketplace": 0, "cuci_gudang": 0, "lainnya": 0, "gabung": 0}
-        for a, p in zip(todo, hasil):
-            cur.execute("""insert into halaman_cache (url, hash) values (%s,%s)
-                           on conflict (url) do update set hash=excluded.hash, diambil=now()""", (a["url"], CACHE_TAG))
+        for a, p in pairs:
+            if not a.get("halaman"):
+                cur.execute("""insert into halaman_cache (url, hash) values (%s,%s)
+                               on conflict (url) do update set hash=excluded.hash, diambil=now()""", (a["url"], CACHE_TAG))
             if not p:
                 continue
             m = matcher.match(p["lokasi"] or "", p["kota"] or "") if p["kategori"] != "marketplace" else None
             lat = lon = None
             # a venue named like the organiser ("Transmart") means every branch: no single pin
-            spesifik = p["lokasi"] and p["lokasi"].strip().lower() not in (p["brand"].lower(), (p["acara"] or "").lower())
+            spesifik = (p["lokasi"] and p["lokasi"].strip().lower() not in (p["brand"].lower(), (p["acara"] or "").lower())
+                        and not p["lokasi"].lower().startswith("semua "))
             if p["kategori"] == "cuci_gudang" and spesifik and geocode_sisa > 0:
                 geocode_sisa -= 1
                 g = nominatim(cur, f"{p['lokasi']}, {p['kota'] or 'Jakarta'}", matcher)
