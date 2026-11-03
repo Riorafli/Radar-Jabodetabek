@@ -160,7 +160,8 @@ python scripts/set_webhook.py
 | Nominatim | 1 req/s | max 15 lookups per news run, cached forever |
 | Overpass | fair use | 20 queries/day at 03:00 WIB, 5 s apart |
 | Supabase | 500 MB | daily cleanup (02:30 WIB): news > 31 days, videos > 30 days, expired promos, signals > 30 days. Change with repo variables `RETENSI_BERITA_HARI` / `RETENSI_POST_HARI`. |
-- News key points: `pipeline.inti` (every news run) fetches each new article, has the LLM write 2-4 points in its own words, and stores only those points (~0.5 KB per item). Sites whose robots.txt opts out of AI crawlers (e.g. Tempo) are skipped and keep the RSS lead.
+
+News key points: `pipeline.inti` (every news run) fetches each new article, has the LLM write 2-4 points in its own words, and stores only those points (~0.5 KB per item). Sites whose robots.txt opts out of AI crawlers (e.g. Tempo) are skipped and keep the RSS lead.
 
 ## China news tab
 
