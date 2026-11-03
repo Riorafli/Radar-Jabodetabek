@@ -444,3 +444,9 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
 .src-badge.lainnya { background: var(--bg-2); color: var(--muted); }
 :root[data-theme="dark"] .src-badge.lokal { background: #2b2148; color: #b197fc; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .src-badge.lokal { background: #2b2148; color: #b197fc; } }
+
+/* filter buttons: wrap onto several lines on wider screens so every option is visible
+   (phones keep the swipeable single row) */
+@media (min-width: 700px) {
+  .chips { flex-wrap: wrap; overflow-x: visible; }
+}
