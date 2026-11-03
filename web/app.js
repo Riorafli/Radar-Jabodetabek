@@ -826,7 +826,16 @@
 
   function bind() {
     $("#area").addEventListener("change", (e) => { S.area = areaFromValue(e.target.value); render(true); });
-    for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => { S.tab = b.dataset.tab; render(); });
+    for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => {
+      // measured BEFORE switching: the new tab starts short (skeleton) and would clamp the scroll position
+      const sticky = getComputedStyle($(".top")).position === "sticky";
+      const top = Math.max(0, $("main").getBoundingClientRect().top + window.scrollY - (sticky ? $(".top").offsetHeight : 0) - 8);
+      const jauh = window.scrollY > top;
+      S.tab = b.dataset.tab;
+      render();
+      // already scrolled past the hero: glide to the start of the tab's content instead of jumping
+      if (jauh) window.scrollTo({ top, behavior: REDUCED ? "auto" : "smooth" });
+    });
     window.addEventListener("resize", moveIndicator);
     $("#more-berita").addEventListener("click", () => renderBerita(true));
     $("#f-china").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) { S.cn.kat = b.dataset.k; renderChina(); } });
@@ -891,7 +900,12 @@
     });
 
     const toTop = $("#to-top");
-    window.addEventListener("scroll", () => toTop.classList.toggle("show", window.scrollY > 600), { passive: true });
+    let scrollTick = false;   // at most one update per frame while scrolling
+    window.addEventListener("scroll", () => {
+      if (scrollTick) return;
+      scrollTick = true;
+      requestAnimationFrame(() => { toTop.classList.toggle("show", window.scrollY > 600); scrollTick = false; });
+    }, { passive: true });
     toTop.addEventListener("click", () => window.scrollTo({ top: 0 }));
 
     $("#near").addEventListener("click", () => {
