@@ -179,6 +179,9 @@ def test_bmkg_relevance(m):
     assert relevan("Hujan Lebat di Jawa Barat", "khususnya di GARUT, TASIKMALAYA", m, prov) is None
     assert relevan("Hujan Lebat di DKI Jakarta", "di sebagian wilayah", m, prov).kode_wilayah == "31"
     assert relevan("Hujan Lebat di Jawa Timur", "khususnya di BEJI", m, prov) is None
+    # Jatinegara is also a kecamatan in Tegal (Jawa Tengah); the summary may still mention Jawa Barat
+    assert relevan("Hujan Lebat disertai Petir di Jawa Tengah",
+                   "di sebagian wilayah Jawa Tengah, khususnya di JATINEGARA, dapat meluas ke Jawa Barat", m, prov) is None
 
 
 # --- promo page handling ----------------------------------------------------------------
@@ -497,3 +500,28 @@ def test_china_feeds_have_source_type():
     assert feeds and all(f.get("jenis") in JENIS_SUMBER for f in feeds), [f["nama"] for f in feeds if f.get("jenis") not in JENIS_SUMBER]
     jenis = {f["nama"]: f["jenis"] for f in feeds}
     assert jenis["CGTN Business"] == "negara" and jenis["TechNode"] == "swasta" and jenis["cnBeta"] == "agregator"
+
+
+# --- berita topics -------------------------------------------------------------------------
+@pytest.mark.parametrize("judul, ringkasan, harap", [
+    ("Kecelakaan Beruntun 3 Kendaraan di Tol Jatibening, Lalin Macet", "", "lalu_lintas"),
+    ("Banjir Rendam Rumah Warga di Cipondoh", "Ketinggian air 50 cm", "cuaca_bencana"),
+    ("Polisi Tangkap Pelaku Jambret di Bekasi", "", "kriminal"),
+    ("Pramono Minta Guru SMKN 27 Disanksi Tegas", "", "pemerintahan"),
+    ("Festival Kuliner Pecinan Digelar di Suryakencana", "", "gaya_hidup"),
+    ("Persija Tumbangkan Lawan di GBK", "", "olahraga"),
+    ("Warga Gelar Kerja Bakti", "", "umum"),
+    ("Viral Main di Tanah Merah Depok Dipungli Rp 20 Ribu, 1 Orang Diamankan", "", "kriminal"),
+    ("Solikhin Jadi Sekda Kota Bekasi", "", "pemerintahan"),
+    ("200 Pedagang Gulung Tikar Buntut Revitalisasi Pasar Kronjo Mangkrak", "", "ekonomi"),
+    ("Kampung Adat Kranggan: Tradisi Leluhur Tetap Dijaga", "", "gaya_hidup"),
+])
+def test_topik_klasifikasi(judul, ringkasan, harap):
+    from pipeline.topik import klasifikasi
+    out = klasifikasi(judul, ringkasan)
+    assert out[0] == harap and len(out) <= 2
+
+
+def test_topik_info_bmkg_is_weather():
+    from pipeline.topik import klasifikasi
+    assert "cuaca_bencana" in klasifikasi("⚠️ Hujan Lebat disertai Petir di DKI Jakarta", "", "info")

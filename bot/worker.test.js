@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import worker, { areaFilter, belanjaQuery, chinaKategori, formatSaham, promoFilterArg, findArea, handle, isAdmin, kategoriOf, parseCommand, parseTambahPromo, platformOf, timeAgo } from "./worker.js";
+import worker, { areaFilter, belanjaQuery, beritaFilterArg, chinaKategori, formatSaham, promoFilterArg, findArea, handle, isAdmin, kategoriOf, parseCommand, parseTambahPromo, platformOf, timeAgo } from "./worker.js";
 
 const zonas = [
   { id: 1, nama: "Kemang", alias: ["kemang", "kemang raya"], kecuali: ["bogor"], kode_wilayah: "31.74" },
@@ -77,6 +77,12 @@ test("chinaKategori maps words to categories", () => {
   assert.equal(chinaKategori("AI"), "teknologi");
   assert.equal(chinaKategori("pasar saham"), "bisnis");
   assert.equal(chinaKategori(""), null);
+});
+
+test("beritaFilterArg separates topic words from the area", () => {
+  assert.deepEqual(beritaFilterArg("banjir bekasi"), { topik: "cuaca_bencana", area: "bekasi" });
+  assert.deepEqual(beritaFilterArg("macet"), { topik: "lalu_lintas", area: "" });
+  assert.deepEqual(beritaFilterArg("bsd"), { topik: null, area: "bsd" });
 });
 
 test("isAdmin trims ids", () => {

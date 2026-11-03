@@ -68,6 +68,21 @@
         <h2 id="h-berita">Berita terkini</h2>
         <div class="search"><span aria-hidden="true">🔎</span><input id="q" type="search" placeholder="Cari judul…" aria-label="Cari berita"></div>
       </div>
+      <div class="filters">
+        <div id="f-topik" class="chips" role="group" aria-label="Topik berita"></div>
+        <div class="filter-row">
+          <label class="sort">Waktu
+            <select id="b-waktu">
+              <option value="semua">Semua</option>
+              <option value="6j">6 jam terakhir</option>
+              <option value="hari">Hari ini</option>
+              <option value="3h">3 hari terakhir</option>
+            </select>
+          </label>
+          <label class="sort">Sumber <select id="b-sumber"><option value="">Semua sumber</option></select></label>
+          <button id="b-reset" class="link-btn" type="button" hidden>Reset filter</button>
+        </div>
+      </div>
       <ul id="list-berita" class="list"></ul>
       <button id="more-berita" class="btn more" type="button" hidden>Muat lebih banyak</button>
     </section>

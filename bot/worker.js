@@ -10,7 +10,7 @@
 
 const HELP = `Radar Jabodetabek - berita, promo makanan & tempat viral.
 
-/berita [zona|kota] - berita terkini, mis. /berita bsd
+/berita [topik] [zona|kota] - berita terkini, mis. /berita bsd, /berita banjir bekasi, /berita macet
 /promo [minuman|makanan] [halal|non halal] [zona|kota] - promo makanan, mis. /promo minuman halal kemang
 /belanja [shopee|tokopedia|cuci gudang|zona] - promo marketplace & cuci gudang
 /viral [zona|kota] - lagi viral/ramai, mis. /viral depok
@@ -144,12 +144,38 @@ async function resolve(env, arg) {
 const judulArea = (area) => (area ? area.nama : "Jabodetabek");
 
 // ---------------------------------------------------------------- commands
+const TOPIK_KATA = [
+  ["lalu_lintas", ["macet", "lalu lintas", "lalin", "krl", "transjakarta", "tol", "transportasi"]],
+  ["cuaca_bencana", ["banjir", "cuaca", "hujan", "bencana", "bmkg"]],
+  ["peristiwa", ["kecelakaan", "kebakaran", "peristiwa"]],
+  ["kriminal", ["kriminal", "hukum", "polisi", "korupsi"]],
+  ["pemerintahan", ["pemerintahan", "pemprov", "pemkot", "gubernur", "kebijakan"]],
+  ["ekonomi", ["ekonomi", "kerja", "loker", "harga"]],
+  ["kesehatan", ["kesehatan", "rumah sakit", "dbd"]],
+  ["pendidikan", ["pendidikan", "sekolah"]],
+  ["gaya_hidup", ["gaya hidup", "event", "konser", "wisata"]],
+  ["olahraga", ["olahraga", "bola", "persija"]],
+];
+/** "/berita banjir bekasi" -> { topik: "cuaca_bencana", area: "bekasi" } */
+export function beritaFilterArg(arg) {
+  let rest = normalize(arg);
+  let topik = null;
+  for (const [k, ws] of TOPIK_KATA) {
+    const w = ws.find((x) => rest.includes(` ${x} `));
+    if (w) { topik = topik || k; rest = rest.replace(` ${w} `, " "); }
+  }
+  return { topik, area: rest.trim() };
+}
+
 async function cmdBerita(env, arg) {
-  const { area, error } = await resolve(env, arg);
+  const bf = beritaFilterArg(arg || "");
+  const { area, error } = await resolve(env, bf.area);
   if (error) return error;
-  const rows = await sb(env, `v_berita?select=judul,url,sumber,published_at&order=published_at.desc&limit=8${areaFilter(area)}`);
-  if (!rows.length) return `Belum ada berita untuk ${judulArea(area)}.`;
-  return `📰 Berita ${judulArea(area)}\n\n` + rows.map((r) => `• ${r.judul}\n  ${r.sumber}, ${timeAgo(r.published_at)}\n  ${r.url}`).join("\n\n");
+  const qs = bf.topik ? `&topik=cs.${encodeURIComponent(`{"${bf.topik}"}`)}` : "";
+  const rows = await sb(env, `v_berita?select=judul,url,sumber,published_at&order=published_at.desc&limit=8${qs}${areaFilter(area)}`);
+  const label = bf.topik ? ` (${bf.topik.replace("_", " ")})` : "";
+  if (!rows.length) return `Belum ada berita${label} untuk ${judulArea(area)}.`;
+  return `📰 Berita${label} ${judulArea(area)}\n\n` + rows.map((r) => `• ${r.judul}\n  ${r.sumber}, ${timeAgo(r.published_at)}\n  ${r.url}`).join("\n\n");
 }
 
 /** "/promo minuman halal kemang" -> { jenis: "minuman", halal: "halal", area: "kemang" } */

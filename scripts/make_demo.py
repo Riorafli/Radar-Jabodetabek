@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pipeline.common import ROOT, load_config  # noqa: E402
+from pipeline.topik import klasifikasi  # noqa: E402
 
 w = load_config("wilayah")["wilayah"]
 z = load_config("zones")["zona"]
@@ -21,7 +22,7 @@ wn = {x["kode"]: x["nama"] for x in w}
 def berita(judul, sumber, menit, zona_nama=None, kode=None, tipe="berita", ringkasan=""):
     zz = zid.get(zona_nama)
     kode = kode or (zz["kode_wilayah"] if zz else None)
-    return {"tipe": tipe, "judul": f"[Contoh] {judul}", "url": "https://example.com/", "sumber": sumber,
+    return {"tipe": tipe, "topik": klasifikasi(judul, ringkasan, tipe), "judul": f"[Contoh] {judul}", "url": "https://example.com/", "sumber": sumber,
             "ringkasan": ringkasan, "menit": menit, "zona_id": zz["id"] if zz else None,
             "zona": zona_nama, "kode_wilayah": kode, "wilayah": wn.get(kode)}
 

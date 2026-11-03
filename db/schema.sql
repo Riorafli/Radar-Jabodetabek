@@ -75,6 +75,7 @@ create table if not exists item (
   lon          double precision,
   meta         jsonb not null default '{}',
   label_status text not null default 'baru',  -- baru | teks | llm | geocode | gagal
+  topik        text[] not null default '{}',  -- news topics (pipeline/topik.py)
   published_at timestamptz not null default now(),
   dibuat       timestamptz not null default now(),
   hash_dedup   text unique
@@ -84,6 +85,8 @@ create index if not exists item_wilayah    on item (kode_wilayah, published_at d
 create index if not exists item_zona       on item (zona_id, published_at desc);
 create index if not exists item_label      on item (label_status) where label_status = 'baru';
 create index if not exists item_judul_trgm on item using gin (judul gin_trgm_ops);
+alter table item add column if not exists topik text[] not null default '{}';
+create index if not exists item_topik on item using gin (topik);
 
 create table if not exists promo (
   item_id       bigint primary key references item(id) on delete cascade,
@@ -251,7 +254,8 @@ create index if not exists berita_china_terbit on berita_china (terbit desc);
 create or replace view v_berita with (security_invoker = true) as
 select i.id, i.tipe, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
        i.kode_wilayah, w.nama as wilayah, i.zona_id, z.nama as zona,
-       coalesce(i.lat, z.lat, w.lat) as lat, coalesce(i.lon, z.lon, w.lon) as lon
+       coalesce(i.lat, z.lat, w.lat) as lat, coalesce(i.lon, z.lon, w.lon) as lon,
+       i.topik
 from item i
 left join wilayah w on w.kode = i.kode_wilayah
 left join zona z on z.id = i.zona_id

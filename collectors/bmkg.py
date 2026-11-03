@@ -13,10 +13,11 @@ from pipeline.items import insert_item
 
 
 def relevan(judul, ringkasan, matcher, provinsi):
-    """Match for a Jabodetabek warning, else None. The province check comes
-    first so a same-named kecamatan elsewhere (e.g. Beji, Jatim) is ignored."""
+    """Match for a Jabodetabek warning, else None. The alert's province is taken
+    from the TITLE ("... di Jawa Tengah"): kecamatan names repeat across
+    provinces (Jatinegara is also in Tegal, Beji in Pasuruan)."""
     teks = f"{judul} {ringkasan}".lower()
-    if not any(p.lower() in teks for p in provinsi):
+    if not any(p.lower() in judul.lower() for p in provinsi):
         return None
     m = matcher.match(ringkasan)
     if m.ok:

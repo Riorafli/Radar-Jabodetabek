@@ -65,6 +65,32 @@
 
   const skeleton = (n) => Array.from({ length: n }, () => `<li class="sk" aria-hidden="true"><i></i><i></i><i></i></li>`).join("");
 
+  // ------------------------------------------------------------ berita filters
+  const TOPIK = {
+    lalu_lintas: "🚦 Lalu lintas", cuaca_bencana: "🌧️ Cuaca & bencana", peristiwa: "🚨 Peristiwa", kriminal: "⚖️ Kriminal & hukum",
+    pemerintahan: "🏛️ Pemerintahan", ekonomi: "💼 Ekonomi & kerja", kesehatan: "🏥 Kesehatan", pendidikan: "🎓 Pendidikan",
+    gaya_hidup: "🎉 Gaya hidup", olahraga: "⚽ Olahraga", umum: "📌 Umum",
+  };
+  function beritaSince(w) {
+    const now = Date.now();
+    if (w === "6j") return new Date(now - 6 * 3600e3).toISOString();
+    if (w === "3h") return new Date(now - 3 * 86400e3).toISOString();
+    if (w === "hari") {
+      const wib = new Date(now + 7 * 3600e3);                       // midnight WIB as UTC instant
+      return new Date(Date.UTC(wib.getUTCFullYear(), wib.getUTCMonth(), wib.getUTCDate()) - 7 * 3600e3).toISOString();
+    }
+    return null;
+  }
+  const cocokTopik = (r, t) => !t || t === "semua" || (t === "info" ? r.tipe === "info" : (r.topik || ["umum"]).includes(t));
+  function beritaQS(bf, since) {
+    let qs = "";
+    if (bf.t === "info") qs += "&tipe=eq.info";
+    else if (bf.t && bf.t !== "semua") qs += `&topik=cs.${encodeURIComponent(`{"${bf.t}"}`)}`;
+    if (bf.s) qs += `&sumber=eq.${encodeURIComponent(bf.s)}`;
+    if (since) qs += `&published_at=gte.${encodeURIComponent(since)}`;
+    return qs;
+  }
+
   // ------------------------------------------------------------ data layer
   const headers = () => ({ apikey: C.SUPABASE_ANON_KEY, Authorization: `Bearer ${C.SUPABASE_ANON_KEY}`, "content-type": "application/json" });
   async function rest(path, init = {}) {
@@ -115,14 +141,19 @@
       ]);
       return { berita, promo, video, tempat, updated: last && last[0] && last[0].dibuat };
     },
-    async berita(area, q, offset) {
+    async berita(area, q, offset, bf = {}) {
       const clean = (q || "").replace(/[,()*%]/g, " ").trim();
+      const since = beritaSince(bf.w);
       if (DEMO) {
-        return D().berita.filter((r) => areaMatch(r, area) && (!clean || r.judul.toLowerCase().includes(clean.toLowerCase())))
-          .slice(offset, offset + PAGE);
+        return D().berita.filter((r) => areaMatch(r, area) && (!clean || r.judul.toLowerCase().includes(clean.toLowerCase()))
+          && cocokTopik(r, bf.t) && (!bf.s || r.sumber === bf.s) && (!since || r.published_at >= since)).slice(offset, offset + PAGE);
       }
-      const qs = clean ? `&judul=ilike.${encodeURIComponent(`*${clean}*`)}` : "";
-      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,published_at,wilayah,zona&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
+      const qs = (clean ? `&judul=ilike.${encodeURIComponent(`*${clean}*`)}` : "") + beritaQS(bf, since);
+      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,published_at,wilayah,zona,topik&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
+    },
+    async beritaMeta(area, since) {
+      if (DEMO) return D().berita.filter((r) => areaMatch(r, area) && (!since || r.published_at >= since));
+      return rest(`v_berita?select=tipe,topik,sumber&order=published_at.desc&limit=5000${areaQS(area)}${since ? `&published_at=gte.${encodeURIComponent(since)}` : ""}`);
     },
     async promo(area) {
       if (DEMO) return D().promo.filter((r) => areaMatch(r, area, "promo"));
@@ -183,11 +214,13 @@
 
   // ------------------------------------------------------------ state
   const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null,
+    bf: { t: "semua", w: "semua", s: "" },
     promos: [], outlets: [], outletKey: null,
     sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false },
     cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0 },
     pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
+  try { Object.assign(S.bf, JSON.parse(store.get("beritaFilter") || "{}")); } catch { /* ignore */ }
 
   function areaFromValue(v) {
     if (!v || v === "all") return null;
@@ -216,12 +249,41 @@
     } catch (e) { console.error(e); }
   }
 
+  async function drawBeritaFilters() {
+    const bf = S.bf, since = beritaSince(bf.w);
+    $("#b-waktu").value = bf.w;
+    $("#b-reset").hidden = bf.t === "semua" && bf.w === "semua" && !bf.s;
+    try {
+      const keys = ["semua", "info", ...Object.keys(TOPIK)];
+      const ct = {}, cs = {};
+      const meta = await data.beritaMeta(S.area, since);       // recent rows: source list only (API caps rows)
+      for (const m of meta) if (cocokTopik(m, bf.t)) cs[m.sumber] = 1;
+      if (DEMO) {
+        for (const k of keys) ct[k] = meta.filter((m) => cocokTopik(m, k) && (!bf.s || m.sumber === bf.s)).length;
+      } else {                                                  // exact counts, respecting waktu + sumber
+        const n = await Promise.all(keys.map((k) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: k, s: bf.s }, since)}`)));
+        keys.forEach((k, i) => { ct[k] = n[i]; });
+      }
+      const opsi = [["semua", "📰 Semua"], ["info", "⚠️ Info layanan"], ...Object.entries(TOPIK)];
+      $("#f-topik").innerHTML = opsi.map(([k, label]) => `<button type="button" data-t="${k}" class="fchip ${bf.t === k ? "on" : ""}" ${!ct[k] && k !== "semua" && bf.t !== k ? "disabled" : ""}>${label} <span class="n">${ct[k] || 0}</span></button>`).join("");
+      $("#b-sumber").innerHTML = `<option value="">Semua sumber</option>` + Object.keys(cs).sort()
+        .map((s) => `<option value="${esc(s)}" ${bf.s === s ? "selected" : ""}>${esc(s)}</option>`).join("")
+        + (bf.s && !cs[bf.s] ? `<option value="${esc(bf.s)}" selected>${esc(bf.s)}</option>` : "");
+    } catch (e) { console.error(e); }
+  }
+
+  function setBF(patch) {
+    Object.assign(S.bf, patch);
+    store.set("beritaFilter", JSON.stringify(S.bf));
+    renderBerita();
+  }
+
   async function renderBerita(append = false) {
     const el = $("#list-berita");
     $("#h-berita").textContent = `Berita terkini · ${areaName()}`;
-    if (!append) { S.offset = 0; el.innerHTML = skeleton(5); }
+    if (!append) { S.offset = 0; el.innerHTML = skeleton(5); drawBeritaFilters(); }
     try {
-      const rows = await data.berita(S.area, S.q, S.offset);
+      const rows = await data.berita(S.area, S.q, S.offset, S.bf);
       const html = rows.map((r, i) => {
         const url = safeUrl(r.url);
         const where = r.zona || r.wilayah;
@@ -230,11 +292,13 @@
           ${r.ringkasan ? `<p class="sum">${esc(r.ringkasan)}</p>` : ""}
           <div class="meta">${r.tipe === "info" ? '<span class="chip info">⚠️ Info layanan</span>' : ""}
             ${where ? `<span class="chip">📍 ${esc(where)}</span>` : ""}
+            ${(r.topik || []).filter((t) => t !== "umum" && TOPIK[t]).map((t) => `<span class="chip soft">${TOPIK[t]}</span>`).join("")}
             <span class="src" style="--h:${hue(r.sumber)}">${esc(initials(r.sumber).slice(0, 1))}</span><span>${esc(r.sumber)}</span>·<span>${timeAgo(r.published_at)}</span></div>
         </li>`;
       }).join("");
       if (append) el.insertAdjacentHTML("beforeend", html);
-      else el.innerHTML = html || empty(`Belum ada berita untuk ${areaName()}.`);
+      else el.innerHTML = html || empty(S.bf.t !== "semua" || S.bf.w !== "semua" || S.bf.s
+        ? "Tidak ada berita yang cocok dengan filter ini." : `Belum ada berita untuk ${areaName()}.`);
       S.offset += rows.length;
       $("#more-berita").hidden = rows.length < PAGE;
     } catch (e) { fail(el, e); }
@@ -747,6 +811,10 @@
     let tp;
     $("#pq").addEventListener("input", (e) => { clearTimeout(tp); tp = setTimeout(() => setPF({ q: e.target.value }), 200); });
     let t;
+    $("#f-topik").addEventListener("click", (e) => { const b = e.target.closest("button[data-t]"); if (b) setBF({ t: b.dataset.t }); });
+    $("#b-waktu").addEventListener("change", (e) => setBF({ w: e.target.value }));
+    $("#b-sumber").addEventListener("change", (e) => setBF({ s: e.target.value }));
+    $("#b-reset").addEventListener("click", () => setBF({ t: "semua", w: "semua", s: "" }));
     $("#q").addEventListener("input", (e) => { clearTimeout(t); t = setTimeout(() => { S.q = e.target.value; renderBerita(); }, 300); });
 
     $("#theme").addEventListener("click", () => {

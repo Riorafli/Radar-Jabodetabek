@@ -1,0 +1,74 @@
+"""News topics for the Berita tab filter (keyword based: free, instant, no LLM).
+python -m pipeline.topik   (runs after the news collectors)
+
+Each item gets up to 2 topics, best match first; no match -> 'umum'.
+Re-tags the last 3 days every run, so keyword edits apply to recent news.
+"""
+from pipeline.common import db, log
+from pipeline.geocode import normalize
+
+TOPIK = {
+    "lalu_lintas": ["macet", "kemacetan", "lalu lintas", "lalin", "tol", "jalan tol", "krl", "commuter line", "transjakarta",
+                    "busway", "mrt", "lrt", "ganjil genap", "rekayasa lalu lintas", "penutupan jalan", "angkot", "ojol",
+                    "bandara", "soetta", "penerbangan", "stasiun", "terminal", "jalur", "parkir", "kendaraan", "pengendara",
+                    "jabodebek", "whoosh", "kereta"],
+    "cuaca_bencana": ["banjir", "genangan", "hujan", "cuaca", "bmkg", "longsor", "angin kencang", "puting beliung", "gempa",
+                      "polusi", "kualitas udara", "kekeringan", "rob", "pohon tumbang", "petir", "siaga", "bencana", "bpbd"],
+    "peristiwa": ["kecelakaan", "kebakaran", "terbakar", "tewas", "tenggelam", "korban jiwa", "ambruk", "roboh", "tabrakan",
+                  "tertabrak", "tersengat", "meninggal", "damkar", "evakuasi", "sar", "basarnas", "hanyut", "dibakar"],
+    "kriminal": ["polisi", "polda", "polres", "polsek", "ditangkap", "tersangka", "terdakwa", "pencurian", "maling", "begal",
+                 "jambret", "penipuan", "narkoba", "sabu", "korupsi", "kpk", "sidang", "pengadilan", "vonis", "dituntut",
+                 "pembunuhan", "dibunuh", "penganiayaan", "dikeroyok", "tawuran", "pelecehan", "kejaksaan", "jaksa", "ditahan",
+                 "buron", "penjara", "dakwaan", "kriminal", "pelaku", "pungli", "diamankan", "curi", "mencuri"],
+    "pemerintahan": ["gubernur", "wakil gubernur", "pemprov", "pemkot", "pemkab", "wali kota", "walikota", "bupati", "dprd",
+                     "pramono", "rano karno", "apbd", "anggaran", "pilkada", "camat", "lurah", "satpol pp", "kebijakan",
+                     "peraturan", "perda", "pergub", "pelayanan publik", "dinas", "bansos", "kartu layanan", "menteri", "presiden",
+                     "sekda", "pejabat", "pelantikan", "dilantik", "asn", "pns", "revitalisasi"],
+    "ekonomi": ["harga", "inflasi", "ekonomi", "umkm", "investasi", "lowongan", "loker", "pekerja", "buruh", "umr", "ump",
+                "phk", "pajak", "bisnis", "usaha", "perdagangan", "pasar induk", "bapok", "sembako", "emas", "rupiah", "properti",
+                "pedagang", "gulung tikar", "pasar", "toko"],
+    "kesehatan": ["rumah sakit", "rsud", "puskesmas", "kesehatan", "bpjs kesehatan", "dbd", "demam berdarah", "vaksin",
+                  "imunisasi", "penyakit", "pasien", "dokter", "stunting", "keracunan", "virus", "wabah", "gizi"],
+    "pendidikan": ["sekolah", "siswa", "pelajar", "guru", "kampus", "universitas", "mahasiswa", "ppdb", "smk", "sma", "smp",
+                   "sd", "madrasah", "pendidikan", "beasiswa", "ujian", "kuliah", "mbg", "makan bergizi gratis"],
+    "gaya_hidup": ["kuliner", "makanan", "restoran", "kafe", "cafe", "kopi", "konser", "festival", "wisata", "liburan", "mal",
+                   "mall", "film", "bioskop", "musik", "fashion", "pameran", "bazar", "event", "hiburan", "taman", "budaya",
+                   "tradisi", "adat", "sejarah", "museum"],
+    "olahraga": ["sepak bola", "persija", "persikabo", "timnas", "liga", "pertandingan", "laga", "stadion", "gbk", "jis",
+                 "marathon", "maraton", "olahraga", "atlet", "motogp", "badminton", "bulu tangkis", "basket", "voli", "turnamen"],
+}
+_TOPIK_NORM = {k: [normalize(w).strip() for w in ws] for k, ws in TOPIK.items()}
+
+
+def klasifikasi(judul, ringkasan="", tipe="berita"):
+    """-> up to 2 topics, title hits weigh double; ['umum'] when nothing matches."""
+    tj, tr = normalize(judul), normalize(ringkasan)
+    skor = {}
+    for k, ws in _TOPIK_NORM.items():
+        s = sum(2 for w in ws if f" {w} " in tj) + sum(1 for w in ws if f" {w} " in tr)
+        if s:
+            skor[k] = s
+    if tipe == "info" and "cuaca_bencana" not in skor and ("hujan" in tj or "cuaca" in tj):
+        skor["cuaca_bencana"] = 1
+    if not skor:
+        return ["umum"]
+    urut = sorted(skor, key=lambda k: (-skor[k], list(TOPIK).index(k)))
+    return urut[:2]
+
+
+def main():
+    with db() as cur:
+        cur.execute("""select id, judul, coalesce(ringkasan, ''), tipe, topik from item where tipe in ('berita', 'info')
+                       and (topik = '{}' or published_at > now() - interval '3 days')""")
+        rows = cur.fetchall()
+        n = 0
+        for iid, judul, ringkasan, tipe, lama in rows:
+            baru = klasifikasi(judul, ringkasan, tipe)
+            if baru != (lama or []):
+                cur.execute("update item set topik = %s where id = %s", (baru, iid))
+                n += 1
+    log(f"topik: {len(rows)} berita dicek, {n} diperbarui")
+
+
+if __name__ == "__main__":
+    main()
