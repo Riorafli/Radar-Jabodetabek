@@ -61,6 +61,8 @@
       if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
+    // safety net: some browsers pause rAF (battery saver, embedded views); show the final number anyway
+    setTimeout(() => { if (el.dataset.v === String(to)) el.textContent = to.toLocaleString("id-ID"); }, dur + 300);
   }
 
   const skeleton = (n) => Array.from({ length: n }, () => `<li class="sk" aria-hidden="true"><i></i><i></i><i></i></li>`).join("");
