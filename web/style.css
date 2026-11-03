@@ -457,3 +457,51 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
 .kode-chip { font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .03em; border: 1px solid var(--line); background: var(--surface);
   color: var(--text); border-radius: 6px; padding: 1px 7px; cursor: pointer; }
 .kode-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ============================================================ phones (Samsung Galaxy 360-412px and up to 600px) */
+.chips { flex-wrap: wrap; overflow-x: visible; }            /* every filter button visible, never cut at the edge */
+@media (max-width: 600px) {
+  .top { position: static; }                                 /* a 2-row sticky header would eat the screen */
+  .top-row { padding-top: 8px; gap: 8px; }
+  .brand { font-size: 16px; }
+  .area-ctl { gap: 6px; }
+  #area { padding: 7px 10px; }
+  .icon-btn { width: 36px; height: 36px; flex: none; }
+  #near { flex: none; padding: 7px 10px; }
+
+  /* tabs: 3 x 2 grid instead of a row that runs off the screen */
+  .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; overflow: visible; padding-bottom: 10px; }
+  .tab-ind { display: none; }
+  .tabs button { padding: 8px 4px; font-size: 14px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tabs button[aria-selected="true"] { color: #fff; border-color: transparent;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 3px 10px rgba(232, 89, 12, .3); }
+
+  /* compact hero */
+  .hero { padding: 16px 0 14px; }
+  .hero-title { font-size: 24px; margin-bottom: 10px; }
+  .hero-sub { display: none; }
+  .live { margin-bottom: 8px; }
+  .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .stat { padding: 8px 6px; border-radius: 10px; text-align: center; }
+  .stat b { font-size: 15px; }
+  .stat span { font-size: 10px; line-height: 1.2; display: block; }
+
+  /* panels, search and selects */
+  .panel { padding-top: 16px; }
+  h2 { font-size: 19px; }
+  .search { flex: 1 1 100%; }
+  .filter-row { gap: 8px 12px; }
+  .sort { flex-wrap: wrap; }
+  .sort select, .filter-row select { max-width: 62vw; }
+  .fchip { font-size: 13px; padding: 5px 10px; }
+  .fchip .n { font-size: 10px; padding: 0 6px; }
+  .chips { gap: 6px; }
+  .note { font-size: 12px; }
+  .list > li { padding: 12px 12px 12px 15px; }
+  .meta { gap: 5px; }
+  .promo { padding: 14px; }
+  .lapor-row select, .lapor-row input, .lapor-row .btn { flex: 1 1 100%; }
+  .ihsg .val { font-size: 24px; }
+  .to-top { right: 12px; bottom: 12px; }
+}
