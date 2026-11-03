@@ -37,6 +37,7 @@
       <button role="tab" data-tab="promo">🏷️ Promo</button>
       <button role="tab" data-tab="viral">🔥 Viral</button>
       <button role="tab" data-tab="saham">📈 Saham</button>
+      <button role="tab" data-tab="china">🇨🇳 China</button>
       <button role="tab" data-tab="peta">🗺️ Peta</button>
     </nav>
   </header>
@@ -142,6 +143,24 @@
         </div>
       </div>
       <ul id="list-saham" class="list saham-list"></ul>
+    </section>
+
+    <section id="tab-china" class="panel" hidden>
+      <div class="panel-head">
+        <h2>Pantauan berita China</h2>
+        <div class="search"><span aria-hidden="true">🔎</span><input id="cq" type="search" placeholder="Cari: AI, Huawei, BYD…" aria-label="Cari berita China"></div>
+      </div>
+      <p class="note">Judul &amp; ringkasan dari media China dan media yang meliput China, <b>diterjemahkan otomatis oleh AI</b>
+        (bisa ada kekeliruan). Diperbarui tiap jam. Baca artikel aslinya untuk detail.</p>
+      <div class="filters">
+        <div id="f-china" class="chips" role="group" aria-label="Kategori"></div>
+        <div class="filter-row">
+          <label class="sort">Sumber <select id="c-sumber"><option value="">Semua sumber</option></select></label>
+          <label class="toggle"><input id="c-asli" type="checkbox"> Tampilkan judul asli</label>
+        </div>
+      </div>
+      <ul id="list-china" class="list"></ul>
+      <button id="more-china" class="btn more" type="button" hidden>Muat lebih banyak</button>
     </section>
 
     <section id="tab-peta" class="panel" hidden>

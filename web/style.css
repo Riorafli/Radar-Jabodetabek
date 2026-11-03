@@ -422,3 +422,11 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
   .sh-btn .spark, .sh-btn .spark-empty { display: none; }
   .ohlc { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ============================================================ china */
+#list-china .asli { margin: 4px 0 0; font-size: 13px; color: var(--muted); font-style: italic; }
+#list-china .lang { font-size: 11px; font-weight: 800; letter-spacing: .04em; padding: 1px 6px; border-radius: 5px; background: #e03131; color: #fff; }
+#list-china li.cn-teknologi { --bar: #1c7ed6; }
+#list-china li.cn-bisnis { --bar: #2b8a3e; }
+#list-china li.cn-kebijakan { --bar: #e03131; }
+#list-china li.cn-sosial { --bar: #ae3ec9; }

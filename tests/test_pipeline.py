@@ -468,3 +468,24 @@ def test_saham_template_matches_watch_list():
     from collectors.saham import daftar_saham
     kode = [s["kode"] for s in daftar_saham()]
     assert len(kode) == len(set(kode)) and "BBCA" in kode and all(k.isupper() and 4 == len(k) for k in kode)
+
+
+# --- china ---------------------------------------------------------------------------------
+def test_china_terbaru_limits_and_sorts():
+    from collectors.china import terbaru
+    now = datetime(2026, 11, 3, 12, tzinfo=timezone.utc)
+    g = lambda h: time.gmtime((now - timedelta(hours=h)).timestamp())
+    entries = [{"title": f"t{h}", "link": f"https://x/{h}", "published_parsed": g(h)} for h in (5, 1, 100, 3, 2)]
+    out = terbaru(entries, now, max_hari=3, maks=3)
+    assert [e["title"] for _, e in out] == ["t1", "t2", "t3"]          # newest first, 100h-old dropped, capped
+
+
+def test_china_terjemahkan_validates(monkeypatch):
+    from collectors import china
+    monkeypatch.setattr(china.extract_llm, "ask_json", lambda p: {"hasil": [
+        {"no": 1, "judul": "Huawei rilis chip AI baru", "ringkasan": "Chip dipakai di pusat data.", "kategori": "teknologi"},
+        {"no": 2, "judul": "Ekspor China naik", "kategori": "aneh"},
+        {"no": 9, "judul": "nomor salah"}]})
+    out = china.terjemahkan([(11, "Huawei launches AI chip", ""), (12, "中国出口增长", "")])
+    assert out[11] == ("Huawei rilis chip AI baru", "Chip dipakai di pusat data.", "teknologi")
+    assert out[12][2] == "lainnya" and 9 not in out and len(out) == 2

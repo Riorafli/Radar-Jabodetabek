@@ -229,6 +229,22 @@ create table if not exists saham_berita (
 create index if not exists saham_berita_kode on saham_berita using gin (kode);
 create index if not exists saham_berita_terbit on saham_berita (terbit desc);
 
+-- ---------------------------------------------------------------- China news mirror (tab China)
+create table if not exists berita_china (
+  id             bigserial primary key,
+  url            text unique not null,
+  sumber         text,
+  bahasa         text,                    -- en | zh
+  judul_asli     text not null,
+  ringkasan_asli text,                    -- max 400 chars, never the full article
+  judul_id       text,                    -- Indonesian translation (LLM)
+  ringkasan_id   text,
+  kategori       text,                    -- teknologi | bisnis | kebijakan | sosial | lainnya
+  terbit         timestamptz not null default now(),
+  dibuat         timestamptz not null default now()
+);
+create index if not exists berita_china_terbit on berita_china (terbit desc);
+
 -- ---------------------------------------------------------------- views for web/bot
 create or replace view v_berita with (security_invoker = true) as
 select i.id, i.tipe, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
@@ -276,7 +292,8 @@ do $$
 declare t text;
 begin
   foreach t in array array['wilayah','kawasan','kawasan_wilayah','zona','entitas',
-                           'item','promo','skor','zona_statistik','saham','saham_harian','saham_berita'] loop
+                           'item','promo','skor','zona_statistik','saham','saham_harian','saham_berita',
+                           'berita_china'] loop
     execute format('alter table %I enable row level security', t);
     if not exists (select 1 from pg_policies where tablename = t and policyname = 'baca publik') then
       execute format('create policy "baca publik" on %I for select using (true)', t);

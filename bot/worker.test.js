@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import worker, { areaFilter, belanjaQuery, formatSaham, promoFilterArg, findArea, handle, isAdmin, kategoriOf, parseCommand, parseTambahPromo, platformOf, timeAgo } from "./worker.js";
+import worker, { areaFilter, belanjaQuery, chinaKategori, formatSaham, promoFilterArg, findArea, handle, isAdmin, kategoriOf, parseCommand, parseTambahPromo, platformOf, timeAgo } from "./worker.js";
 
 const zonas = [
   { id: 1, nama: "Kemang", alias: ["kemang", "kemang raya"], kecuali: ["bogor"], kode_wilayah: "31.74" },
@@ -70,6 +70,13 @@ test("formatSaham shows price, direction and range", () => {
   assert.match(out, /BBCA · Bank Central Asia/);
   assert.match(out, /Harga: 9\.875  ▲ \+1,28%/);
   assert.match(out, /Volume: 51\.234\.500/);
+});
+
+test("chinaKategori maps words to categories", () => {
+  assert.equal(chinaKategori("teknologi"), "teknologi");
+  assert.equal(chinaKategori("AI"), "teknologi");
+  assert.equal(chinaKategori("pasar saham"), "bisnis");
+  assert.equal(chinaKategori(""), null);
 });
 
 test("isAdmin trims ids", () => {

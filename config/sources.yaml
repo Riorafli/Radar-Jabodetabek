@@ -250,6 +250,27 @@ saham:
     - nama: CNN Indonesia Ekonomi
       url: https://www.cnnindonesia.com/ekonomi/rss
 
+# China news mirror (tab China): headlines + short summaries translated to
+# Indonesian by the LLM, link to the original. Tested 2026-11-03 (open,
+# robots.txt allows). Not working then: China Daily, Xinhua, KrASIA (404),
+# Caixin (403), 36Kr (empty), Huxiu (timeout), Global Times (stale since Oct).
+china:
+  maks_per_feed: 6        # newest N per feed per run - keeps the free LLM quota safe
+  terjemah_per_run: 40
+  max_hari: 3
+  rss:
+    - {nama: SCMP China Tech, url: "https://www.scmp.com/rss/36/feed", bahasa: en, kategori: teknologi}
+    - {nama: SCMP China, url: "https://www.scmp.com/rss/4/feed", bahasa: en, kategori: kebijakan}
+    - {nama: SCMP China Economy, url: "https://www.scmp.com/rss/92/feed", bahasa: en, kategori: bisnis}
+    - {nama: TechNode, url: "https://technode.com/feed/", bahasa: en, kategori: teknologi}
+    - {nama: Pandaily, url: "https://pandaily.com/feed/", bahasa: en, kategori: teknologi}
+    - {nama: CGTN Business, url: "https://www.cgtn.com/subscribe/rss/section/business.xml", bahasa: en, kategori: bisnis}
+    - {nama: Sixth Tone, url: "https://www.sixthtone.com/rss", bahasa: en, kategori: sosial, maks: 3}
+    - {nama: IT之家 (ITHome), url: "https://www.ithome.com/rss/", bahasa: zh, kategori: teknologi}
+    - {nama: cnBeta, url: "https://www.cnbeta.com.tw/backend.php", bahasa: zh, kategori: teknologi}
+    - {nama: 少数派 (sspai), url: "https://sspai.com/feed", bahasa: zh, kategori: teknologi, maks: 3}
+    - {nama: Solidot, url: "https://www.solidot.org/index.rss", bahasa: zh, kategori: teknologi, maks: 3}
+
 # Reddit (optional; needs REDDIT_CLIENT_ID/SECRET, app-only OAuth).
 reddit:
   subreddits: [indonesia, jakarta]

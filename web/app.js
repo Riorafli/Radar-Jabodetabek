@@ -150,6 +150,18 @@
       const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       return rest(`item?select=judul,url,ringkasan,meta,published_at&sumber=eq.${encodeURIComponent("Google Trends")}&published_at=gt.${encodeURIComponent(since)}&order=published_at.desc&limit=40`);
     },
+    async china(kategori, sumber, q, offset) {
+      if (DEMO) return [];
+      const clean = (q || "").replace(/[,()*%]/g, " ").trim();
+      const qs = (kategori && kategori !== "semua" ? `&kategori=eq.${kategori}` : "")
+        + (sumber ? `&sumber=eq.${encodeURIComponent(sumber)}` : "")
+        + (clean ? `&or=(judul_id.ilike.${encodeURIComponent(`*${clean}*`)},ringkasan_id.ilike.${encodeURIComponent(`*${clean}*`)},judul_asli.ilike.${encodeURIComponent(`*${clean}*`)})` : "");
+      return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,kategori,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
+    },
+    async chinaMeta() {
+      if (DEMO) return [];
+      return rest("berita_china?select=kategori,sumber&judul_id=not.is.null&limit=2000");
+    },
     async saham() {
       if (DEMO) return [];
       return rest("saham?select=*&order=kode");
@@ -173,6 +185,7 @@
   const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null,
     promos: [], outlets: [], outletKey: null,
     sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false },
+    cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0 },
     pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
 
@@ -553,6 +566,43 @@
     } catch (e) { det.querySelector(".sh-news").innerHTML = `<li class="note">Gagal memuat berita.</li>`; }
   }
 
+  // ------------------------------------------------------------ china
+  const KAT_CN = { teknologi: "💻 Teknologi", bisnis: "📊 Bisnis & pasar", kebijakan: "🏛️ Kebijakan", sosial: "👥 Sosial", lainnya: "📌 Lainnya" };
+
+  async function renderChina(append = false) {
+    const el = $("#list-china"), cn = S.cn;
+    if (!append) {
+      cn.offset = 0;
+      el.innerHTML = skeleton(5);
+      try {
+        const meta = await data.chinaMeta();
+        const ck = { semua: meta.length }, cs = {};
+        for (const m of meta) { ck[m.kategori || "lainnya"] = (ck[m.kategori || "lainnya"] || 0) + 1; cs[m.sumber] = (cs[m.sumber] || 0) + 1; }
+        $("#f-china").innerHTML = [["semua", "🌏 Semua"], ...Object.entries(KAT_CN)].map(([k, label]) =>
+          `<button type="button" data-k="${k}" class="fchip ${cn.kat === k ? "on" : ""}" ${!ck[k] && k !== "semua" ? "disabled" : ""}>${label} <span class="n">${ck[k] || 0}</span></button>`).join("");
+        $("#c-sumber").innerHTML = `<option value="">Semua sumber</option>` + Object.keys(cs).sort().map((s) =>
+          `<option value="${esc(s)}" ${cn.sumber === s ? "selected" : ""}>${esc(s)} (${cs[s]})</option>`).join("");
+      } catch (e) { console.error(e); }
+    }
+    try {
+      const rows = await data.china(cn.kat, cn.sumber, cn.q, cn.offset);
+      const html = rows.map((r, i) => {
+        const url = safeUrl(r.url);
+        return `<li style="--i:${i}" class="cn-${esc(r.kategori || "lainnya")}">
+          ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul_id)}</a>` : `<span class="title">${esc(r.judul_id)}</span>`}
+          ${cn.asli ? `<p class="asli" lang="${r.bahasa === "zh" ? "zh" : "en"}">${esc(r.judul_asli)}</p>` : ""}
+          ${r.ringkasan_id ? `<p class="sum">${esc(r.ringkasan_id)}</p>` : ""}
+          <div class="meta"><span class="chip">${KAT_CN[r.kategori] || KAT_CN.lainnya}</span>
+            <span class="lang">${r.bahasa === "zh" ? "中文" : "EN"}</span><span>${esc(r.sumber || "")}</span>·<span>${timeAgo(r.terbit)}</span></div>
+        </li>`;
+      }).join("");
+      if (append) el.insertAdjacentHTML("beforeend", html);
+      else el.innerHTML = html || empty(DEMO ? "Mode demo: belum ada berita China." : "Belum ada berita yang cocok.");
+      cn.offset += rows.length;
+      $("#more-china").hidden = rows.length < PAGE;
+    } catch (e) { fail(el, e); }
+  }
+
   // ------------------------------------------------------------ map
   function ensureMap() {
     if (S.map || !window.L) return;
@@ -613,11 +663,11 @@
 
   function render(withStats = false) {
     for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === S.tab));
-    for (const t of ["berita", "promo", "viral", "saham", "peta"]) $(`#tab-${t}`).hidden = t !== S.tab;
+    for (const t of ["berita", "promo", "viral", "saham", "china", "peta"]) $(`#tab-${t}`).hidden = t !== S.tab;
     moveIndicator();
     saveHash();
     if (withStats) renderStats();
-    ({ berita: renderBerita, promo: renderPromo, viral: renderViral, saham: renderSaham, peta: renderMap })[S.tab]();
+    ({ berita: renderBerita, promo: renderPromo, viral: renderViral, saham: renderSaham, china: renderChina, peta: renderMap })[S.tab]();
   }
 
   function fillSelects() {
@@ -654,6 +704,12 @@
     for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => { S.tab = b.dataset.tab; render(); });
     window.addEventListener("resize", moveIndicator);
     $("#more-berita").addEventListener("click", () => renderBerita(true));
+    $("#f-china").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) { S.cn.kat = b.dataset.k; renderChina(); } });
+    $("#c-sumber").addEventListener("change", (e) => { S.cn.sumber = e.target.value; renderChina(); });
+    $("#c-asli").addEventListener("change", (e) => { S.cn.asli = e.target.checked; renderChina(); });
+    $("#more-china").addEventListener("click", () => renderChina(true));
+    let tc;
+    $("#cq").addEventListener("input", (e) => { clearTimeout(tc); tc = setTimeout(() => { S.cn.q = e.target.value; renderChina(); }, 300); });
     $("#f-sektor").addEventListener("click", (e) => { const b = e.target.closest("button[data-s]"); if (b) { S.sh.sektor = b.dataset.s; drawSaham(); } });
     $("#s-sort").addEventListener("change", (e) => { S.sh.sort = e.target.value; drawSaham(); });
     let ts;
@@ -752,7 +808,7 @@
     fillSelects();
     bind();
     const [tab, area] = location.hash.slice(1).split("/");
-    if (["berita", "promo", "viral", "saham", "peta"].includes(tab)) S.tab = tab;
+    if (["berita", "promo", "viral", "saham", "china", "peta"].includes(tab)) S.tab = tab;
     S.area = areaFromValue(area);
     $("#area").value = areaValue(S.area);
     render(true);

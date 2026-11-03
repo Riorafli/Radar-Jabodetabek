@@ -16,6 +16,7 @@ const HELP = `Radar Jabodetabek - berita, promo makanan & tempat viral.
 /viral [zona|kota] - lagi viral/ramai, mis. /viral depok
 /baru [zona|kota] - tempat makan baru (OSM)
 /saham [kode] - harga saham BEI, mis. /saham BBCA (data tertunda, bukan saran investasi)
+/china [teknologi|bisnis|kebijakan] - berita China terbaru (terjemahan)
 /zona - daftar zona
 /langganan <zona|kota> - notifikasi tempat viral
 /berhenti - hapus semua langganan
@@ -324,6 +325,22 @@ async function cmdSaham(env, arg) {
     + `▼ Turun terbanyak: ${turun.map((r) => `${r.kode} ${pct(r.persen)}`).join(", ")}\n\nDetail: /saham BBCA` + CATATAN_SAHAM;
 }
 
+export function chinaKategori(arg) {
+  const t = normalize(arg);
+  for (const [k, w] of [["teknologi", ["teknologi", "tech", "ai", "chip"]], ["bisnis", ["bisnis", "pasar", "ekonomi", "saham"]],
+    ["kebijakan", ["kebijakan", "politik", "pemerintah"]], ["sosial", ["sosial", "budaya"]]]) {
+    if (w.some((x) => t.includes(` ${x} `))) return k;
+  }
+  return null;
+}
+
+async function cmdChina(env, arg) {
+  const k = chinaKategori(arg || "");
+  const rows = await sb(env, `berita_china?select=judul_id,sumber,url,terbit&judul_id=not.is.null${k ? `&kategori=eq.${k}` : ""}&order=terbit.desc&limit=8`);
+  if (!rows.length) return "Belum ada berita China.";
+  return `🇨🇳 Berita China${k ? ` · ${k}` : ""} (terjemahan AI)\n\n` + rows.map((r) => `• ${r.judul_id}\n  ${r.sumber}, ${timeAgo(r.terbit)}\n  ${r.url}`).join("\n\n");
+}
+
 export async function handle(env, update) {
   const msg = update.message || update.edited_message;
   if (!msg?.text) return null;
@@ -341,6 +358,7 @@ export async function handle(env, update) {
     case "/baru": return cmdBaru(env, arg);
     case "/zona": return cmdZona(env);
     case "/saham": return cmdSaham(env, arg);
+    case "/china": return cmdChina(env, arg);
     case "/langganan": return cmdLangganan(env, chatId, arg);
     case "/berhenti": return cmdBerhenti(env, chatId);
     case "/lapor": return cmdLapor(env, arg);

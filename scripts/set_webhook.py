@@ -18,6 +18,7 @@ COMMANDS = [
     ("viral", "Tempat viral/ramai, mis. /viral depok"),
     ("baru", "Tempat makan baru"),
     ("saham", "Harga saham BEI, mis. /saham BBCA"),
+    ("china", "Berita China terbaru (terjemahan), mis. /china teknologi"),
     ("zona", "Daftar zona"),
     ("langganan", "Notifikasi tempat viral di suatu zona"),
     ("berhenti", "Hapus semua langganan"),
