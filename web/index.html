@@ -200,16 +200,8 @@
         <span class="src-badge agregator">🔁 Agregator/cepat</span> sering menulis ulang media lain atau memuat bocoran, cek sumber aslinya.</p>
       <div class="filters">
         <div id="f-china" class="chips" role="group" aria-label="Kategori"></div>
+        <div id="f-cjenis" class="chips sub" role="group" aria-label="Jenis sumber"></div>
         <div class="filter-row">
-          <label class="sort">Sumber <select id="c-sumber"><option value="">Semua sumber</option></select></label>
-          <label class="sort">Jenis
-            <select id="c-jenis">
-              <option value="">Semua jenis</option>
-              <option value="negara">📡 Media negara</option>
-              <option value="swasta">📰 Media swasta</option>
-              <option value="agregator">🔁 Agregator/cepat</option>
-            </select>
-          </label>
           <label class="sort">Waktu
             <select id="c-waktu">
               <option value="semua">Semua (14 hari)</option>
@@ -230,6 +222,8 @@
           <label class="sort waktu-extra" id="c-tgl-wrap" hidden>Tanggal
             <input id="c-tgl" class="tgl-input" type="date" aria-label="Tanggal berita China">
           </label>
+          <label class="sort">Sumber <select id="c-sumber"><option value="">Semua sumber</option></select></label>
+          <button id="c-reset" class="link-btn" type="button" hidden>Reset filter</button>
           <label class="toggle"><input id="c-asli" type="checkbox"> Tampilkan judul asli</label>
         </div>
       </div>

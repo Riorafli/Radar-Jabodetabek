@@ -226,7 +226,7 @@
     },
     async chinaMeta(rng = {}) {
       if (DEMO) return [];
-      return rest(`berita_china?select=kategori,sumber&judul_id=not.is.null&limit=2000${terbitQS(rng)}`);
+      return rest(`berita_china?select=kategori,sumber,jenis_sumber&judul_id=not.is.null&limit=2000${terbitQS(rng)}`);
     },
     async saham() {
       if (DEMO) return [];
@@ -736,14 +736,24 @@
       if (mode === "atur") { const n = parseInt(w.slice(5), 10) || 7; $("#c-hari").value = n; $("#c-hari-n").textContent = `${n} hari`; }
       if (mode === "tgl") $("#c-tgl").value = w.slice(4);
       $("#h-china-waktu").textContent = labelWaktu(w) ? `· ${labelWaktu(w)}` : "";
+      $("#c-reset").hidden = cn.kat === "semua" && w === "semua" && !cn.sumber && !cn.jenis;
       try {
+        // same layout as Berita: category chips, source-type chips, then Waktu / Sumber
         const meta = await data.chinaMeta(rng);
-        const ck = { semua: meta.length }, cs = {};
-        for (const m of meta) { ck[m.kategori || "lainnya"] = (ck[m.kategori || "lainnya"] || 0) + 1; cs[m.sumber] = (cs[m.sumber] || 0) + 1; }
+        const kat = (m) => m.kategori || "lainnya";
+        const ck = { semua: 0 }, cj = { "": 0 }, cs = {};
+        for (const m of meta) {
+          if ((!cn.jenis || m.jenis_sumber === cn.jenis) && (!cn.sumber || m.sumber === cn.sumber)) { ck.semua++; ck[kat(m)] = (ck[kat(m)] || 0) + 1; }
+          if ((cn.kat === "semua" || kat(m) === cn.kat) && (!cn.sumber || m.sumber === cn.sumber)) { cj[""]++; cj[m.jenis_sumber] = (cj[m.jenis_sumber] || 0) + 1; }
+          if ((cn.kat === "semua" || kat(m) === cn.kat) && (!cn.jenis || m.jenis_sumber === cn.jenis)) cs[m.sumber] = (cs[m.sumber] || 0) + 1;
+        }
         $("#f-china").innerHTML = [["semua", "🌏 Semua"], ...Object.entries(KAT_CN)].map(([k, label]) =>
-          `<button type="button" data-k="${k}" class="fchip ${cn.kat === k ? "on" : ""}" ${!ck[k] && k !== "semua" ? "disabled" : ""}>${label} <span class="n">${ck[k] || 0}</span></button>`).join("");
+          `<button type="button" data-k="${k}" class="fchip ${cn.kat === k ? "on" : ""}" ${!ck[k] && k !== "semua" && cn.kat !== k ? "disabled" : ""}>${label} <span class="n">${ck[k] || 0}</span></button>`).join("");
+        $("#f-cjenis").innerHTML = ["", "negara", "swasta", "agregator"].map((j) => `<button type="button" data-j="${j}" class="fchip ${cn.jenis === j ? "on" : ""}" ${!cj[j] && j && cn.jenis !== j ? "disabled" : ""}>
+          ${j ? JENIS_SUMBER[j][0] : "🗂️ Semua jenis sumber"} <span class="n">${cj[j] || 0}</span></button>`).join("");
         $("#c-sumber").innerHTML = `<option value="">Semua sumber</option>` + Object.keys(cs).sort().map((s) =>
-          `<option value="${esc(s)}" ${cn.sumber === s ? "selected" : ""}>${esc(s)} (${cs[s]})</option>`).join("");
+          `<option value="${esc(s)}" ${cn.sumber === s ? "selected" : ""}>${esc(s)}</option>`).join("")
+          + (cn.sumber && !cs[cn.sumber] ? `<option value="${esc(cn.sumber)}" selected>${esc(cn.sumber)}</option>` : "");
       } catch (e) { console.error(e); }
     }
     try {
@@ -874,7 +884,8 @@
     $("#more-berita").addEventListener("click", () => renderBerita(true));
     $("#f-china").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) { S.cn.kat = b.dataset.k; renderChina(); } });
     $("#c-sumber").addEventListener("change", (e) => { S.cn.sumber = e.target.value; renderChina(); });
-    $("#c-jenis").addEventListener("change", (e) => { S.cn.jenis = e.target.value; S.cn.sumber = ""; renderChina(); });
+    $("#f-cjenis").addEventListener("click", (e) => { const b = e.target.closest("button[data-j]"); if (b) { S.cn.jenis = b.dataset.j; S.cn.sumber = ""; renderChina(); } });
+    $("#c-reset").addEventListener("click", () => { Object.assign(S.cn, { kat: "semua", w: "semua", sumber: "", jenis: "" }); renderChina(); });
     $("#c-asli").addEventListener("change", (e) => { S.cn.asli = e.target.checked; renderChina(); });
     $("#more-china").addEventListener("click", () => renderChina(true));
     // China time filter: same controls as Berita, limited to the 14 days the database keeps
