@@ -525,3 +525,21 @@ def test_topik_klasifikasi(judul, ringkasan, harap):
 def test_topik_info_bmkg_is_weather():
     from pipeline.topik import klasifikasi
     assert "cuaca_bencana" in klasifikasi("⚠️ Hujan Lebat disertai Petir di DKI Jakarta", "", "info")
+
+
+def test_peta_jenis_sumber_berita():
+    from pipeline.topik import peta_jenis
+    peta = peta_jenis(load_config("sources"))
+    assert peta["BMKG"] == "resmi" and peta["Antara Megapolitan"] == "negara" and peta["Detik News"] == "swasta"
+    assert peta["Radar Bekasi"] == "lokal" and peta["Tangerang News"] == "lokal"
+    assert set(peta.values()) <= {"resmi", "negara", "swasta", "lokal", "lainnya"}
+    assert all("jenis" in f for f in load_config("sources")["rss"])       # every feed labelled
+
+
+def test_jenis_domain():
+    from pipeline.topik import jenis_domain
+    dj = load_config("sources")["gdelt"]["domain_jenis"]
+    assert jenis_domain("antaranews.com", dj) == "negara"
+    assert jenis_domain("daerah.sindonews.com", dj) == "swasta"
+    assert jenis_domain("jakarta.go.id", dj) == "resmi"
+    assert jenis_domain("blogacak.net", dj) is None

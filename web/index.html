@@ -70,6 +70,7 @@
       </div>
       <div class="filters">
         <div id="f-topik" class="chips" role="group" aria-label="Topik berita"></div>
+        <div id="f-jenis" class="chips sub" role="group" aria-label="Jenis sumber"></div>
         <div class="filter-row">
           <label class="sort">Waktu
             <select id="b-waktu">
@@ -82,6 +83,8 @@
           <label class="sort">Sumber <select id="b-sumber"><option value="">Semua sumber</option></select></label>
           <button id="b-reset" class="link-btn" type="button" hidden>Reset filter</button>
         </div>
+        <p class="note small legend-sumber">🏛️ Resmi pemerintah · 📡 Media negara (milik negara/BUMN) · 📰 Media swasta nasional ·
+          🏘️ Media lokal · 🔁 Lainnya. Sentuh label di berita untuk penjelasan.</p>
       </div>
       <ul id="list-berita" class="list"></ul>
       <button id="more-berita" class="btn more" type="button" hidden>Muat lebih banyak</button>
@@ -168,13 +171,21 @@
       <p class="note">Judul &amp; ringkasan dari media China dan media yang meliput China, <b>diterjemahkan otomatis oleh AI</b>
         (bisa ada kekeliruan). Diperbarui tiap jam. Baca artikel aslinya untuk detail.</p>
       <p class="note legend-sumber">Jenis sumber:
-        <span class="src-badge negara">🏛️ Media negara</span> sudut pandang resmi pemerintah China ·
+        <span class="src-badge negara">📡 Media negara</span> sudut pandang resmi pemerintah China ·
         <span class="src-badge swasta">📰 Media swasta</span> ·
         <span class="src-badge agregator">🔁 Agregator/cepat</span> sering menulis ulang media lain atau memuat bocoran, cek sumber aslinya.</p>
       <div class="filters">
         <div id="f-china" class="chips" role="group" aria-label="Kategori"></div>
         <div class="filter-row">
           <label class="sort">Sumber <select id="c-sumber"><option value="">Semua sumber</option></select></label>
+          <label class="sort">Jenis
+            <select id="c-jenis">
+              <option value="">Semua jenis</option>
+              <option value="negara">📡 Media negara</option>
+              <option value="swasta">📰 Media swasta</option>
+              <option value="agregator">🔁 Agregator/cepat</option>
+            </select>
+          </label>
           <label class="toggle"><input id="c-asli" type="checkbox"> Tampilkan judul asli</label>
         </div>
       </div>

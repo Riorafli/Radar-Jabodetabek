@@ -65,6 +65,17 @@
 
   const skeleton = (n) => Array.from({ length: n }, () => `<li class="sk" aria-hidden="true"><i></i><i></i><i></i></li>`).join("");
 
+  // ------------------------------------------------------------ source types (Berita + China)
+  const JENIS_SUMBER = {
+    resmi: ["🏛️ Resmi pemerintah", "Instansi resmi pemerintah (mis. BMKG): data dan peringatan resmi"],
+    negara: ["📡 Media negara", "Media milik negara/BUMN (Indonesia: Antara; China: CGTN, Sixth Tone): cenderung membawa sudut pandang resmi pemerintah"],
+    swasta: ["📰 Media swasta", "Media swasta nasional"],
+    lokal: ["🏘️ Media lokal", "Media lokal daerah: liputan dekat, jangkauan terbatas"],
+    agregator: ["🔁 Agregator/cepat", "Portal cepat yang sering menulis ulang media lain atau memuat bocoran: cek sumber aslinya"],
+    lainnya: ["🔁 Lainnya", "Sumber lain (mis. hasil pencarian GDELT): cek kredibilitas medianya"],
+  };
+  const badgeSumber = (j) => (JENIS_SUMBER[j] ? `<span class="src-badge ${esc(j)}" title="${esc(JENIS_SUMBER[j][1])}">${JENIS_SUMBER[j][0]}</span>` : "");
+
   // ------------------------------------------------------------ berita filters
   const TOPIK = {
     lalu_lintas: "🚦 Lalu lintas", cuaca_bencana: "🌧️ Cuaca & bencana", peristiwa: "🚨 Peristiwa", kriminal: "⚖️ Kriminal & hukum",
@@ -87,6 +98,7 @@
     if (bf.t === "info") qs += "&tipe=eq.info";
     else if (bf.t && bf.t !== "semua") qs += `&topik=cs.${encodeURIComponent(`{"${bf.t}"}`)}`;
     if (bf.s) qs += `&sumber=eq.${encodeURIComponent(bf.s)}`;
+    if (bf.j) qs += `&jenis_sumber=eq.${encodeURIComponent(bf.j)}`;
     if (since) qs += `&published_at=gte.${encodeURIComponent(since)}`;
     return qs;
   }
@@ -146,14 +158,15 @@
       const since = beritaSince(bf.w);
       if (DEMO) {
         return D().berita.filter((r) => areaMatch(r, area) && (!clean || r.judul.toLowerCase().includes(clean.toLowerCase()))
-          && cocokTopik(r, bf.t) && (!bf.s || r.sumber === bf.s) && (!since || r.published_at >= since)).slice(offset, offset + PAGE);
+          && cocokTopik(r, bf.t) && (!bf.s || r.sumber === bf.s) && (!bf.j || r.jenis_sumber === bf.j)
+          && (!since || r.published_at >= since)).slice(offset, offset + PAGE);
       }
       const qs = (clean ? `&judul=ilike.${encodeURIComponent(`*${clean}*`)}` : "") + beritaQS(bf, since);
-      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,published_at,wilayah,zona,topik&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
+      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,published_at,wilayah,zona,topik,jenis_sumber&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
     },
     async beritaMeta(area, since) {
       if (DEMO) return D().berita.filter((r) => areaMatch(r, area) && (!since || r.published_at >= since));
-      return rest(`v_berita?select=tipe,topik,sumber&order=published_at.desc&limit=5000${areaQS(area)}${since ? `&published_at=gte.${encodeURIComponent(since)}` : ""}`);
+      return rest(`v_berita?select=tipe,topik,sumber,jenis_sumber&order=published_at.desc&limit=5000${areaQS(area)}${since ? `&published_at=gte.${encodeURIComponent(since)}` : ""}`);
     },
     async promo(area) {
       if (DEMO) return D().promo.filter((r) => areaMatch(r, area, "promo"));
@@ -181,11 +194,12 @@
       const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       return rest(`item?select=judul,url,ringkasan,meta,published_at&sumber=eq.${encodeURIComponent("Google Trends")}&published_at=gt.${encodeURIComponent(since)}&order=published_at.desc&limit=40`);
     },
-    async china(kategori, sumber, q, offset) {
+    async china(kategori, sumber, q, offset, jenis) {
       if (DEMO) return [];
       const clean = (q || "").replace(/[,()*%]/g, " ").trim();
       const qs = (kategori && kategori !== "semua" ? `&kategori=eq.${kategori}` : "")
         + (sumber ? `&sumber=eq.${encodeURIComponent(sumber)}` : "")
+        + (jenis ? `&jenis_sumber=eq.${encodeURIComponent(jenis)}` : "")
         + (clean ? `&or=(judul_id.ilike.${encodeURIComponent(`*${clean}*`)},ringkasan_id.ilike.${encodeURIComponent(`*${clean}*`)},judul_asli.ilike.${encodeURIComponent(`*${clean}*`)})` : "");
       return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,kategori,jenis_sumber,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
     },
@@ -214,10 +228,10 @@
 
   // ------------------------------------------------------------ state
   const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null,
-    bf: { t: "semua", w: "semua", s: "" },
+    bf: { t: "semua", w: "semua", s: "", j: "" },
     promos: [], outlets: [], outletKey: null,
     sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false },
-    cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0 },
+    cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0, jenis: "" },
     pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
   try { Object.assign(S.bf, JSON.parse(store.get("beritaFilter") || "{}")); } catch { /* ignore */ }
@@ -252,18 +266,27 @@
   async function drawBeritaFilters() {
     const bf = S.bf, since = beritaSince(bf.w);
     $("#b-waktu").value = bf.w;
-    $("#b-reset").hidden = bf.t === "semua" && bf.w === "semua" && !bf.s;
+    $("#b-reset").hidden = bf.t === "semua" && bf.w === "semua" && !bf.s && !bf.j;
     try {
       const keys = ["semua", "info", ...Object.keys(TOPIK)];
       const ct = {}, cs = {};
       const meta = await data.beritaMeta(S.area, since);       // recent rows: source list only (API caps rows)
-      for (const m of meta) if (cocokTopik(m, bf.t)) cs[m.sumber] = 1;
+      for (const m of meta) if (cocokTopik(m, bf.t) && (!bf.j || m.jenis_sumber === bf.j)) cs[m.sumber] = 1;
+      const jenisKeys = ["", ...Object.keys(JENIS_SUMBER).filter((j) => j !== "agregator")];
+      const cj = {};
       if (DEMO) {
-        for (const k of keys) ct[k] = meta.filter((m) => cocokTopik(m, k) && (!bf.s || m.sumber === bf.s)).length;
-      } else {                                                  // exact counts, respecting waktu + sumber
-        const n = await Promise.all(keys.map((k) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: k, s: bf.s }, since)}`)));
+        for (const k of keys) ct[k] = meta.filter((m) => cocokTopik(m, k) && (!bf.s || m.sumber === bf.s) && (!bf.j || m.jenis_sumber === bf.j)).length;
+        for (const j of jenisKeys) cj[j] = meta.filter((m) => cocokTopik(m, bf.t) && (!j || m.jenis_sumber === j)).length;
+      } else {                                                  // exact counts, respecting the other filters
+        const [n, nj] = await Promise.all([
+          Promise.all(keys.map((k) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: k, s: bf.s, j: bf.j }, since)}`))),
+          Promise.all(jenisKeys.map((j) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: bf.t, s: bf.s, j }, since)}`))),
+        ]);
         keys.forEach((k, i) => { ct[k] = n[i]; });
+        jenisKeys.forEach((j, i) => { cj[j] = nj[i]; });
       }
+      $("#f-jenis").innerHTML = jenisKeys.map((j) => `<button type="button" data-j="${j}" class="fchip ${bf.j === j ? "on" : ""}" ${!cj[j] && j && bf.j !== j ? "disabled" : ""}>
+        ${j ? JENIS_SUMBER[j][0] : "🗂️ Semua jenis sumber"} <span class="n">${cj[j] || 0}</span></button>`).join("");
       const opsi = [["semua", "📰 Semua"], ["info", "⚠️ Info layanan"], ...Object.entries(TOPIK)];
       $("#f-topik").innerHTML = opsi.map(([k, label]) => `<button type="button" data-t="${k}" class="fchip ${bf.t === k ? "on" : ""}" ${!ct[k] && k !== "semua" && bf.t !== k ? "disabled" : ""}>${label} <span class="n">${ct[k] || 0}</span></button>`).join("");
       $("#b-sumber").innerHTML = `<option value="">Semua sumber</option>` + Object.keys(cs).sort()
@@ -293,11 +316,12 @@
           <div class="meta">${r.tipe === "info" ? '<span class="chip info">⚠️ Info layanan</span>' : ""}
             ${where ? `<span class="chip">📍 ${esc(where)}</span>` : ""}
             ${(r.topik || []).filter((t) => t !== "umum" && TOPIK[t]).map((t) => `<span class="chip soft">${TOPIK[t]}</span>`).join("")}
+            ${badgeSumber(r.jenis_sumber)}
             <span class="src" style="--h:${hue(r.sumber)}">${esc(initials(r.sumber).slice(0, 1))}</span><span>${esc(r.sumber)}</span>·<span>${timeAgo(r.published_at)}</span></div>
         </li>`;
       }).join("");
       if (append) el.insertAdjacentHTML("beforeend", html);
-      else el.innerHTML = html || empty(S.bf.t !== "semua" || S.bf.w !== "semua" || S.bf.s
+      else el.innerHTML = html || empty(S.bf.t !== "semua" || S.bf.w !== "semua" || S.bf.s || S.bf.j
         ? "Tidak ada berita yang cocok dengan filter ini." : `Belum ada berita untuk ${areaName()}.`);
       S.offset += rows.length;
       $("#more-berita").hidden = rows.length < PAGE;
@@ -631,11 +655,6 @@
   }
 
   // ------------------------------------------------------------ china
-  const JENIS_SUMBER = {
-    negara: ["🏛️ Media negara", "Dimiliki/dikendalikan negara China: mencerminkan sudut pandang resmi pemerintah"],
-    swasta: ["📰 Media swasta", "Media swasta (tetap beroperasi di bawah aturan media China/Hong Kong)"],
-    agregator: ["🔁 Agregator/cepat", "Portal cepat yang sering menulis ulang media lain atau memuat bocoran: cek sumber aslinya"],
-  };
   const KAT_CN = { teknologi: "💻 Teknologi", bisnis: "📊 Bisnis & pasar", kebijakan: "🏛️ Kebijakan", sosial: "👥 Sosial", lainnya: "📌 Lainnya" };
 
   async function renderChina(append = false) {
@@ -654,7 +673,7 @@
       } catch (e) { console.error(e); }
     }
     try {
-      const rows = await data.china(cn.kat, cn.sumber, cn.q, cn.offset);
+      const rows = await data.china(cn.kat, cn.sumber, cn.q, cn.offset, cn.jenis);
       const html = rows.map((r, i) => {
         const url = safeUrl(r.url);
         return `<li style="--i:${i}" class="cn-${esc(r.kategori || "lainnya")}">
@@ -662,7 +681,7 @@
           ${cn.asli ? `<p class="asli" lang="${r.bahasa === "zh" ? "zh" : "en"}">${esc(r.judul_asli)}</p>` : ""}
           ${r.ringkasan_id ? `<p class="sum">${esc(r.ringkasan_id)}</p>` : ""}
           <div class="meta"><span class="chip">${KAT_CN[r.kategori] || KAT_CN.lainnya}</span>
-            ${JENIS_SUMBER[r.jenis_sumber] ? `<span class="src-badge ${esc(r.jenis_sumber)}" title="${esc(JENIS_SUMBER[r.jenis_sumber][1])}">${JENIS_SUMBER[r.jenis_sumber][0]}</span>` : ""}
+            ${badgeSumber(r.jenis_sumber)}
             <span class="lang">${r.bahasa === "zh" ? "中文" : "EN"}</span><span>${esc(r.sumber || "")}</span>·<span>${timeAgo(r.terbit)}</span></div>
         </li>`;
       }).join("");
@@ -776,6 +795,7 @@
     $("#more-berita").addEventListener("click", () => renderBerita(true));
     $("#f-china").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) { S.cn.kat = b.dataset.k; renderChina(); } });
     $("#c-sumber").addEventListener("change", (e) => { S.cn.sumber = e.target.value; renderChina(); });
+    $("#c-jenis").addEventListener("change", (e) => { S.cn.jenis = e.target.value; S.cn.sumber = ""; renderChina(); });
     $("#c-asli").addEventListener("change", (e) => { S.cn.asli = e.target.checked; renderChina(); });
     $("#more-china").addEventListener("click", () => renderChina(true));
     let tc;
@@ -814,7 +834,8 @@
     $("#f-topik").addEventListener("click", (e) => { const b = e.target.closest("button[data-t]"); if (b) setBF({ t: b.dataset.t }); });
     $("#b-waktu").addEventListener("change", (e) => setBF({ w: e.target.value }));
     $("#b-sumber").addEventListener("change", (e) => setBF({ s: e.target.value }));
-    $("#b-reset").addEventListener("click", () => setBF({ t: "semua", w: "semua", s: "" }));
+    $("#b-reset").addEventListener("click", () => setBF({ t: "semua", w: "semua", s: "", j: "" }));
+    $("#f-jenis").addEventListener("click", (e) => { const b = e.target.closest("button[data-j]"); if (b) setBF({ j: b.dataset.j, s: "" }); });
     $("#q").addEventListener("input", (e) => { clearTimeout(t); t = setTimeout(() => { S.q = e.target.value; renderBerita(); }, 300); });
 
     $("#theme").addEventListener("click", () => {

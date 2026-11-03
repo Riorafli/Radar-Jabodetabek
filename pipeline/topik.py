@@ -4,7 +4,7 @@ python -m pipeline.topik   (runs after the news collectors)
 Each item gets up to 2 topics, best match first; no match -> 'umum'.
 Re-tags the last 3 days every run, so keyword edits apply to recent news.
 """
-from pipeline.common import db, log
+from pipeline.common import db, load_config, log
 from pipeline.geocode import normalize
 
 TOPIK = {
@@ -56,8 +56,46 @@ def klasifikasi(judul, ringkasan="", tipe="berita"):
     return urut[:2]
 
 
+def peta_jenis(cfg):
+    """{source name: jenis} for the Berita tab (rss feeds + BMKG)."""
+    peta = {f["nama"]: f.get("jenis", "lainnya") for f in cfg.get("rss", [])}
+    peta["BMKG"] = cfg.get("bmkg", {}).get("jenis", "resmi")
+    return peta
+
+
+def sinkron_jenis(cur):
+    """Label every news item with its source type; unknown sources (GDELT domains) -> lainnya."""
+    n = 0
+    for nama, jenis in peta_jenis(load_config("sources")).items():
+        cur.execute("""update item set jenis_sumber = %s where tipe in ('berita', 'info') and sumber = %s
+                       and jenis_sumber is distinct from %s""", (jenis, nama, jenis))
+        n += cur.rowcount
+    # GDELT items carry the outlet's domain as source
+    dj = load_config("sources").get("gdelt", {}).get("domain_jenis", {})
+    cur.execute("select distinct sumber from item where tipe in ('berita', 'info') and (jenis_sumber is null or jenis_sumber = 'lainnya')")
+    for (sumber,) in cur.fetchall():
+        jenis = jenis_domain(sumber, dj)
+        if jenis:
+            cur.execute("update item set jenis_sumber = %s where tipe in ('berita', 'info') and sumber = %s", (jenis, sumber))
+            n += cur.rowcount
+    cur.execute("update item set jenis_sumber = 'lainnya' where tipe in ('berita', 'info') and jenis_sumber is null")
+    return n + cur.rowcount
+
+
+def jenis_domain(sumber, domain_jenis):
+    """'daerah.sindonews.com' -> 'swasta'; '*.go.id' -> 'resmi'; unknown -> None."""
+    d = (sumber or "").lower().strip()
+    if d.endswith(".go.id"):
+        return "resmi"
+    for jenis, domains in domain_jenis.items():
+        if any(d == x or d.endswith("." + x) for x in domains):
+            return jenis
+    return None
+
+
 def main():
     with db() as cur:
+        log(f"jenis sumber: {sinkron_jenis(cur)} berita diberi label")
         cur.execute("""select id, judul, coalesce(ringkasan, ''), tipe, topik from item where tipe in ('berita', 'info')
                        and (topik = '{}' or published_at > now() - interval '3 days')""")
         rows = cur.fetchall()

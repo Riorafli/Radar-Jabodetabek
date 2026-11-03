@@ -438,3 +438,9 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
 :root[data-theme="dark"] .src-badge.negara { background: #3d3214; color: #ffd43b; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .src-badge.negara { background: #3d3214; color: #ffd43b; } }
 .legend-sumber { line-height: 1.9; }
+
+.src-badge.resmi { background: var(--good-soft); color: var(--good); }
+.src-badge.lokal { background: #f3e8ff; color: #7048e8; }
+.src-badge.lainnya { background: var(--bg-2); color: var(--muted); }
+:root[data-theme="dark"] .src-badge.lokal { background: #2b2148; color: #b197fc; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .src-badge.lokal { background: #2b2148; color: #b197fc; } }

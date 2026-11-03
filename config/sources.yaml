@@ -6,43 +6,58 @@
 # rss.default_wilayah:       kode used when a local item mentions no place
 # rss.tipe:                  berita (default) | info (public service: weather, transit)
 
+# jenis = source type shown as a label/filter in the Berita tab:
+#   resmi (government agency) | negara (state-owned media) | swasta (private national)
+#   lokal (local outlet) | lainnya (anything else, e.g. GDELT domains)
 rss:
   - nama: Detik News
+    jenis: swasta
     url: https://news.detik.com/berita/rss
     filter_wilayah: true
   - nama: detikFood
+    jenis: swasta
     url: https://food.detik.com/rss
     filter_wilayah: true
   # Antara "megapolitan"/"metro" also carry national stories -> filtered too
   - nama: Antara Megapolitan
+    jenis: negara
     url: https://megapolitan.antaranews.com/rss/terkini.xml
     filter_wilayah: true
   - nama: Antara Metro
+    jenis: negara
     url: https://www.antaranews.com/rss/metro.xml
     filter_wilayah: true
   - nama: CNN Indonesia
+    jenis: swasta
     url: https://www.cnnindonesia.com/nasional/rss
     filter_wilayah: true
   - nama: CNN Indonesia Gaya Hidup
+    jenis: swasta
     url: https://www.cnnindonesia.com/gaya-hidup/rss
     filter_wilayah: true
   - nama: CNBC Indonesia
+    jenis: swasta
     url: https://www.cnbcindonesia.com/news/rss
     filter_wilayah: true
   - nama: Tempo
+    jenis: swasta
     url: https://rss.tempo.co/nasional
     filter_wilayah: true
   - nama: Okezone
+    jenis: swasta
     url: https://www.okezone.com/rss
     filter_wilayah: true
   - nama: Republika
+    jenis: swasta
     url: https://www.republika.co.id/rss
     filter_wilayah: true
   # Local outlets also carry national/entertainment news -> filtered too
   - nama: Radar Bekasi
+    jenis: lokal
     url: https://radarbekasi.id/feed
     filter_wilayah: true
   - nama: Tangerang News
+    jenis: lokal
     url: https://www.tangerangnews.com/rss
     filter_wilayah: true
   # Not working on 2026-10-08 (re-check later): Kompas megapolitan (404),
@@ -50,12 +65,21 @@ rss:
 
 # BMKG nowcast (weather warnings), filtered to Jabodetabek provinces/regions.
 bmkg:
+  jenis: resmi
   nowcast_url: https://www.bmkg.go.id/alerts/nowcast/id
   provinsi: [DKI Jakarta, Jawa Barat, Banten]
 
 # GDELT DOC API: free, no key, max 1 request / 5 s. Extra coverage only.
 gdelt:
   aktif: true
+  # source type of GDELT items by domain (anything ending in .go.id = resmi);
+  # unknown domains stay "lainnya"
+  domain_jenis:
+    negara: [antaranews.com, rri.co.id, tvri.go.id]
+    swasta: [detik.com, kompas.com, kompas.id, cnnindonesia.com, cnbcindonesia.com, liputan6.com, merdeka.com,
+             jawapos.com, sindonews.com, beritasatu.com, tempo.co, okezone.com, republika.co.id, tribunnews.com,
+             suara.com, kumparan.com, idntimes.com, koran-jakarta.com, mediaindonesia.com, inews.id, viva.co.id,
+             bisnis.com, kontan.co.id, katadata.co.id, thejakartapost.com, metrotvnews.com]
   query: '(jakarta OR bekasi OR depok OR tangerang OR bogor) sourcecountry:indonesia'
   timespan: 2h
   maxrecords: 75

@@ -86,6 +86,7 @@ create index if not exists item_zona       on item (zona_id, published_at desc);
 create index if not exists item_label      on item (label_status) where label_status = 'baru';
 create index if not exists item_judul_trgm on item using gin (judul gin_trgm_ops);
 alter table item add column if not exists topik text[] not null default '{}';
+alter table item add column if not exists jenis_sumber text;  -- resmi | negara | swasta | lokal | lainnya
 create index if not exists item_topik on item using gin (topik);
 
 create table if not exists promo (
@@ -255,7 +256,7 @@ create or replace view v_berita with (security_invoker = true) as
 select i.id, i.tipe, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
        i.kode_wilayah, w.nama as wilayah, i.zona_id, z.nama as zona,
        coalesce(i.lat, z.lat, w.lat) as lat, coalesce(i.lon, z.lon, w.lon) as lon,
-       i.topik
+       i.topik, i.jenis_sumber
 from item i
 left join wilayah w on w.kode = i.kode_wilayah
 left join zona z on z.id = i.zona_id
