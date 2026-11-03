@@ -505,3 +505,27 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
   .ihsg .val { font-size: 24px; }
   .to-top { right: 12px; bottom: 12px; }
 }
+
+/* ============================================================ large text settings (Samsung/Android font scaling) */
+html, body { max-width: 100%; overflow-x: clip; }          /* never a blank strip beside the page */
+@media (max-width: 600px) {
+  /* columns sized in em: with bigger system text the grid drops to 2 columns instead of cutting labels */
+  .tabs { grid-template-columns: repeat(auto-fit, minmax(6.4em, 1fr)); }
+  .area-ctl { flex-wrap: wrap; justify-content: flex-start; }
+  #area { flex: 1 1 9em; min-width: 0; }
+  .icon-btn { width: auto; min-width: 2.4em; height: auto; min-height: 2.4em; }
+  #near { min-width: 2.4em; }
+  .stats { grid-template-columns: repeat(auto-fit, minmax(4.6em, 1fr)); }
+}
+
+/* header on phones: [logo] / [area select ...... 📍 🌙] - the two buttons stay together,
+   and with very large system text they move to the next line together */
+@media (max-width: 600px) {
+  .top-row { flex-wrap: wrap; row-gap: 8px; }
+  .brand { flex: 1 1 100%; min-width: 0; }
+  .area-ctl { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; }
+  #area { flex: 1 1 10em; min-width: 0; }
+  #near, #theme { flex: none; }
+}
+.hdr-btns { display: inline-flex; gap: 8px; flex: none; align-items: center; }
+@media (max-width: 600px) { .hdr-btns { gap: 6px; } }
