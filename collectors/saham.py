@@ -20,6 +20,26 @@ from pipeline.common import ROOT, WIB, clean_html, db, http, load_config, log, n
 
 KOSONG = ("", "#n/a", "#value!", "#ref!", "#error!", "loading...", "n/a", "-")
 
+# A headline that names one of these is capital-market news (moved from the
+# Berita tab to the Saham tab). Lowercase, whole words.
+KATA_SAHAM = ["saham", "ihsg", "bursa efek", "bursa saham", "emiten", "ipo", "dividen", "right issue", "reksa dana",
+              "reksadana", "obligasi", "sukuk", "lq45", "idx", "bei", "investor saham", "harga saham", "aksi korporasi",
+              "buyback", "stock split", "pasar modal", "sekuritas"]
+KATA_KRIPTO = ["kripto", "crypto", "cryptocurrency", "bitcoin", "btc", "ethereum", "blockchain", "stablecoin",
+               "indodax", "binance", "token kripto", "aset kripto", "altcoin", "nft", "web3"]
+
+
+def jenis_pasar(judul, pola=None):
+    """'kripto' / 'saham' when the HEADLINE is about crypto / the stock market, else None."""
+    from pipeline.geocode import normalize
+
+    t = normalize(judul)
+    if any(f" {w} " in t for w in KATA_KRIPTO):
+        return "kripto"
+    if any(f" {w} " in t for w in KATA_SAHAM) or (pola and kode_disebut(judul, pola)):
+        return "saham"
+    return None
+
 
 def angka(s):
     """'9,875.00' / '1.23' / '#N/A' -> float or None (sheet locale must be United States)."""
@@ -179,14 +199,16 @@ def main():
                 if not judul or not url or larangan.search(judul):
                     continue
                 kode = kode_disebut(f"{judul} {clean_html(e.get('summary'), 400)}", pola)
-                if not kode:
+                jenis = jenis_pasar(judul, pola)
+                if not kode and jenis != "kripto":
                     continue
                 t = e.get("published_parsed")
                 terbit = datetime(*t[:6], tzinfo=timezone.utc) if t else None
                 if terbit and terbit < batas:
                     continue
-                cur.execute("""insert into saham_berita (url, judul, sumber, terbit, kode) values (%s,%s,%s,coalesce(%s, now()),%s)
-                               on conflict (url) do nothing""", (url, judul, f["nama"], terbit, kode))
+                cur.execute("""insert into saham_berita (url, judul, sumber, terbit, kode, jenis)
+                               values (%s,%s,%s,coalesce(%s, now()),%s,%s) on conflict (url) do nothing""",
+                            (url, judul, f["nama"], terbit, kode, jenis or "saham"))
                 baru += cur.rowcount
         log(f"saham berita: {baru} baru")
 

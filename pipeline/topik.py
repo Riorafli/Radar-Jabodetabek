@@ -40,8 +40,13 @@ TOPIK = {
 _TOPIK_NORM = {k: [normalize(w).strip() for w in ws] for k, ws in TOPIK.items()}
 
 
-def klasifikasi(judul, ringkasan="", tipe="berita"):
-    """-> up to 2 topics, title hits weigh double; ['umum'] when nothing matches."""
+def klasifikasi(judul, ringkasan="", tipe="berita", pola_saham=None):
+    """-> up to 2 topics, title hits weigh double; ['umum'] when nothing matches.
+    A HEADLINE about stocks/crypto -> ['pasar_modal'] only: it moves to the Saham tab."""
+    from collectors.saham import jenis_pasar
+
+    if tipe == "berita" and jenis_pasar(judul, pola_saham):
+        return ["pasar_modal"]
     tj, tr = normalize(judul), normalize(ringkasan)
     skor = {}
     for k, ws in _TOPIK_NORM.items():
@@ -93,7 +98,39 @@ def jenis_domain(sumber, domain_jenis):
     return None
 
 
+def pindah_ke_saham(cur, pola):
+    """Copy pasar_modal news into saham_berita (the Saham tab's news list)."""
+    from collectors.saham import jenis_pasar, kode_disebut
+
+    cur.execute("""select url, judul, sumber, published_at, coalesce(ringkasan, '') from item
+                   where 'pasar_modal' = any(topik) and url is not null
+                   and not exists (select 1 from saham_berita s where s.url = item.url)""")
+    rows = cur.fetchall()
+    for url, judul, sumber, terbit, ringkasan in rows:
+        cur.execute("""insert into saham_berita (url, judul, sumber, terbit, kode, jenis) values (%s,%s,%s,%s,%s,%s)
+                       on conflict (url) do nothing""",
+                    (url, judul, sumber, terbit, kode_disebut(f"{judul} {ringkasan}", pola), jenis_pasar(judul, pola) or "saham"))
+    return len(rows)
+
+
+def pola_pindah():
+    """Tickers only (BBCA, GOTO, IHSG): company-name keywords such as 'BRI' or
+    'Summarecon' also appear in sports, court and event news, so they must not
+    decide that a story is stock-market news."""
+    from collectors.saham import daftar_saham, pola_saham
+
+    return pola_saham([{"kode": s["kode"]} for s in daftar_saham()] + [{"kode": "IHSG"}])
+
+
+def pola_kode():
+    """Tickers + company keywords: used only to tag which stocks a moved story names."""
+    from collectors.saham import daftar_saham, pola_saham
+
+    return pola_saham(daftar_saham() + [{"kode": "IHSG", "kata_kunci": []}])
+
+
 def main():
+    pola = pola_pindah()
     with db() as cur:
         log(f"jenis sumber: {sinkron_jenis(cur)} berita diberi label")
         cur.execute("""select id, judul, coalesce(ringkasan, ''), tipe, topik from item where tipe in ('berita', 'info')
@@ -101,11 +138,12 @@ def main():
         rows = cur.fetchall()
         n = 0
         for iid, judul, ringkasan, tipe, lama in rows:
-            baru = klasifikasi(judul, ringkasan, tipe)
+            baru = klasifikasi(judul, ringkasan, tipe, pola)
             if baru != (lama or []):
                 cur.execute("update item set topik = %s where id = %s", (baru, iid))
                 n += 1
-    log(f"topik: {len(rows)} berita dicek, {n} diperbarui")
+        pindah = pindah_ke_saham(cur, pola_kode())
+    log(f"topik: {len(rows)} berita dicek, {n} diperbarui, {pindah} berita saham/kripto dipindah ke tab Saham")
 
 
 if __name__ == "__main__":

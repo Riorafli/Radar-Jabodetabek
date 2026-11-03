@@ -450,3 +450,10 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
 @media (min-width: 700px) {
   .chips { flex-wrap: wrap; overflow-x: visible; }
 }
+
+.pasar-head { margin-top: 30px; }
+#list-pasar li.saham { --bar: var(--good); }
+#list-pasar li.kripto { --bar: #f59f00; }
+.kode-chip { font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .03em; border: 1px solid var(--line); background: var(--surface);
+  color: var(--text); border-radius: 6px; padding: 1px 7px; cursor: pointer; }
+.kode-chip:hover { border-color: var(--accent); color: var(--accent); }

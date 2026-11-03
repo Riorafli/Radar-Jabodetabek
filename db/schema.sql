@@ -228,8 +228,10 @@ create table if not exists saham_berita (
   judul  text not null,
   sumber text,
   terbit timestamptz not null default now(),
-  kode   text[] not null default '{}'
+  kode   text[] not null default '{}',
+  jenis  text not null default 'saham'      -- saham | kripto
 );
+alter table saham_berita add column if not exists jenis text not null default 'saham';
 create index if not exists saham_berita_kode on saham_berita using gin (kode);
 create index if not exists saham_berita_terbit on saham_berita (terbit desc);
 
@@ -260,7 +262,8 @@ select i.id, i.tipe, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
 from item i
 left join wilayah w on w.kode = i.kode_wilayah
 left join zona z on z.id = i.zona_id
-where i.tipe in ('berita','info');
+where i.tipe in ('berita','info')
+  and not ('pasar_modal' = any(i.topik));   -- stock/crypto news lives in the Saham tab
 
 create or replace view v_promo with (security_invoker = true) as
 select i.id, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,

@@ -216,6 +216,15 @@
       const since = new Date(Date.now() - 75 * 86400000).toISOString().slice(0, 10);
       return rest(`saham_harian?select=kode,tanggal,close&tanggal=gte.${since}&order=tanggal&limit=10000`);
     },
+    async pasarBerita(jenis, offset) {
+      if (DEMO) return [];
+      return rest(`saham_berita?select=judul,url,sumber,terbit,kode,jenis&order=terbit.desc&limit=${PAGE}&offset=${offset}${jenis ? `&jenis=eq.${jenis}` : ""}`);
+    },
+    async pasarHitung() {
+      if (DEMO) return { semua: 0, saham: 0, kripto: 0 };
+      const [semua, saham, kripto] = await Promise.all(["", "&jenis=eq.saham", "&jenis=eq.kripto"].map((q) => count(`saham_berita?select=id${q}`)));
+      return { semua, saham, kripto };
+    },
     async sahamBerita(kode) {
       if (DEMO) return [];
       return rest(`saham_berita?select=judul,url,sumber,terbit&kode=cs.${encodeURIComponent(`{"${kode}"}`)}&order=terbit.desc&limit=6`);
@@ -230,7 +239,7 @@
   const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null,
     bf: { t: "semua", w: "semua", s: "", j: "" },
     promos: [], outlets: [], outletKey: null,
-    sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false },
+    sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false, pasar: "", pasarOff: 0 },
     cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0, jenis: "" },
     pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
@@ -574,7 +583,38 @@
     return `<svg class="spark ${vals[vals.length - 1] >= vals[0] ? "naik" : "turun"}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline points="${pts}"/></svg>`;
   }
 
+  async function renderPasar(append = false) {
+    const el = $("#list-pasar"), sh = S.sh;
+    if (!append) {
+      sh.pasarOff = 0;
+      el.innerHTML = skeleton(3);
+      try {
+        const c = await data.pasarHitung();
+        $("#f-pasar").innerHTML = [["", "📰 Semua", c.semua], ["saham", "📈 Saham", c.saham], ["kripto", "🪙 Kripto", c.kripto]]
+          .map(([k, label, n]) => `<button type="button" data-p="${k}" class="fchip ${sh.pasar === k ? "on" : ""}" ${!n && k ? "disabled" : ""}>${label} <span class="n">${n}</span></button>`).join("");
+      } catch (e) { console.error(e); }
+    }
+    try {
+      const rows = await data.pasarBerita(sh.pasar, sh.pasarOff);
+      const html = rows.map((r, i) => {
+        const url = safeUrl(r.url);
+        const kode = (r.kode || []).filter((k) => k !== "IHSG").slice(0, 4);
+        return `<li style="--i:${i}" class="${r.jenis === "kripto" ? "kripto" : "saham"}">
+          ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
+          <div class="meta"><span class="chip ${r.jenis === "kripto" ? "soft" : ""}">${r.jenis === "kripto" ? "🪙 Kripto" : "📈 Saham"}</span>
+            ${kode.map((k) => `<button type="button" class="kode-chip" data-kode="${esc(k)}">${esc(k)}</button>`).join("")}
+            <span>${esc(r.sumber || "")}</span>·<span>${timeAgo(r.terbit)}</span></div>
+        </li>`;
+      }).join("");
+      if (append) el.insertAdjacentHTML("beforeend", html);
+      else el.innerHTML = html || empty("Belum ada berita pasar modal.");
+      sh.pasarOff += rows.length;
+      $("#more-pasar").hidden = rows.length < PAGE;
+    } catch (e) { fail(el, e); }
+  }
+
   async function renderSaham() {
+    renderPasar();
     const el = $("#list-saham");
     if (!S.sh.loaded) el.innerHTML = skeleton(6);
     try {
@@ -800,6 +840,15 @@
     $("#more-china").addEventListener("click", () => renderChina(true));
     let tc;
     $("#cq").addEventListener("input", (e) => { clearTimeout(tc); tc = setTimeout(() => { S.cn.q = e.target.value; renderChina(); }, 300); });
+    $("#f-pasar").addEventListener("click", (e) => { const b = e.target.closest("button[data-p]"); if (b) { S.sh.pasar = b.dataset.p; renderPasar(); } });
+    $("#more-pasar").addEventListener("click", () => renderPasar(true));
+    $("#list-pasar").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-kode]");
+      if (!b) return;
+      const li = document.querySelector(`.saham-row[data-kode="${CSS.escape(b.dataset.kode)}"]`);
+      if (li) { li.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "center" }); bukaSaham(li); }
+      else toast(`${b.dataset.kode} belum ada di daftar harga.`);
+    });
     $("#f-sektor").addEventListener("click", (e) => { const b = e.target.closest("button[data-s]"); if (b) { S.sh.sektor = b.dataset.s; drawSaham(); } });
     $("#s-sort").addEventListener("change", (e) => { S.sh.sort = e.target.value; drawSaham(); });
     let ts;

@@ -543,3 +543,42 @@ def test_jenis_domain():
     assert jenis_domain("daerah.sindonews.com", dj) == "swasta"
     assert jenis_domain("jakarta.go.id", dj) == "resmi"
     assert jenis_domain("blogacak.net", dj) is None
+
+
+# --- stock/crypto news moved to the Saham tab ----------------------------------------------
+@pytest.mark.parametrize("judul, harap", [
+    ("IHSG Ditutup Menguat 0,29% Sore Ini", "saham"),
+    ("Harga Bitcoin Tembus Rekor Baru", "kripto"),
+    ("Indodax Catat Lonjakan Transaksi Aset Kripto", "kripto"),
+    ("Emiten Properti Bagikan Dividen Jumbo", "saham"),
+    ("Banjir Rendam Rumah Warga di Bekasi", None),
+    ("Harga Emas Antam Turun Hari Ini", None),             # gold price is not stock-market news
+])
+def test_jenis_pasar(judul, harap):
+    from collectors.saham import jenis_pasar
+    assert jenis_pasar(judul) == harap
+
+
+def test_pasar_modal_topic_only_from_headline():
+    from pipeline.topik import klasifikasi
+    assert klasifikasi("Saham BBCA Menguat, Investor Asing Masuk") == ["pasar_modal"]
+    assert klasifikasi("Banjir Bekasi Rendam 200 Rumah", "Kerugian warga ditaksir... saham") != ["pasar_modal"]
+    assert klasifikasi("⚠️ Hujan Lebat di DKI Jakarta", "", "info") != ["pasar_modal"]   # BMKG never moves
+
+
+@pytest.mark.parametrize("judul", [
+    "Klasemen sementara BRI Super League pekan ke-8",
+    "Sari Akui Bukan Mahasiswa Universitas BSI",
+    "KPK Periksa Pegawai Summarecon soal Suap Lahan di Bogor",
+    "BCA Semarakkan myBCA Jakarta Running Festival 2026",
+    "Intip Keseruan Wahana di Mal Ciputra Tangerang",
+])
+def test_company_names_do_not_move_news(judul):
+    from pipeline.topik import klasifikasi, pola_pindah
+    assert klasifikasi(judul, "", "berita", pola_pindah()) != ["pasar_modal"]
+
+
+def test_tickers_and_market_words_move_news():
+    from pipeline.topik import klasifikasi, pola_pindah
+    assert klasifikasi("Saham BBCA dan GOTO Kompak Menguat", "", "berita", pola_pindah()) == ["pasar_modal"]
+    assert klasifikasi("Pramono Tunda IPO PAM Jaya", "", "berita", pola_pindah()) == ["pasar_modal"]
