@@ -585,3 +585,35 @@ def test_tickers_and_market_words_move_news():
     from pipeline.topik import klasifikasi, pola_pindah
     assert klasifikasi("Saham BBCA dan GOTO Kompak Menguat", "", "berita", pola_pindah()) == ["pasar_modal"]
     assert klasifikasi("Pramono Tunda IPO PAM Jaya", "", "berita", pola_pindah()) == ["pasar_modal"]
+
+
+# ---------------------------------------------------------------- inti berita
+def test_inti_robots_opt_out():
+    from pipeline.inti import boleh_ai
+    url = "https://contoh.id/read/1/berita"
+    assert boleh_ai("", url)
+    assert boleh_ai("User-agent: *\nDisallow: /admin\n\nUser-agent: Google-Extended\nAllow: /\n", url)
+    assert not boleh_ai("User-agent: ClaudeBot\nDisallow: /\n", url)
+    assert not boleh_ai("User-agent: Google-Extended\nDisallow: /\n", url)
+    assert not boleh_ai("User-agent: *\nDisallow: /read/\n", url)
+
+
+def test_inti_ekstrak_teks():
+    from pipeline.inti import ekstrak_teks
+    isi = "Gubernur meresmikan taman baru di Jakarta Utara pada Senin pagi bersama warga. " * 6
+    ld = f'<script type="application/ld+json">{{"@type":"NewsArticle","articleBody":"{isi}"}}</script>'
+    assert ekstrak_teks(f"<html><head>{ld}</head><body></body></html>").startswith("Gubernur meresmikan")
+    html = f"""<html><body><nav><p>{'Menu navigasi situs yang panjang sekali dan tidak penting untuk dibaca'}</p></nav>
+      <article><p>{isi}</p><p>Baca juga: berita lain yang tidak berhubungan dengan topik ini sama sekali</p></article></body></html>"""
+    t = ekstrak_teks(html)
+    assert t.startswith("Gubernur") and "Baca juga" not in t and "navigasi" not in t
+    assert len(ekstrak_teks(f"<article><p>{isi * 20}</p></article>")) == 4000
+
+
+def test_inti_rapikan_poin():
+    from pipeline.inti import rapikan_poin
+    assert rapikan_poin(["- Pramono minta Forkopimda menata Kampung Bahari", "• Penataan menyusul penggerebekan narkoba"]) == [
+        "Pramono minta Forkopimda menata Kampung Bahari", "Penataan menyusul penggerebekan narkoba"]
+    assert rapikan_poin(["cuma satu poin yang cukup panjang"]) == []
+    assert rapikan_poin("bukan list") == []
+    assert len(rapikan_poin([f"poin nomor {i} yang cukup panjang" for i in range(6)])) == 4

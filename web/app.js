@@ -182,7 +182,7 @@
           && dalamRange(r.published_at, rng)).slice(offset, offset + PAGE);
       }
       const qs = (clean ? `&judul=ilike.${encodeURIComponent(`*${clean}*`)}` : "") + beritaQS(bf, rng);
-      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,published_at,wilayah,zona,topik,jenis_sumber&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
+      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,inti,published_at,wilayah,zona,topik,jenis_sumber&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
     },
     async beritaMeta(area, rng = {}) {
       if (DEMO) return D().berita.filter((r) => areaMatch(r, area) && dalamRange(r.published_at, rng));
@@ -347,7 +347,9 @@
         const where = r.zona || r.wilayah;
         return `<li class="${r.tipe === "info" ? "info" : ""}" style="--i:${i}">
           ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
-          ${r.ringkasan ? `<p class="sum">${esc(r.ringkasan)}</p>` : ""}
+          ${r.inti ? `<ul class="inti" aria-label="Inti berita">${r.inti.split("\n").map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
+            ${url ? `<a class="baca" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Baca selengkapnya di ${esc(r.sumber)} ↗</a>` : ""}`
+            : r.ringkasan ? `<p class="sum">${esc(r.ringkasan)}</p>` : ""}
           <div class="meta">${r.tipe === "info" ? '<span class="chip info">⚠️ Info layanan</span>' : ""}
             ${where ? `<span class="chip">📍 ${esc(where)}</span>` : ""}
             ${(r.topik || []).filter((t) => t !== "umum" && TOPIK[t]).map((t) => `<span class="chip soft">${TOPIK[t]}</span>`).join("")}

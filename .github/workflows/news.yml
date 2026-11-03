@@ -27,5 +27,7 @@ jobs:
         continue-on-error: true
       - run: python -m pipeline.dedup
       - run: python -m pipeline.topik
+      - run: python -m pipeline.inti
+        continue-on-error: true
       - run: python -m pipeline.geocode
         continue-on-error: true

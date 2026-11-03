@@ -566,3 +566,10 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
 .hari-n { min-width: 58px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
 #b-tgl, .tgl-input { padding: 6px 10px; }
 @media (max-width: 600px) { .hari-range { width: 46vw; } }
+
+/* news key points (pipeline/inti.py) */
+.list > li .inti { margin: 8px 0 0; padding: 0 0 0 1.15em; font-size: 14px; line-height: 1.55; color: var(--text); }
+.list > li .inti li { margin: 2px 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; animation: none; }
+.list > li .inti li::marker { color: var(--accent); }
+.list > li .baca { display: inline-block; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.list > li .baca:hover { text-decoration: underline; }
