@@ -2,7 +2,7 @@
 python -m pipeline.cleanup
 
 Retention (days) can be changed with env vars / GitHub secrets:
-  RETENSI_BERITA_HARI  news + BMKG info          (default 14)
+  RETENSI_BERITA_HARI  news + BMKG info          (default 31: the Berita tab can filter up to 30 days)
   RETENSI_POST_HARI    YouTube/Reddit posts      (default 30)
   RETENSI_PROMO_HARI   promos without an end date (default 60)
   RETENSI_SINYAL_HARI  viral signals             (default 30; scoring needs >= 15)
@@ -15,7 +15,7 @@ def hari(name, default, minimum=1):
 
 
 def main():
-    hari_berita = hari("RETENSI_BERITA_HARI", 14)
+    hari_berita = hari("RETENSI_BERITA_HARI", 31)
     hari_post = hari("RETENSI_POST_HARI", 30)
     hari_promo = hari("RETENSI_PROMO_HARI", 60)
     hari_sinyal = hari("RETENSI_SINYAL_HARI", 30, minimum=15)  # 14-day baseline + today

@@ -82,24 +82,39 @@
     pemerintahan: "🏛️ Pemerintahan", ekonomi: "💼 Ekonomi & kerja", kesehatan: "🏥 Kesehatan", pendidikan: "🎓 Pendidikan",
     gaya_hidup: "🎉 Gaya hidup", olahraga: "⚽ Olahraga", umum: "📌 Umum",
   };
-  function beritaSince(w) {
+  // WIB calendar helpers (dates as "YYYY-MM-DD")
+  const WIB_MS = 7 * 3600e3;
+  const tglWIB = (ms = Date.now()) => new Date(ms + WIB_MS).toISOString().slice(0, 10);
+  const awalTglWIB = (tgl) => new Date(Date.parse(`${tgl}T00:00:00Z`) - WIB_MS);   // midnight WIB as an instant
+  /** time filter value -> { since, until } ISO strings (either may be null).
+   *  "6j" = 6 hours, "hari" = today, "<N>h" = last N days (1-30), "tgl:YYYY-MM-DD" = that day */
+  function beritaRange(w) {
     const now = Date.now();
-    if (w === "6j") return new Date(now - 6 * 3600e3).toISOString();
-    if (w === "3h") return new Date(now - 3 * 86400e3).toISOString();
-    if (w === "hari") {
-      const wib = new Date(now + 7 * 3600e3);                       // midnight WIB as UTC instant
-      return new Date(Date.UTC(wib.getUTCFullYear(), wib.getUTCMonth(), wib.getUTCDate()) - 7 * 3600e3).toISOString();
+    if (w === "6j") return { since: new Date(now - 6 * 3600e3).toISOString(), until: null };
+    if (w === "hari") return { since: awalTglWIB(tglWIB(now)).toISOString(), until: null };
+    const n = /^(?:atur:)?(\d{1,2})h?$/.exec(w || "");
+    if (n) return { since: new Date(now - Math.min(30, Math.max(1, +n[1])) * 86400e3).toISOString(), until: null };
+    if ((w || "").startsWith("tgl:")) {
+      const a = awalTglWIB(w.slice(4));
+      return { since: a.toISOString(), until: new Date(a.getTime() + 86400e3).toISOString() };
     }
-    return null;
+    return { since: null, until: null };
+  }
+  const dalamRange = (iso, r) => (!r.since || iso >= r.since) && (!r.until || iso < r.until);
+  function labelWaktu(w) {
+    if ((w || "").startsWith("tgl:")) return new Date(`${w.slice(4)}T00:00:00`).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" });
+    const n = /^(?:atur:)?(\d{1,2})h?$/.exec(w || "");
+    return n ? `${n[1]} hari terakhir` : "";
   }
   const cocokTopik = (r, t) => !t || t === "semua" || (t === "info" ? r.tipe === "info" : (r.topik || ["umum"]).includes(t));
-  function beritaQS(bf, since) {
+  function beritaQS(bf, r = {}) {
     let qs = "";
     if (bf.t === "info") qs += "&tipe=eq.info";
     else if (bf.t && bf.t !== "semua") qs += `&topik=cs.${encodeURIComponent(`{"${bf.t}"}`)}`;
     if (bf.s) qs += `&sumber=eq.${encodeURIComponent(bf.s)}`;
     if (bf.j) qs += `&jenis_sumber=eq.${encodeURIComponent(bf.j)}`;
-    if (since) qs += `&published_at=gte.${encodeURIComponent(since)}`;
+    if (r.since) qs += `&published_at=gte.${encodeURIComponent(r.since)}`;
+    if (r.until) qs += `&published_at=lt.${encodeURIComponent(r.until)}`;
     return qs;
   }
 
@@ -155,18 +170,18 @@
     },
     async berita(area, q, offset, bf = {}) {
       const clean = (q || "").replace(/[,()*%]/g, " ").trim();
-      const since = beritaSince(bf.w);
+      const rng = beritaRange(bf.w);
       if (DEMO) {
         return D().berita.filter((r) => areaMatch(r, area) && (!clean || r.judul.toLowerCase().includes(clean.toLowerCase()))
           && cocokTopik(r, bf.t) && (!bf.s || r.sumber === bf.s) && (!bf.j || r.jenis_sumber === bf.j)
-          && (!since || r.published_at >= since)).slice(offset, offset + PAGE);
+          && dalamRange(r.published_at, rng)).slice(offset, offset + PAGE);
       }
-      const qs = (clean ? `&judul=ilike.${encodeURIComponent(`*${clean}*`)}` : "") + beritaQS(bf, since);
+      const qs = (clean ? `&judul=ilike.${encodeURIComponent(`*${clean}*`)}` : "") + beritaQS(bf, rng);
       return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,published_at,wilayah,zona,topik,jenis_sumber&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
     },
-    async beritaMeta(area, since) {
-      if (DEMO) return D().berita.filter((r) => areaMatch(r, area) && (!since || r.published_at >= since));
-      return rest(`v_berita?select=tipe,topik,sumber,jenis_sumber&order=published_at.desc&limit=5000${areaQS(area)}${since ? `&published_at=gte.${encodeURIComponent(since)}` : ""}`);
+    async beritaMeta(area, rng = {}) {
+      if (DEMO) return D().berita.filter((r) => areaMatch(r, area) && dalamRange(r.published_at, rng));
+      return rest(`v_berita?select=tipe,topik,sumber,jenis_sumber&order=published_at.desc&limit=5000${areaQS(area)}${beritaQS({}, rng)}`);
     },
     async promo(area) {
       if (DEMO) return D().promo.filter((r) => areaMatch(r, area, "promo"));
@@ -273,13 +288,19 @@
   }
 
   async function drawBeritaFilters() {
-    const bf = S.bf, since = beritaSince(bf.w);
-    $("#b-waktu").value = bf.w;
+    const bf = S.bf, rng = beritaRange(bf.w);
+    // the select shows presets; other values come from the slider or the date picker
+    const w = bf.w || "semua", mode = w.startsWith("atur:") ? "atur" : w.startsWith("tgl:") ? "tgl" : w;
+    $("#b-waktu").value = mode;
+    $("#b-hari-wrap").hidden = mode !== "atur";
+    $("#b-tgl-wrap").hidden = mode !== "tgl";
+    if (mode === "atur") { const n = parseInt(w.slice(5), 10) || 7; $("#b-hari").value = n; $("#b-hari-n").textContent = `${n} hari`; }
+    if (mode === "tgl") $("#b-tgl").value = w.slice(4);
     $("#b-reset").hidden = bf.t === "semua" && bf.w === "semua" && !bf.s && !bf.j;
     try {
       const keys = ["semua", "info", ...Object.keys(TOPIK)];
       const ct = {}, cs = {};
-      const meta = await data.beritaMeta(S.area, since);       // recent rows: source list only (API caps rows)
+      const meta = await data.beritaMeta(S.area, rng);         // recent rows: source list only (API caps rows)
       for (const m of meta) if (cocokTopik(m, bf.t) && (!bf.j || m.jenis_sumber === bf.j)) cs[m.sumber] = 1;
       const jenisKeys = ["", ...Object.keys(JENIS_SUMBER).filter((j) => j !== "agregator")];
       const cj = {};
@@ -288,8 +309,8 @@
         for (const j of jenisKeys) cj[j] = meta.filter((m) => cocokTopik(m, bf.t) && (!j || m.jenis_sumber === j)).length;
       } else {                                                  // exact counts, respecting the other filters
         const [n, nj] = await Promise.all([
-          Promise.all(keys.map((k) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: k, s: bf.s, j: bf.j }, since)}`))),
-          Promise.all(jenisKeys.map((j) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: bf.t, s: bf.s, j }, since)}`))),
+          Promise.all(keys.map((k) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: k, s: bf.s, j: bf.j }, rng)}`))),
+          Promise.all(jenisKeys.map((j) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: bf.t, s: bf.s, j }, rng)}`))),
         ]);
         keys.forEach((k, i) => { ct[k] = n[i]; });
         jenisKeys.forEach((j, i) => { cj[j] = nj[i]; });
@@ -312,7 +333,7 @@
 
   async function renderBerita(append = false) {
     const el = $("#list-berita");
-    $("#h-berita").textContent = `Berita terkini · ${areaName()}`;
+    $("#h-berita").textContent = `Berita ${labelWaktu(S.bf.w) ? `· ${labelWaktu(S.bf.w)}` : "terkini"} · ${areaName()}`;
     if (!append) { S.offset = 0; el.innerHTML = skeleton(5); drawBeritaFilters(); }
     try {
       const rows = await data.berita(S.area, S.q, S.offset, S.bf);
@@ -886,7 +907,21 @@
     $("#pq").addEventListener("input", (e) => { clearTimeout(tp); tp = setTimeout(() => setPF({ q: e.target.value }), 200); });
     let t;
     $("#f-topik").addEventListener("click", (e) => { const b = e.target.closest("button[data-t]"); if (b) setBF({ t: b.dataset.t }); });
-    $("#b-waktu").addEventListener("change", (e) => setBF({ w: e.target.value }));
+    $("#b-waktu").addEventListener("change", (e) => {
+      const v = e.target.value;
+      $("#b-hari-wrap").hidden = v !== "atur";
+      $("#b-tgl-wrap").hidden = v !== "tgl";
+      if (v === "atur") setBF({ w: `atur:${$("#b-hari").value}` });
+      else if (v === "tgl") { $("#b-tgl").focus(); if ($("#b-tgl").value) setBF({ w: `tgl:${$("#b-tgl").value}` }); }
+      else setBF({ w: v });
+    });
+    // slider: label follows while dragging, the list reloads when released
+    $("#b-hari").addEventListener("input", (e) => { $("#b-hari-n").textContent = `${e.target.value} hari`; });
+    $("#b-hari").addEventListener("change", (e) => setBF({ w: `atur:${e.target.value}` }));
+    // date picker limited to the 30 days the database keeps
+    $("#b-tgl").max = tglWIB();
+    $("#b-tgl").min = tglWIB(Date.now() - 30 * 86400e3);
+    $("#b-tgl").addEventListener("change", (e) => { if (e.target.value) setBF({ w: `tgl:${e.target.value}` }); });
     $("#b-sumber").addEventListener("change", (e) => setBF({ s: e.target.value }));
     $("#b-reset").addEventListener("click", () => setBF({ t: "semua", w: "semua", s: "", j: "" }));
     $("#f-jenis").addEventListener("click", (e) => { const b = e.target.closest("button[data-j]"); if (b) setBF({ j: b.dataset.j, s: "" }); });

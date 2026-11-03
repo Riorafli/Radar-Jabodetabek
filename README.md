@@ -159,7 +159,7 @@ python scripts/set_webhook.py
 | Gemini/Groq | per-minute/day limits | promo pages only when the page text changes; place/location extraction batched (1 call per run) |
 | Nominatim | 1 req/s | max 15 lookups per news run, cached forever |
 | Overpass | fair use | 20 queries/day at 03:00 WIB, 5 s apart |
-| Supabase | 500 MB | daily cleanup (02:30 WIB): news > 14 days, videos > 30 days, expired promos, signals > 30 days. Change with repo variables `RETENSI_BERITA_HARI` / `RETENSI_POST_HARI`. |
+| Supabase | 500 MB | daily cleanup (02:30 WIB): news > 31 days, videos > 30 days, expired promos, signals > 30 days. Change with repo variables `RETENSI_BERITA_HARI` / `RETENSI_POST_HARI`. |
 
 ## China news tab
 

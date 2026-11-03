@@ -157,8 +157,11 @@ def test_parse_entry_local_feed_default(m):
 
 def test_parse_entry_skips_entries_older_than_retention(m):
     old = _entry("Banjir di Bekasi Timur")
-    old["published_parsed"] = time.gmtime(time.time() - 20 * 86400)
-    assert parse_entry(old, {"filter_wilayah": True}, m) is None
+    old["published_parsed"] = time.gmtime(time.time() - 40 * 86400)
+    assert parse_entry(old, {"filter_wilayah": True}, m) is None          # older than the 31-day retention
+    recent = _entry("Banjir di Bekasi Timur")
+    recent["published_parsed"] = time.gmtime(time.time() - 20 * 86400)
+    assert parse_entry(recent, {"filter_wilayah": True}, m) is not None   # inside the 30-day filter window
 
 
 def test_clean_html_broken_entities():

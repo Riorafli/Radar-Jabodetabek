@@ -78,11 +78,24 @@
         <div class="filter-row">
           <label class="sort">Waktu
             <select id="b-waktu">
-              <option value="semua">Semua</option>
+              <option value="semua">Semua (30 hari)</option>
               <option value="6j">6 jam terakhir</option>
               <option value="hari">Hari ini</option>
+              <option value="1h">1 hari terakhir</option>
               <option value="3h">3 hari terakhir</option>
+              <option value="7h">7 hari terakhir</option>
+              <option value="14h">14 hari terakhir</option>
+              <option value="30h">30 hari terakhir</option>
+              <option value="atur">Atur jumlah hari (1–30)…</option>
+              <option value="tgl">Pilih tanggal…</option>
             </select>
+          </label>
+          <label class="sort waktu-extra" id="b-hari-wrap" hidden>
+            <input id="b-hari" type="range" min="1" max="30" step="1" value="7" aria-label="Jumlah hari">
+            <output id="b-hari-n">7 hari</output>
+          </label>
+          <label class="sort waktu-extra" id="b-tgl-wrap" hidden>Tanggal
+            <input id="b-tgl" type="date" aria-label="Tanggal berita">
           </label>
           <label class="sort">Sumber <select id="b-sumber"><option value="">Semua sumber</option></select></label>
           <button id="b-reset" class="link-btn" type="button" hidden>Reset filter</button>

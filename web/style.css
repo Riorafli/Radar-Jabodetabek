@@ -559,3 +559,9 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
   .tab-ind { transition: none; }
 }
 
+/* time filter: 1-30 day slider and date picker */
+.waktu-extra { gap: 8px; }
+#b-hari { width: 150px; accent-color: var(--accent); }
+#b-hari-n { min-width: 58px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+#b-tgl { padding: 6px 10px; }
+@media (max-width: 600px) { #b-hari { width: 46vw; } }

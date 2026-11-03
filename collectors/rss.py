@@ -31,7 +31,7 @@ def parse_entry(e, feed, matcher):
     t = e.get("published_parsed") or e.get("updated_parsed")
     waktu = datetime(*t[:6], tzinfo=timezone.utc) if t else datetime.now(timezone.utc)
     waktu = min(waktu, datetime.now(timezone.utc))  # some feeds publish future timestamps
-    if waktu < datetime.now(timezone.utc) - timedelta(days=int(env("RETENSI_BERITA_HARI", 14))):
+    if waktu < datetime.now(timezone.utc) - timedelta(days=int(env("RETENSI_BERITA_HARI", 31))):
         return None  # older than retention: cleanup would delete it again
     return {
         "judul": judul, "url": link, "ringkasan": ringkasan, "published_at": waktu,
