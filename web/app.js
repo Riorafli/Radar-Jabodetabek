@@ -265,6 +265,7 @@
     pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
   try { Object.assign(S.bf, JSON.parse(store.get("beritaFilter") || "{}")); } catch { /* ignore */ }
+  if (String(S.bf.w).startsWith("atur:")) S.bf.w = "semua";       // saved value from the removed day slider
 
   function areaFromValue(v) {
     if (!v || v === "all") return null;
@@ -296,11 +297,9 @@
   async function drawBeritaFilters() {
     const bf = S.bf, rng = beritaRange(bf.w);
     // the select shows presets; other values come from the slider or the date picker
-    const w = bf.w || "semua", mode = w.startsWith("atur:") ? "atur" : w.startsWith("tgl:") ? "tgl" : w;
+    const w = bf.w || "semua", mode = w.startsWith("tgl:") ? "tgl" : w;
     $("#b-waktu").value = mode;
-    $("#b-hari-wrap").hidden = mode !== "atur";
     $("#b-tgl-wrap").hidden = mode !== "tgl";
-    if (mode === "atur") { const n = parseInt(w.slice(5), 10) || 7; $("#b-hari").value = n; $("#b-hari-n").textContent = `${n} hari`; }
     if (mode === "tgl") $("#b-tgl").value = w.slice(4);
     $("#b-reset").hidden = bf.t === "semua" && bf.w === "semua" && !bf.s && !bf.j;
     try {
@@ -948,15 +947,10 @@
     $("#f-topik").addEventListener("click", (e) => { const b = e.target.closest("button[data-t]"); if (b) setBF({ t: b.dataset.t }); });
     $("#b-waktu").addEventListener("change", (e) => {
       const v = e.target.value;
-      $("#b-hari-wrap").hidden = v !== "atur";
       $("#b-tgl-wrap").hidden = v !== "tgl";
-      if (v === "atur") setBF({ w: `atur:${$("#b-hari").value}` });
-      else if (v === "tgl") { $("#b-tgl").focus(); if ($("#b-tgl").value) setBF({ w: `tgl:${$("#b-tgl").value}` }); }
+      if (v === "tgl") { $("#b-tgl").focus(); if ($("#b-tgl").value) setBF({ w: `tgl:${$("#b-tgl").value}` }); }
       else setBF({ w: v });
     });
-    // slider: label follows while dragging, the list reloads when released
-    $("#b-hari").addEventListener("input", (e) => { $("#b-hari-n").textContent = `${e.target.value} hari`; });
-    $("#b-hari").addEventListener("change", (e) => setBF({ w: `atur:${e.target.value}` }));
     // date picker limited to the 30 days the database keeps
     $("#b-tgl").max = tglWIB();
     $("#b-tgl").min = tglWIB(Date.now() - 30 * 86400e3);
