@@ -88,20 +88,23 @@
   const awalTglWIB = (tgl) => new Date(Date.parse(`${tgl}T00:00:00Z`) - WIB_MS);   // midnight WIB as an instant
   /** time filter value -> { since, until } ISO strings (either may be null).
    *  "6j" = 6 hours, "hari" = today, "<N>h" = last N days (1-30), "tgl:YYYY-MM-DD" = that day */
-  function beritaRange(w) {
+  function beritaRange(w, maks = 30) {
     const now = Date.now();
     if (w === "6j") return { since: new Date(now - 6 * 3600e3).toISOString(), until: null };
     if (w === "hari") return { since: awalTglWIB(tglWIB(now)).toISOString(), until: null };
     const n = /^(?:atur:)?(\d{1,2})h?$/.exec(w || "");
-    if (n) return { since: new Date(now - Math.min(30, Math.max(1, +n[1])) * 86400e3).toISOString(), until: null };
+    if (n) return { since: new Date(now - Math.min(maks, Math.max(1, +n[1])) * 86400e3).toISOString(), until: null };
     if ((w || "").startsWith("tgl:")) {
       const a = awalTglWIB(w.slice(4));
       return { since: a.toISOString(), until: new Date(a.getTime() + 86400e3).toISOString() };
     }
     return { since: null, until: null };
   }
+  const terbitQS = (r) => (r.since ? `&terbit=gte.${encodeURIComponent(r.since)}` : "") + (r.until ? `&terbit=lt.${encodeURIComponent(r.until)}` : "");
   const dalamRange = (iso, r) => (!r.since || iso >= r.since) && (!r.until || iso < r.until);
   function labelWaktu(w) {
+    if (w === "hari") return "Hari ini";
+    if (w === "6j") return "6 jam terakhir";
     if ((w || "").startsWith("tgl:")) return new Date(`${w.slice(4)}T00:00:00`).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" });
     const n = /^(?:atur:)?(\d{1,2})h?$/.exec(w || "");
     return n ? `${n[1]} hari terakhir` : "";
@@ -209,18 +212,19 @@
       const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       return rest(`item?select=judul,url,ringkasan,meta,published_at&sumber=eq.${encodeURIComponent("Google Trends")}&published_at=gt.${encodeURIComponent(since)}&order=published_at.desc&limit=40`);
     },
-    async china(kategori, sumber, q, offset, jenis) {
+    async china(kategori, sumber, q, offset, jenis, rng = {}) {
       if (DEMO) return [];
       const clean = (q || "").replace(/[,()*%]/g, " ").trim();
       const qs = (kategori && kategori !== "semua" ? `&kategori=eq.${kategori}` : "")
         + (sumber ? `&sumber=eq.${encodeURIComponent(sumber)}` : "")
         + (jenis ? `&jenis_sumber=eq.${encodeURIComponent(jenis)}` : "")
+        + terbitQS(rng)
         + (clean ? `&or=(judul_id.ilike.${encodeURIComponent(`*${clean}*`)},ringkasan_id.ilike.${encodeURIComponent(`*${clean}*`)},judul_asli.ilike.${encodeURIComponent(`*${clean}*`)})` : "");
       return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,kategori,jenis_sumber,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
     },
-    async chinaMeta() {
+    async chinaMeta(rng = {}) {
       if (DEMO) return [];
-      return rest("berita_china?select=kategori,sumber&judul_id=not.is.null&limit=2000");
+      return rest(`berita_china?select=kategori,sumber&judul_id=not.is.null&limit=2000${terbitQS(rng)}`);
     },
     async saham() {
       if (DEMO) return [];
@@ -255,7 +259,7 @@
     bf: { t: "semua", w: "semua", s: "", j: "" },
     promos: [], outlets: [], outletKey: null,
     sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false, pasar: "", pasarOff: 0 },
-    cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0, jenis: "" },
+    cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0, jenis: "", w: "semua" },
     pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
   try { Object.assign(S.bf, JSON.parse(store.get("beritaFilter") || "{}")); } catch { /* ignore */ }
@@ -719,12 +723,19 @@
   const KAT_CN = { teknologi: "💻 Teknologi", bisnis: "📊 Bisnis & pasar", kebijakan: "🏛️ Kebijakan", sosial: "👥 Sosial", lainnya: "📌 Lainnya" };
 
   async function renderChina(append = false) {
-    const el = $("#list-china"), cn = S.cn;
+    const el = $("#list-china"), cn = S.cn, rng = beritaRange(cn.w, 14);
     if (!append) {
       cn.offset = 0;
       el.innerHTML = skeleton(5);
+      const w = cn.w || "semua", mode = w.startsWith("atur:") ? "atur" : w.startsWith("tgl:") ? "tgl" : w;
+      $("#c-waktu").value = mode;
+      $("#c-hari-wrap").hidden = mode !== "atur";
+      $("#c-tgl-wrap").hidden = mode !== "tgl";
+      if (mode === "atur") { const n = parseInt(w.slice(5), 10) || 7; $("#c-hari").value = n; $("#c-hari-n").textContent = `${n} hari`; }
+      if (mode === "tgl") $("#c-tgl").value = w.slice(4);
+      $("#h-china-waktu").textContent = labelWaktu(w) ? `· ${labelWaktu(w)}` : "";
       try {
-        const meta = await data.chinaMeta();
+        const meta = await data.chinaMeta(rng);
         const ck = { semua: meta.length }, cs = {};
         for (const m of meta) { ck[m.kategori || "lainnya"] = (ck[m.kategori || "lainnya"] || 0) + 1; cs[m.sumber] = (cs[m.sumber] || 0) + 1; }
         $("#f-china").innerHTML = [["semua", "🌏 Semua"], ...Object.entries(KAT_CN)].map(([k, label]) =>
@@ -734,7 +745,7 @@
       } catch (e) { console.error(e); }
     }
     try {
-      const rows = await data.china(cn.kat, cn.sumber, cn.q, cn.offset, cn.jenis);
+      const rows = await data.china(cn.kat, cn.sumber, cn.q, cn.offset, cn.jenis, rng);
       const html = rows.map((r, i) => {
         const url = safeUrl(r.url);
         return `<li style="--i:${i}" class="cn-${esc(r.kategori || "lainnya")}">
@@ -864,6 +875,21 @@
     $("#c-jenis").addEventListener("change", (e) => { S.cn.jenis = e.target.value; S.cn.sumber = ""; renderChina(); });
     $("#c-asli").addEventListener("change", (e) => { S.cn.asli = e.target.checked; renderChina(); });
     $("#more-china").addEventListener("click", () => renderChina(true));
+    // China time filter: same controls as Berita, limited to the 14 days the database keeps
+    const setCW = (w) => { S.cn.w = w; renderChina(); };
+    $("#c-waktu").addEventListener("change", (e) => {
+      const v = e.target.value;
+      $("#c-hari-wrap").hidden = v !== "atur";
+      $("#c-tgl-wrap").hidden = v !== "tgl";
+      if (v === "atur") setCW(`atur:${$("#c-hari").value}`);
+      else if (v === "tgl") { $("#c-tgl").focus(); if ($("#c-tgl").value) setCW(`tgl:${$("#c-tgl").value}`); }
+      else setCW(v);
+    });
+    $("#c-hari").addEventListener("input", (e) => { $("#c-hari-n").textContent = `${e.target.value} hari`; });
+    $("#c-hari").addEventListener("change", (e) => setCW(`atur:${e.target.value}`));
+    $("#c-tgl").max = tglWIB();
+    $("#c-tgl").min = tglWIB(Date.now() - 13 * 86400e3);
+    $("#c-tgl").addEventListener("change", (e) => { if (e.target.value) setCW(`tgl:${e.target.value}`); });
     let tc;
     $("#cq").addEventListener("input", (e) => { clearTimeout(tc); tc = setTimeout(() => { S.cn.q = e.target.value; renderChina(); }, 300); });
     $("#f-pasar").addEventListener("click", (e) => { const b = e.target.closest("button[data-p]"); if (b) { S.sh.pasar = b.dataset.p; renderPasar(); } });

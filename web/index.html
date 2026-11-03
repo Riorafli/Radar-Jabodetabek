@@ -189,7 +189,7 @@
 
     <section id="tab-china" class="panel" hidden>
       <div class="panel-head">
-        <h2>Pantauan berita China</h2>
+        <h2>Pantauan berita China <span id="h-china-waktu"></span></h2>
         <div class="search"><span aria-hidden="true">🔎</span><input id="cq" type="search" placeholder="Cari: AI, Huawei, BYD…" aria-label="Cari berita China"></div>
       </div>
       <p class="note">Judul &amp; ringkasan dari media China dan media yang meliput China, <b>diterjemahkan otomatis oleh AI</b>
@@ -209,6 +209,26 @@
               <option value="swasta">📰 Media swasta</option>
               <option value="agregator">🔁 Agregator/cepat</option>
             </select>
+          </label>
+          <label class="sort">Waktu
+            <select id="c-waktu">
+              <option value="semua">Semua (14 hari)</option>
+              <option value="6j">6 jam terakhir</option>
+              <option value="hari">Hari ini</option>
+              <option value="1h">1 hari terakhir</option>
+              <option value="3h">3 hari terakhir</option>
+              <option value="7h">7 hari terakhir</option>
+              <option value="14h">14 hari terakhir</option>
+              <option value="atur">Atur jumlah hari (1–14)…</option>
+              <option value="tgl">Pilih tanggal…</option>
+            </select>
+          </label>
+          <label class="sort waktu-extra" id="c-hari-wrap" hidden>
+            <input id="c-hari" class="hari-range" type="range" min="1" max="14" step="1" value="7" aria-label="Jumlah hari">
+            <output id="c-hari-n" class="hari-n">7 hari</output>
+          </label>
+          <label class="sort waktu-extra" id="c-tgl-wrap" hidden>Tanggal
+            <input id="c-tgl" class="tgl-input" type="date" aria-label="Tanggal berita China">
           </label>
           <label class="toggle"><input id="c-asli" type="checkbox"> Tampilkan judul asli</label>
         </div>

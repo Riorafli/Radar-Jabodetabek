@@ -167,7 +167,7 @@ python scripts/set_webhook.py
 Pandaily, CGTN, Sixth Tone, ITHome, cnBeta, sspai, Solidot - list in
 `config/sources.yaml` -> `china`) hourly and the LLM translates headline + a 1-2
 sentence summary to Indonesian. Only headline + short summary + link are stored
-(copyright); kept 14 days. Bot: `/china teknologi`.
+(copyright); kept 15 days (the tab filters up to 14). Bot: `/china teknologi`.
 
 ## Saham (stock tab) - one-time Google Sheets setup
 
