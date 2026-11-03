@@ -93,10 +93,17 @@
             <input id="b-tgl" type="date" aria-label="Tanggal berita">
           </label>
           <label class="sort">Sumber <select id="b-sumber"><option value="">Semua sumber</option></select></label>
+          <label class="toggle"><input id="b-verif" type="checkbox"> ✓ Hanya media terverifikasi Dewan Pers</label>
           <button id="b-reset" class="link-btn" type="button" hidden>Reset filter</button>
         </div>
         <p class="note small legend-sumber">🏛️ Resmi pemerintah · 📡 Media negara (milik negara/BUMN) · 📰 Media swasta nasional ·
-          🏘️ Media lokal · 🔁 Lainnya. Sentuh label di berita untuk penjelasan.</p>
+          🏘️ Media lokal · 🔁 Lainnya. Sentuh label di berita untuk penjelasan.<br>
+          <span class="verif">✓</span> media terverifikasi Dewan Pers · <span class="chip warn mini">Belum terverifikasi</span> belum tercatat di Dewan Pers ·
+          berita dicek otomatis terhadap daftar hoaks TurnBackHoax &amp; CekFakta.com.</p>
+        <details id="hoaks-box" class="hoaks-box">
+          <summary>🛡️ Hoaks yang lagi beredar <span class="muted">· dari lembaga cek fakta</span></summary>
+          <ul id="list-hoaks"></ul>
+        </details>
       </div>
       <ul id="list-berita" class="list"></ul>
       <button id="more-berita" class="btn more" type="button" hidden>Muat lebih banyak</button>

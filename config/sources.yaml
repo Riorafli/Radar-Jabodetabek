@@ -306,3 +306,12 @@ reddit:
 osm:
   endpoint: https://overpass-api.de/api/interpreter
   amenity: [cafe, restaurant, fast_food, food_court, ice_cream]
+
+# Fact-check feeds for the hoax check (pipeline/cekfakta.py). Both allow crawling (robots.txt).
+# Each feed only returns its 10 newest items (no paging); every news run adds new ones, kept 90 days.
+cekfakta:
+  feeds:
+    - nama: TurnBackHoax (Mafindo)
+      url: https://turnbackhoax.id/feed/
+    - nama: CekFakta.com
+      url: https://cekfakta.com/feed

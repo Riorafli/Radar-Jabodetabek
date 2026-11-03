@@ -257,15 +257,46 @@ alter table berita_china add column if not exists inti text;          -- 2-4 key
 alter table berita_china add column if not exists inti_at timestamptz;
 create index if not exists berita_china_terbit on berita_china (terbit desc);
 
+-- ---------------------------------------------------------------- hoax check (pipeline/cekfakta.py)
+-- press verification per domain (config/media.yaml, from Dewan Pers); subdomains match too
+create table if not exists media_verif (
+  domain     text primary key,                -- e.g. detik.com
+  nama       text,
+  status     text not null,                   -- faktual | administratif | resmi
+  badan      text,
+  sertifikat text
+);
+-- claims rated false / fraud by fact-checkers (TurnBackHoax, CekFakta.com); kept 90 days
+create table if not exists hoaks (
+  id        bigserial primary key,
+  url       text unique not null,
+  judul     text not null,                    -- claim, without the "[SALAH]" label
+  label     text,                             -- SALAH | PENIPUAN | HOAKS | MENYESATKAN | ...
+  ringkasan text,
+  sumber    text,
+  terbit    timestamptz not null default now()   -- first seen: the feeds carry no dates
+);
+create index if not exists hoaks_terbit on hoaks (terbit desc);
+alter table item add column if not exists cek_at timestamptz;   -- set once checked against hoaks
+alter table item add column if not exists hoaks_id bigint references hoaks(id) on delete set null;
+
 -- ---------------------------------------------------------------- views for web/bot
 create or replace view v_berita with (security_invoker = true) as
 select i.id, i.tipe, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
        i.kode_wilayah, w.nama as wilayah, i.zona_id, z.nama as zona,
        coalesce(i.lat, z.lat, w.lat) as lat, coalesce(i.lon, z.lon, w.lon) as lon,
-       i.topik, i.jenis_sumber, i.inti
+       i.topik, i.jenis_sumber, i.inti,
+       mv.status as pers,                                  -- null = not verified by Dewan Pers
+       h.judul as hoaks_judul, h.label as hoaks_label, h.url as hoaks_url, h.sumber as hoaks_sumber
 from item i
 left join wilayah w on w.kode = i.kode_wilayah
 left join zona z on z.id = i.zona_id
+left join hoaks h on h.id = i.hoaks_id
+left join lateral (
+  select m.status from media_verif m
+  where regexp_replace(lower(split_part(i.url, '/', 3)), '^www\.', '') in (m.domain)
+     or lower(split_part(i.url, '/', 3)) like '%.' || m.domain
+  limit 1) mv on true
 where i.tipe in ('berita','info')
   and not ('pasar_modal' = any(i.topik));   -- stock/crypto news lives in the Saham tab
 
@@ -307,7 +338,7 @@ declare t text;
 begin
   foreach t in array array['wilayah','kawasan','kawasan_wilayah','zona','entitas',
                            'item','promo','skor','zona_statistik','saham','saham_harian','saham_berita',
-                           'berita_china'] loop
+                           'berita_china','media_verif','hoaks'] loop
     execute format('alter table %I enable row level security', t);
     if not exists (select 1 from pg_policies where tablename = t and policyname = 'baca publik') then
       execute format('create policy "baca publik" on %I for select using (true)', t);

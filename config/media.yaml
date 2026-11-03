@@ -1,0 +1,24 @@
+# Press verification for news sources (Berita tab).
+# Source: Dewan Pers "Data Perusahaan Pers" (https://dewanpers.or.id/data), checked 2026-11-03.
+#   faktual        Terverifikasi Faktual (highest level)
+#   administratif  Terverifikasi Administratif
+#   resmi          official government agency (not a press company)
+# A domain also covers its subdomains (news.detik.com -> detik.com).
+# Sources NOT listed here are shown with "Belum terverifikasi Dewan Pers"
+# (checked 2026-11-03: radarbekasi.id, tangerangnews.com, koran-jakarta.com not found).
+# Re-check yearly: verification can expire or be added.
+
+media:
+  - { domain: detik.com,          nama: detik.com,         status: faktual, badan: PT Trans Digital Media }
+  - { domain: antaranews.com,     nama: LKBN Antara,       status: faktual, badan: Perum LKBN Antara }
+  - { domain: okezone.com,        nama: Okezone.com,       status: faktual, badan: Okezone Network Indonesia, sertifikat: 24/DP-Verifikasi/K/IX/2026 }
+  - { domain: republika.co.id,    nama: republika.co.id,   status: faktual, badan: Republika Media Mandiri, sertifikat: 1058/DP-Verifikasi/K/XII/2022 }
+  - { domain: cnnindonesia.com,   nama: cnnindonesia.com,  status: faktual, badan: Trans News Corpora, sertifikat: 867/DP-Verifikasi/K/XI/2021 }
+  - { domain: cnbcindonesia.com,  nama: cnbcindonesia.com, status: faktual, badan: Trans Berita Bisnis, sertifikat: 755/DP-Verifikasi/K/VII/2021 }
+  - { domain: tempo.co,           nama: tempo.co,          status: faktual, badan: Info Media Digital, sertifikat: 183/DP-Verifikasi/K/XI/2025 }
+  - { domain: kompas.com,         nama: kompas.com,        status: faktual, badan: Kompas Cyber Media, sertifikat: 1100/DP-Verifikasi/K/VII/2023 }
+  - { domain: liputan6.com,       nama: liputan6.com,      status: faktual, badan: Liputan enam dot com, sertifikat: 1294/DP-Verifikasi/K/X/2024 }
+  - { domain: merdeka.com,        nama: merdeka.com,       status: faktual, badan: Kapan Lagi Dot Com Networks, sertifikat: 1276/DP-Verifikasi/K/VIII/2024 }
+  - { domain: jawapos.com,        nama: jawapos.com,       status: faktual, badan: Jawa Pos Group Multimedia, sertifikat: 1055/DP-Verifikasi/K/XII/2022 }
+  - { domain: beritasatu.com,     nama: beritasatu.com,    status: faktual, badan: Jakarta Globe Media }
+  - { domain: bmkg.go.id,         nama: BMKG,              status: resmi,   badan: Badan Meteorologi, Klimatologi, dan Geofisika }

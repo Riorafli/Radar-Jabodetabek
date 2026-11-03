@@ -617,3 +617,23 @@ def test_inti_rapikan_poin():
     assert rapikan_poin(["cuma satu poin yang cukup panjang"]) == []
     assert rapikan_poin("bukan list") == []
     assert len(rapikan_poin([f"poin nomor {i} yang cukup panjang" for i in range(6)])) == 4
+
+
+# ---------------------------------------------------------------- hoax check
+def test_cekfakta_pisah_label():
+    from pipeline.cekfakta import pisah_label
+    assert pisah_label("[SALAH] Gaji Guru Naik 60% Mulai 2027") == ("SALAH", "Gaji Guru Naik 60% Mulai 2027")
+    assert pisah_label("[PENIPUAN] Tautan  Program Bantuan Rumah Gratis") == ("PENIPUAN", "Tautan Program Bantuan Rumah Gratis")
+    assert pisah_label("Salah, Panglima TNI Anggap Komnas HAM Musuh") == ("SALAH", "Panglima TNI Anggap Komnas HAM Musuh")
+    assert pisah_label("Pemprov DKI Buka Lowongan") == (None, "Pemprov DKI Buka Lowongan")
+
+
+def test_cekfakta_cocokkan(monkeypatch):
+    from pipeline import cekfakta
+    berita = [(10, "Gaji guru naik 60 persen tahun depan", None), (11, "Polisi bantah isu gaji guru naik", "hoaks")]
+    klaim = [(5, "Gaji Guru Naik 60% Mulai 2027")]
+    monkeypatch.setattr(cekfakta.extract_llm, "ask_json",
+                        lambda p: {"cocok": [{"berita": 1, "klaim": 1}, {"berita": 9, "klaim": 1}, {"berita": "x"}]})
+    assert cekfakta.cocokkan(berita, klaim) == {10: 5}          # out-of-range and junk rows ignored
+    monkeypatch.setattr(cekfakta.extract_llm, "ask_json", lambda p: None)
+    assert cekfakta.cocokkan(berita, klaim) is None              # LLM failure -> retry next run

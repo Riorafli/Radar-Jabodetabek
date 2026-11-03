@@ -29,5 +29,7 @@ jobs:
       - run: python -m pipeline.topik
       - run: python -m pipeline.inti
         continue-on-error: true
+      - run: python -m pipeline.cekfakta
+        continue-on-error: true
       - run: python -m pipeline.geocode
         continue-on-error: true

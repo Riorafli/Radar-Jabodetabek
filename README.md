@@ -161,6 +161,12 @@ python scripts/set_webhook.py
 | Overpass | fair use | 20 queries/day at 03:00 WIB, 5 s apart |
 | Supabase | 500 MB | daily cleanup (02:30 WIB): news > 31 days, videos > 30 days, expired promos, signals > 30 days. Change with repo variables `RETENSI_BERITA_HARI` / `RETENSI_POST_HARI`. |
 
+Hoax check: `pipeline.cekfakta` (every news run). (1) Sources are matched against
+`config/media.yaml`, the Dewan Pers verified-media list (re-check yearly); unlisted sources show
+"Belum terverifikasi" and can be hidden with the "Hanya media terverifikasi" filter. (2) Claims rated
+false/fraud by TurnBackHoax (Mafindo) and CekFakta.com are stored 90 days. (3) The LLM flags news
+that repeats such a claim (not news that debunks it); flagged cards link the fact-check.
+
 News key points: `pipeline.inti` (every news run) fetches each new article, has the LLM write 2-4 points in its own words, and stores only those points (~0.5 KB per item). Sites whose robots.txt opts out of AI crawlers (e.g. Tempo) are skipped and keep the RSS lead.
 
 ## China news tab

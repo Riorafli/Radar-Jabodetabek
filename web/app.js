@@ -79,6 +79,27 @@
   // key points (pipeline/inti.py), one per line, plus a link to the full article
   const intiHTML = (inti, url, sumber) => `<ul class="inti" aria-label="Inti berita">${inti.split("\n").map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
     ${url ? `<a class="baca" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Baca selengkapnya di ${esc(sumber)} ↗</a>` : ""}`;
+  // ------------------------------------------------------------ verification (pipeline/cekfakta.py)
+  const PERS = { faktual: "Terverifikasi faktual Dewan Pers", administratif: "Terverifikasi administratif Dewan Pers", resmi: "Sumber resmi pemerintah" };
+  const verifHTML = (p) => (PERS[p] ? `<span class="verif" title="${PERS[p]}" aria-label="${PERS[p]}">✓</span>` : "");
+  const hoaksHTML = (r) => {
+    const u = safeUrl(r.hoaks_url);
+    return `<p class="hoaks-warn">⚠️ Mirip klaim yang dinyatakan <b>${esc(r.hoaks_label || "SALAH")}</b> oleh ${esc(r.hoaks_sumber || "lembaga cek fakta")}:
+      ${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(r.hoaks_judul)}</a>` : esc(r.hoaks_judul)}</p>`;
+  };
+  async function renderHoaks() {
+    const el = $("#list-hoaks");
+    try {
+      const seen = new Set();   // the same claim is often in both feeds
+      const rows = (await data.hoaks()).filter((r) => !seen.has(r.judul.toLowerCase()) && seen.add(r.judul.toLowerCase())).slice(0, 6);
+      el.innerHTML = rows.map((r) => {
+        const u = safeUrl(r.url);
+        return `<li><span class="chip warn mini">${esc(r.label)}</span> ${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : esc(r.judul)}
+          <span class="muted">· ${esc(r.sumber)}</span></li>`;
+      }).join("") || `<li class="muted">Belum ada data cek fakta.</li>`;
+      $("#hoaks-box").hidden = !rows.length && !DEMO;
+    } catch (e) { console.error(e); }
+  }
   const badgeSumber = (j) => (JENIS_SUMBER[j] ? `<span class="src-badge ${esc(j)}" title="${esc(JENIS_SUMBER[j][1])}">${JENIS_SUMBER[j][0]}</span>` : "");
 
   // ------------------------------------------------------------ berita filters
@@ -121,6 +142,7 @@
     else if (bf.t && bf.t !== "semua") qs += `&topik=cs.${encodeURIComponent(`{"${bf.t}"}`)}`;
     if (bf.s) qs += `&sumber=eq.${encodeURIComponent(bf.s)}`;
     if (bf.j) qs += `&jenis_sumber=eq.${encodeURIComponent(bf.j)}`;
+    if (bf.v) qs += "&pers=not.is.null";
     if (r.since) qs += `&published_at=gte.${encodeURIComponent(r.since)}`;
     if (r.until) qs += `&published_at=lt.${encodeURIComponent(r.until)}`;
     return qs;
@@ -181,15 +203,15 @@
       const rng = beritaRange(bf.w);
       if (DEMO) {
         return D().berita.filter((r) => areaMatch(r, area) && (!clean || r.judul.toLowerCase().includes(clean.toLowerCase()))
-          && cocokTopik(r, bf.t) && (!bf.s || r.sumber === bf.s) && (!bf.j || r.jenis_sumber === bf.j)
+          && cocokTopik(r, bf.t) && (!bf.s || r.sumber === bf.s) && (!bf.j || r.jenis_sumber === bf.j) && (!bf.v || r.pers)
           && dalamRange(r.published_at, rng)).slice(offset, offset + PAGE);
       }
       const qs = (clean ? `&judul=ilike.${encodeURIComponent(`*${clean}*`)}` : "") + beritaQS(bf, rng);
-      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,inti,published_at,wilayah,zona,topik,jenis_sumber&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
+      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,inti,published_at,wilayah,zona,topik,jenis_sumber,pers,hoaks_judul,hoaks_label,hoaks_url,hoaks_sumber&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
     },
     async beritaMeta(area, rng = {}) {
       if (DEMO) return D().berita.filter((r) => areaMatch(r, area) && dalamRange(r.published_at, rng));
-      return rest(`v_berita?select=tipe,topik,sumber,jenis_sumber&order=published_at.desc&limit=5000${areaQS(area)}${beritaQS({}, rng)}`);
+      return rest(`v_berita?select=tipe,topik,sumber,jenis_sumber&order=published_at.desc&limit=5000${areaQS(area)}${beritaQS({ v: S.bf.v }, rng)}`);
     },
     async promo(area) {
       if (DEMO) return D().promo.filter((r) => areaMatch(r, area, "promo"));
@@ -212,6 +234,10 @@
       if (DEMO) return [];
       const since = new Date(Date.now() - 7 * 86400e3).toISOString();
       return rest(`item?select=judul,url,meta,published_at,zona_id,kode_wilayah&tipe=eq.post&sumber=eq.YouTube&published_at=gt.${encodeURIComponent(since)}&order=published_at.desc&limit=400${areaQS(area)}`);
+    },
+    async hoaks() {
+      if (DEMO) return [];
+      return rest("hoaks?select=judul,label,url,sumber&order=terbit.desc,id.asc&limit=16");
     },
     async gtrends() {
       if (DEMO) {
@@ -266,7 +292,7 @@
 
   // ------------------------------------------------------------ state
   const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null,
-    bf: { t: "semua", w: "semua", s: "", j: "" },
+    bf: { t: "semua", w: "semua", s: "", j: "", v: false },
     promos: [], outlets: [], outletKey: null,
     sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false, pasar: "", pasarOff: 0 },
     cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0, jenis: "", w: "semua" },
@@ -309,7 +335,8 @@
     $("#b-waktu").value = mode;
     $("#b-tgl-wrap").hidden = mode !== "tgl";
     if (mode === "tgl") $("#b-tgl").value = w.slice(4);
-    $("#b-reset").hidden = bf.t === "semua" && bf.w === "semua" && !bf.s && !bf.j;
+    $("#b-reset").hidden = bf.t === "semua" && bf.w === "semua" && !bf.s && !bf.j && !bf.v;
+    $("#b-verif").checked = !!bf.v;
     try {
       const keys = ["semua", "info", ...Object.keys(TOPIK)];
       const ct = {}, cs = {};
@@ -322,8 +349,8 @@
         for (const j of jenisKeys) cj[j] = meta.filter((m) => cocokTopik(m, bf.t) && (!j || m.jenis_sumber === j)).length;
       } else {                                                  // exact counts, respecting the other filters
         const [n, nj] = await Promise.all([
-          Promise.all(keys.map((k) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: k, s: bf.s, j: bf.j }, rng)}`))),
-          Promise.all(jenisKeys.map((j) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: bf.t, s: bf.s, j }, rng)}`))),
+          Promise.all(keys.map((k) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: k, s: bf.s, j: bf.j, v: bf.v }, rng)}`))),
+          Promise.all(jenisKeys.map((j) => count(`v_berita?select=id${areaQS(S.area)}${beritaQS({ t: bf.t, s: bf.s, j, v: bf.v }, rng)}`))),
         ]);
         keys.forEach((k, i) => { ct[k] = n[i]; });
         jenisKeys.forEach((j, i) => { cj[j] = nj[i]; });
@@ -355,16 +382,18 @@
         const where = r.zona || r.wilayah;
         return `<li class="${r.tipe === "info" ? "info" : ""}" style="--i:${i}">
           ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
+          ${r.hoaks_judul ? hoaksHTML(r) : ""}
           ${r.inti ? intiHTML(r.inti, url, r.sumber) : r.ringkasan ? `<p class="sum">${esc(r.ringkasan)}</p>` : ""}
           <div class="meta">${r.tipe === "info" ? '<span class="chip info">⚠️ Info layanan</span>' : ""}
             ${where ? `<span class="chip">📍 ${esc(where)}</span>` : ""}
             ${(r.topik || []).filter((t) => t !== "umum" && TOPIK[t]).map((t) => `<span class="chip soft">${TOPIK[t]}</span>`).join("")}
             ${badgeSumber(r.jenis_sumber)}
-            <span class="src" style="--h:${hue(r.sumber)}">${esc(initials(r.sumber).slice(0, 1))}</span><span>${esc(r.sumber)}</span>·<span>${timeAgo(r.published_at)}</span></div>
+            ${r.pers ? "" : `<span class="chip warn" title="Media ini belum tercatat terverifikasi di Dewan Pers: cek juga di media lain">⚠️ Belum terverifikasi</span>`}
+            <span class="src" style="--h:${hue(r.sumber)}">${esc(initials(r.sumber).slice(0, 1))}</span><span>${esc(r.sumber)}</span>${verifHTML(r.pers)}·<span>${timeAgo(r.published_at)}</span></div>
         </li>`;
       }).join("");
       if (append) el.insertAdjacentHTML("beforeend", html);
-      else el.innerHTML = html || empty(S.bf.t !== "semua" || S.bf.w !== "semua" || S.bf.s || S.bf.j
+      else el.innerHTML = html || empty(S.bf.t !== "semua" || S.bf.w !== "semua" || S.bf.s || S.bf.j || S.bf.v
         ? "Tidak ada berita yang cocok dengan filter ini." : `Belum ada berita untuk ${areaName()}.`);
       S.offset += rows.length;
       $("#more-berita").hidden = rows.length < PAGE;
@@ -1002,7 +1031,9 @@
     $("#b-tgl").min = tglWIB(Date.now() - 30 * 86400e3);
     $("#b-tgl").addEventListener("change", (e) => { if (e.target.value) setBF({ w: `tgl:${e.target.value}` }); });
     $("#b-sumber").addEventListener("change", (e) => setBF({ s: e.target.value }));
-    $("#b-reset").addEventListener("click", () => setBF({ t: "semua", w: "semua", s: "", j: "" }));
+    $("#b-reset").addEventListener("click", () => setBF({ t: "semua", w: "semua", s: "", j: "", v: false }));
+    $("#b-verif").addEventListener("change", (e) => setBF({ v: e.target.checked, s: "" }));
+    $("#hoaks-box").addEventListener("toggle", (e) => { if (e.target.open && !$("#list-hoaks").children.length) renderHoaks(); }, { once: false });
     $("#f-jenis").addEventListener("click", (e) => { const b = e.target.closest("button[data-j]"); if (b) setBF({ j: b.dataset.j, s: "" }); });
     $("#q").addEventListener("input", (e) => { clearTimeout(t); t = setTimeout(() => { S.q = e.target.value; renderBerita(); }, 300); });
 
