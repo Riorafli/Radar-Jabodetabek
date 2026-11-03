@@ -13,6 +13,7 @@ from pipeline import extract_llm
 from pipeline.common import clean_html, db, http, load_config, log
 
 KATEGORI = ("teknologi", "bisnis", "kebijakan", "sosial", "lainnya")
+JENIS_SUMBER = ("negara", "swasta", "agregator")
 
 PROMPT = """Terjemahkan berita berikut ke Bahasa Indonesia yang natural (sumber: media China atau media yang
 meliput China; bahasa Inggris atau Mandarin). Untuk setiap berita:
@@ -66,6 +67,10 @@ def main():
     now = datetime.now(timezone.utc)
     baru = 0
     with db() as cur:
+        # keep the source-type label in sync with config (also fixes rows stored earlier)
+        for f in cfg.get("rss", []):
+            cur.execute("update berita_china set jenis_sumber = %s where sumber = %s and jenis_sumber is distinct from %s",
+                        (f.get("jenis"), f["nama"], f.get("jenis")))
         for f in cfg.get("rss", []):
             try:
                 r = http().get(f["url"], timeout=40)
@@ -76,10 +81,10 @@ def main():
                 continue
             for terbit, e in terbaru(entries, now, int(cfg.get("max_hari", 3)), int(f.get("maks", cfg.get("maks_per_feed", 6)))):
                 cur.execute(
-                    """insert into berita_china (url, sumber, bahasa, judul_asli, ringkasan_asli, kategori, terbit)
-                       values (%s,%s,%s,%s,%s,%s,%s) on conflict (url) do nothing""",
+                    """insert into berita_china (url, sumber, bahasa, judul_asli, ringkasan_asli, kategori, jenis_sumber, terbit)
+                       values (%s,%s,%s,%s,%s,%s,%s,%s) on conflict (url) do nothing""",
                     (e["link"], f["nama"], f.get("bahasa", "en"), clean_html(e.get("title"), 300),
-                     clean_html(e.get("summary") or e.get("description"), 400), f.get("kategori"), terbit))
+                     clean_html(e.get("summary") or e.get("description"), 400), f.get("kategori"), f.get("jenis"), terbit))
                 baru += cur.rowcount
         log(f"china: {baru} berita baru")
 

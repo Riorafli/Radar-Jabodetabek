@@ -156,7 +156,7 @@
       const qs = (kategori && kategori !== "semua" ? `&kategori=eq.${kategori}` : "")
         + (sumber ? `&sumber=eq.${encodeURIComponent(sumber)}` : "")
         + (clean ? `&or=(judul_id.ilike.${encodeURIComponent(`*${clean}*`)},ringkasan_id.ilike.${encodeURIComponent(`*${clean}*`)},judul_asli.ilike.${encodeURIComponent(`*${clean}*`)})` : "");
-      return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,kategori,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
+      return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,kategori,jenis_sumber,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
     },
     async chinaMeta() {
       if (DEMO) return [];
@@ -567,6 +567,11 @@
   }
 
   // ------------------------------------------------------------ china
+  const JENIS_SUMBER = {
+    negara: ["🏛️ Media negara", "Dimiliki/dikendalikan negara China: mencerminkan sudut pandang resmi pemerintah"],
+    swasta: ["📰 Media swasta", "Media swasta (tetap beroperasi di bawah aturan media China/Hong Kong)"],
+    agregator: ["🔁 Agregator/cepat", "Portal cepat yang sering menulis ulang media lain atau memuat bocoran: cek sumber aslinya"],
+  };
   const KAT_CN = { teknologi: "💻 Teknologi", bisnis: "📊 Bisnis & pasar", kebijakan: "🏛️ Kebijakan", sosial: "👥 Sosial", lainnya: "📌 Lainnya" };
 
   async function renderChina(append = false) {
@@ -593,6 +598,7 @@
           ${cn.asli ? `<p class="asli" lang="${r.bahasa === "zh" ? "zh" : "en"}">${esc(r.judul_asli)}</p>` : ""}
           ${r.ringkasan_id ? `<p class="sum">${esc(r.ringkasan_id)}</p>` : ""}
           <div class="meta"><span class="chip">${KAT_CN[r.kategori] || KAT_CN.lainnya}</span>
+            ${JENIS_SUMBER[r.jenis_sumber] ? `<span class="src-badge ${esc(r.jenis_sumber)}" title="${esc(JENIS_SUMBER[r.jenis_sumber][1])}">${JENIS_SUMBER[r.jenis_sumber][0]}</span>` : ""}
             <span class="lang">${r.bahasa === "zh" ? "中文" : "EN"}</span><span>${esc(r.sumber || "")}</span>·<span>${timeAgo(r.terbit)}</span></div>
         </li>`;
       }).join("");

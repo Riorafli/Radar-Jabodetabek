@@ -240,9 +240,11 @@ create table if not exists berita_china (
   judul_id       text,                    -- Indonesian translation (LLM)
   ringkasan_id   text,
   kategori       text,                    -- teknologi | bisnis | kebijakan | sosial | lainnya
+  jenis_sumber   text,                    -- negara | swasta | agregator (from config)
   terbit         timestamptz not null default now(),
   dibuat         timestamptz not null default now()
 );
+alter table berita_china add column if not exists jenis_sumber text;
 create index if not exists berita_china_terbit on berita_china (terbit desc);
 
 -- ---------------------------------------------------------------- views for web/bot

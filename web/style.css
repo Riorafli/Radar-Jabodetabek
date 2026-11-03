@@ -430,3 +430,11 @@ h3 { font-size: 16px; margin: 28px 0 8px; font-weight: 700; }
 #list-china li.cn-bisnis { --bar: #2b8a3e; }
 #list-china li.cn-kebijakan { --bar: #e03131; }
 #list-china li.cn-sosial { --bar: #ae3ec9; }
+
+.src-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 6px; white-space: nowrap; }
+.src-badge.negara { background: #fff3bf; color: #8a5a00; }
+.src-badge.swasta { background: var(--info-soft); color: var(--info); }
+.src-badge.agregator { background: var(--bg-2); color: var(--muted); }
+:root[data-theme="dark"] .src-badge.negara { background: #3d3214; color: #ffd43b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .src-badge.negara { background: #3d3214; color: #ffd43b; } }
+.legend-sumber { line-height: 1.9; }

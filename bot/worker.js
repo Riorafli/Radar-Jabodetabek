@@ -336,9 +336,11 @@ export function chinaKategori(arg) {
 
 async function cmdChina(env, arg) {
   const k = chinaKategori(arg || "");
-  const rows = await sb(env, `berita_china?select=judul_id,sumber,url,terbit&judul_id=not.is.null${k ? `&kategori=eq.${k}` : ""}&order=terbit.desc&limit=8`);
+  const rows = await sb(env, `berita_china?select=judul_id,sumber,url,terbit,jenis_sumber&judul_id=not.is.null${k ? `&kategori=eq.${k}` : ""}&order=terbit.desc&limit=8`);
   if (!rows.length) return "Belum ada berita China.";
-  return `🇨🇳 Berita China${k ? ` · ${k}` : ""} (terjemahan AI)\n\n` + rows.map((r) => `• ${r.judul_id}\n  ${r.sumber}, ${timeAgo(r.terbit)}\n  ${r.url}`).join("\n\n");
+  const label = { negara: " [media negara]", agregator: " [agregator]" };
+  return `🇨🇳 Berita China${k ? ` · ${k}` : ""} (terjemahan AI)\n\n` + rows.map((r) =>
+    `• ${r.judul_id}\n  ${r.sumber}${label[r.jenis_sumber] || ""}, ${timeAgo(r.terbit)}\n  ${r.url}`).join("\n\n");
 }
 
 export async function handle(env, update) {

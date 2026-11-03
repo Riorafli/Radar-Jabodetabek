@@ -489,3 +489,11 @@ def test_china_terjemahkan_validates(monkeypatch):
     out = china.terjemahkan([(11, "Huawei launches AI chip", ""), (12, "中国出口增长", "")])
     assert out[11] == ("Huawei rilis chip AI baru", "Chip dipakai di pusat data.", "teknologi")
     assert out[12][2] == "lainnya" and 9 not in out and len(out) == 2
+
+
+def test_china_feeds_have_source_type():
+    from collectors.china import JENIS_SUMBER
+    feeds = load_config("sources")["china"]["rss"]
+    assert feeds and all(f.get("jenis") in JENIS_SUMBER for f in feeds), [f["nama"] for f in feeds if f.get("jenis") not in JENIS_SUMBER]
+    jenis = {f["nama"]: f["jenis"] for f in feeds}
+    assert jenis["CGTN Business"] == "negara" and jenis["TechNode"] == "swasta" and jenis["cnBeta"] == "agregator"
