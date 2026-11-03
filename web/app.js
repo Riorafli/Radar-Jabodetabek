@@ -170,7 +170,7 @@
       const [berita, promo, video, tempat, last] = await Promise.all([
         count(`v_berita?select=id${areaQS(area)}`),
         count(`v_promo?select=id${areaQS(area, "promo")}`),
-        count(`item?select=id&tipe=eq.post${areaQS(area)}`),
+        count(`item?select=id&tipe=eq.post&sumber=eq.YouTube${areaQS(area)}`),
         count(`entitas?select=id&tipe=eq.tempat${areaQS(area)}`),
         rest("item?select=dibuat&order=dibuat.desc&limit=1"),
       ]);
@@ -207,6 +207,11 @@
     async baru(area) {
       if (DEMO) return D().baru.filter((r) => areaMatch(r, area));
       return rest(`v_tempat_baru?select=id,nama,lat,lon,zona_id,zona,kode_wilayah,baru_sejak&order=baru_sejak.desc&limit=30${areaQS(area)}`);
+    },
+    async videos(area) {
+      if (DEMO) return [];
+      const since = new Date(Date.now() - 7 * 86400e3).toISOString();
+      return rest(`item?select=judul,url,meta,published_at,zona_id,kode_wilayah&tipe=eq.post&sumber=eq.YouTube&published_at=gt.${encodeURIComponent(since)}&order=published_at.desc&limit=400${areaQS(area)}`);
     },
     async gtrends() {
       if (DEMO) {
@@ -568,6 +573,7 @@
       }).join("") || empty(`Belum ada tempat yang dibicarakan di ${areaName()} minggu ini. Coba pilih "Semua Jabodetabek".`);
     } catch (e) { fail(el, e); }
     renderGtrends();
+    renderVideos();
     try {
       const baru = await data.baru(S.area);
       elBaru.innerHTML = baru.map((r, i) => `<li style="--i:${i}"><b>${esc(r.nama)}</b>
@@ -575,6 +581,36 @@
         <a href="https://www.openstreetmap.org/?mlat=${Number(r.lat)}&mlon=${Number(r.lon)}#map=18/${Number(r.lat)}/${Number(r.lon)}" target="_blank" rel="noopener noreferrer">lihat peta →</a></span></li>`).join("")
         || empty("Belum ada tempat baru tercatat. Muncul setelah pemindaian OSM harian menemukan tempat yang baru ditambahkan.");
     } catch (e) { fail(elBaru, e); }
+  }
+
+  // ------------------------------------------------------------ kuliner videos (YouTube, collectors/youtube.py)
+  const VIDEO_PAGE = 12;
+  const PROV = { 31: "DKI Jakarta", 32: "Jawa Barat", 36: "Banten" };   // province-level codes
+  const ytId = (url) => (/[?&]v=([\w-]{11})/.exec(url || "") || /youtu\.be\/([\w-]{11})/.exec(url || "") || [])[1];
+  const fmtViews = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(".", ",")} jt` : n >= 1000 ? `${Math.round(n / 1000)} rb` : `${n}`);
+  async function renderVideos(more = false) {
+    const el = $("#list-video");
+    if (!more) {
+      el.innerHTML = skeleton(3);
+      try {
+        const rows = (await data.videos(S.area)).filter((r) => ytId(r.url))
+          .map((r) => ({ ...r, views: Number((r.meta && r.meta.stats && r.meta.stats.viewCount) || 0) }));
+        if ($("#v-urut").value === "views") rows.sort((a, b) => b.views - a.views);
+        S.videos = rows; S.videoN = 0;
+      } catch (e) { fail(el, e); return; }
+    }
+    const part = S.videos.slice(S.videoN, S.videoN + VIDEO_PAGE);
+    const html = part.map((r, i) => {
+      const id = ytId(r.url), where = (S.zonas.find((z) => z.id === r.zona_id) || {}).nama || PROV[r.kode_wilayah] || kodeNama(r.kode_wilayah);
+      return `<li style="--i:${i}"><a href="https://www.youtube.com/watch?v=${id}" target="_blank" rel="noopener noreferrer">
+        <span class="thumb"><img src="https://i.ytimg.com/vi/${id}/mqdefault.jpg" alt="" loading="lazy" width="320" height="180"><span class="play" aria-hidden="true">▶</span></span>
+        <span class="vt">${esc(r.judul)}</span></a>
+        <span class="meta">${where ? `<span class="chip">📍 ${esc(where)}</span>` : ""}<span>${esc((r.meta && r.meta.channel) || "YouTube")}</span>·<span>${fmtViews(r.views)} ditonton</span>·<span>${timeAgo(r.published_at)}</span></span></li>`;
+    }).join("");
+    if (more) el.insertAdjacentHTML("beforeend", html);
+    else el.innerHTML = html || empty(`Belum ada video kuliner minggu ini untuk ${areaName()}.`);
+    S.videoN += part.length;
+    $("#more-video").hidden = S.videoN >= S.videos.length;
   }
 
   const fmtTraffic = (n) => (n >= 1e6 ? `${Math.round(n / 1e6)}jt+` : n >= 1000 ? `${Math.round(n / 1000)}rb+` : n ? `${n}+` : "");
@@ -890,6 +926,13 @@
     $("#c-reset").addEventListener("click", () => { Object.assign(S.cn, { kat: "semua", w: "semua", sumber: "", jenis: "" }); renderChina(); });
     $("#c-asli").addEventListener("change", (e) => { S.cn.asli = e.target.checked; renderChina(); });
     $("#more-china").addEventListener("click", () => renderChina(true));
+    $("#more-video").addEventListener("click", () => renderVideos(true));
+    $("#v-urut").addEventListener("change", () => renderVideos());
+    // the "video kuliner" counter opens the Viral tab at the video list
+    $("#stat-video").addEventListener("click", () => {
+      document.querySelector('[data-tab="viral"]').click();
+      setTimeout(() => $("#video-sec").scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" }), 300);
+    });
     // China time filter: same controls as Berita, limited to the 14 days the database keeps
     const setCW = (w) => { S.cn.w = w; renderChina(); };
     $("#c-waktu").addEventListener("change", (e) => {

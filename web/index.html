@@ -60,7 +60,7 @@
       <div class="stats">
         <div class="stat"><b data-count="berita">0</b><span>berita</span></div>
         <div class="stat"><b data-count="promo">0</b><span>promo aktif</span></div>
-        <div class="stat"><b data-count="video">0</b><span>video kuliner</span></div>
+        <button type="button" class="stat stat-link" id="stat-video" title="Lihat video kuliner"><b data-count="video">0</b><span>video kuliner ▸</span></button>
         <div class="stat"><b data-count="tempat">0</b><span>tempat makan</span></div>
       </div>
     </div>
@@ -136,6 +136,19 @@
       <div class="panel-head"><h2 id="h-viral">Lagi viral &amp; ramai</h2></div>
       <p class="note">Skor dihitung tiap jam dari lonjakan sebutan (YouTube, berita, Reddit), engagement, jumlah platform, dan laporan pengguna, dibanding rata-rata 14 hari di zona yang sama. "Ramai" adalah perkiraan, bukan data real-time.</p>
       <ol id="list-viral" class="list rank"></ol>
+      <div id="video-sec">
+        <h3>🎬 Video kuliner populer <span class="muted">· YouTube, 7 hari terakhir</span></h3>
+        <div class="filter-row">
+          <label class="sort">Urutkan
+            <select id="v-urut">
+              <option value="views">Paling banyak ditonton</option>
+              <option value="baru">Terbaru</option>
+            </select>
+          </label>
+        </div>
+        <ul id="list-video" class="video-grid"></ul>
+        <button id="more-video" class="btn more" type="button" hidden>Muat lebih banyak</button>
+      </div>
       <h3>🔎 Lagi dicari di Google <span class="muted">· Indonesia, 24 jam terakhir</span></h3>
       <ul id="list-gtrends" class="trend-list"></ul>
       <h3>🆕 Tempat makan baru</h3>
