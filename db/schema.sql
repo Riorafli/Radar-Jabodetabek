@@ -253,6 +253,8 @@ create table if not exists berita_china (
   dibuat         timestamptz not null default now()
 );
 alter table berita_china add column if not exists jenis_sumber text;
+alter table berita_china add column if not exists inti text;          -- 2-4 key points in Indonesian (pipeline/inti.py)
+alter table berita_china add column if not exists inti_at timestamptz;
 create index if not exists berita_china_terbit on berita_china (terbit desc);
 
 -- ---------------------------------------------------------------- views for web/bot

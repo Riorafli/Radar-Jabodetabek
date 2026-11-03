@@ -1,4 +1,6 @@
-"""Key points ("inti berita") for news cards.  python -m pipeline.inti
+"""Key points ("inti berita") for news cards.
+    python -m pipeline.inti          # Berita tab (item)
+    python -m pipeline.inti china    # China mirror tab (berita_china), translated to Indonesian
 
 For new news items: fetch the article page, extract its text, and let the LLM
 write 2-4 short points in its own words, so readers get the gist on the site
@@ -10,6 +12,7 @@ AI use, so their cards keep the RSS lead only.
 """
 import json
 import re
+import sys
 import urllib.robotparser
 from urllib.parse import urlparse
 
@@ -28,9 +31,25 @@ Untuk setiap berita tulis 2-4 poin singkat (masing-masing maksimal 160 karakter)
 - hanya fakta yang ada di teks: siapa, apa, di mana, kapan, angka penting, dan dampaknya bagi warga
 - jangan menambah opini, tebakan, atau fakta dari luar teks; salin angka, nama, dan tanggal persis
 - lewati iklan, ajakan "baca juga", dan info redaksi
-Kembalikan JSON: {{"hasil": [{{"no": 1, "poin": ["...", "..."]}}]}}
+{extra}Kembalikan JSON: {{"hasil": [{{"no": 1, "poin": ["...", "..."]}}]}}
 
 {lines}"""
+
+# China articles are English or Mandarin: same rules as collectors/china.py translations
+EXTRA_CHINA = """Artikel berbahasa Inggris atau Mandarin (media China atau yang meliput China): tulis poinnya dalam Bahasa Indonesia.
+Nama perusahaan, orang, dan produk jangan diterjemahkan; untuk nama Mandarin tulis nama Latinnya (mis. 美团 -> Meituan).
+Selalu tulis "China" (bukan "Tiongkok"). Istilah teknis/keuangan tanpa padanan baku biarkan dalam bahasa Inggris.
+"""
+
+# per target: rows to do (id, judul, url) and where the points go
+TARGET = {
+    "berita": ("""select id, judul, url from item where tipe = 'berita' and inti_at is null and url like 'http%%'
+                  and published_at > now() - interval '2 days' order by published_at desc limit %s""",
+               "update item set inti = %s, inti_at = now() where id = %s", ""),
+    "china": ("""select id, judul_asli, url from berita_china where inti_at is null and judul_id is not null
+                 and url like 'http%%' and terbit > now() - interval '2 days' order by terbit desc limit %s""",
+              "update berita_china set inti = %s, inti_at = now() where id = %s", EXTRA_CHINA),
+}
 
 
 def boleh_ai(robots_txt, url):
@@ -67,10 +86,10 @@ def rapikan_poin(v):
     return out if len(out) >= 2 else []
 
 
-def ringkas(rows):
+def ringkas(rows, extra=""):
     """rows: [(id, judul, teks)] -> {id: [poin, ...]}; {} if the LLM failed."""
     lines = "\n\n".join(f"### {n + 1}. {j}\n{t}" for n, (_, j, t) in enumerate(rows))
-    data = extract_llm.ask_json(PROMPT.format(lines=lines))
+    data = extract_llm.ask_json(PROMPT.format(extra=extra, lines=lines))
     out = {}
     for h in (data.get("hasil", []) if isinstance(data, dict) else []):
         try:
@@ -83,15 +102,14 @@ def ringkas(rows):
     return out
 
 
-def main():
+def main(target="berita"):
     if not extract_llm.available():
         log("inti: GEMINI_API_KEY / GROQ_API_KEY belum diisi, dilewati")
         return
+    pilih, simpan, extra = TARGET[target]
     s, robots = http(), {}
     with db() as cur:
-        cur.execute("""select id, judul, url from item where tipe = 'berita' and inti_at is null and url like 'http%%'
-                       and published_at > now() - interval '2 days' order by published_at desc limit %s""",
-                    (int(env("INTI_PER_RUN", 20)),))
+        cur.execute(pilih, (int(env("INTI_PER_RUN", 20)),))
         todo, siap = cur.fetchall(), []
         for rid, judul, url in todo:
             host = urlparse(url).netloc
@@ -110,24 +128,23 @@ def main():
                 except Exception as e:
                     log(f"inti: gagal ambil {url[:80]}: {e}")
             if len(teks) < 300:   # opted out, blocked, or no article text: keep the RSS lead
-                cur.execute("update item set inti_at = now() where id = %s", (rid,))
+                cur.execute(simpan, (None, rid))
             else:
                 siap.append((rid, judul, teks))
         cur.connection.commit()
         ok = 0
         for i in range(0, len(siap), 5):
             part = siap[i:i + 5]
-            hasil = ringkas(part)
+            hasil = ringkas(part, extra)
             if not hasil:
                 log("inti: LLM gagal/kuota, sisa dicoba run berikutnya")
                 break
             for rid, _, _ in part:   # items the LLM skipped are not retried
-                cur.execute("update item set inti = %s, inti_at = now() where id = %s",
-                            ("\n".join(hasil[rid]) if rid in hasil else None, rid))
+                cur.execute(simpan, ("\n".join(hasil[rid]) if rid in hasil else None, rid))
                 ok += rid in hasil
             cur.connection.commit()
-        log(f"inti: {ok} diringkas, {len(todo) - len(siap)} dilewati (tanpa teks/opt-out), dari {len(todo)}")
+        log(f"inti {target}: {ok} diringkas, {len(todo) - len(siap)} dilewati (tanpa teks/opt-out), dari {len(todo)}")
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1] if len(sys.argv) > 1 else "berita")

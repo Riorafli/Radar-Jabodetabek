@@ -76,6 +76,9 @@
     agregator: ["🔁 Agregator/cepat", "Portal cepat yang sering menulis ulang media lain atau memuat bocoran: cek sumber aslinya"],
     lainnya: ["🔁 Lainnya", "Sumber lain (mis. hasil pencarian GDELT): cek kredibilitas medianya"],
   };
+  // key points (pipeline/inti.py), one per line, plus a link to the full article
+  const intiHTML = (inti, url, sumber) => `<ul class="inti" aria-label="Inti berita">${inti.split("\n").map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
+    ${url ? `<a class="baca" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Baca selengkapnya di ${esc(sumber)} ↗</a>` : ""}`;
   const badgeSumber = (j) => (JENIS_SUMBER[j] ? `<span class="src-badge ${esc(j)}" title="${esc(JENIS_SUMBER[j][1])}">${JENIS_SUMBER[j][0]}</span>` : "");
 
   // ------------------------------------------------------------ berita filters
@@ -222,7 +225,7 @@
         + (jenis ? `&jenis_sumber=eq.${encodeURIComponent(jenis)}` : "")
         + terbitQS(rng)
         + (clean ? `&or=(judul_id.ilike.${encodeURIComponent(`*${clean}*`)},ringkasan_id.ilike.${encodeURIComponent(`*${clean}*`)},judul_asli.ilike.${encodeURIComponent(`*${clean}*`)})` : "");
-      return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,kategori,jenis_sumber,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
+      return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,inti,kategori,jenis_sumber,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
     },
     async chinaMeta(rng = {}) {
       if (DEMO) return [];
@@ -347,9 +350,7 @@
         const where = r.zona || r.wilayah;
         return `<li class="${r.tipe === "info" ? "info" : ""}" style="--i:${i}">
           ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
-          ${r.inti ? `<ul class="inti" aria-label="Inti berita">${r.inti.split("\n").map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
-            ${url ? `<a class="baca" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Baca selengkapnya di ${esc(r.sumber)} ↗</a>` : ""}`
-            : r.ringkasan ? `<p class="sum">${esc(r.ringkasan)}</p>` : ""}
+          ${r.inti ? intiHTML(r.inti, url, r.sumber) : r.ringkasan ? `<p class="sum">${esc(r.ringkasan)}</p>` : ""}
           <div class="meta">${r.tipe === "info" ? '<span class="chip info">⚠️ Info layanan</span>' : ""}
             ${where ? `<span class="chip">📍 ${esc(where)}</span>` : ""}
             ${(r.topik || []).filter((t) => t !== "umum" && TOPIK[t]).map((t) => `<span class="chip soft">${TOPIK[t]}</span>`).join("")}
@@ -764,7 +765,7 @@
         return `<li style="--i:${i}" class="cn-${esc(r.kategori || "lainnya")}">
           ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul_id)}</a>` : `<span class="title">${esc(r.judul_id)}</span>`}
           ${cn.asli ? `<p class="asli" lang="${r.bahasa === "zh" ? "zh" : "en"}">${esc(r.judul_asli)}</p>` : ""}
-          ${r.ringkasan_id ? `<p class="sum">${esc(r.ringkasan_id)}</p>` : ""}
+          ${r.inti ? intiHTML(r.inti, url, r.sumber) : r.ringkasan_id ? `<p class="sum">${esc(r.ringkasan_id)}</p>` : ""}
           <div class="meta"><span class="chip">${KAT_CN[r.kategori] || KAT_CN.lainnya}</span>
             ${badgeSumber(r.jenis_sumber)}
             <span class="lang">${r.bahasa === "zh" ? "中文" : "EN"}</span><span>${esc(r.sumber || "")}</span>·<span>${timeAgo(r.terbit)}</span></div>
