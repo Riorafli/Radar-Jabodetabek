@@ -821,11 +821,7 @@
     return best ? best.v : null;
   }
 
-  function currentTheme() {
-    const t = document.documentElement.dataset.theme;
-    if (t) return t;
-    return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  }
+  const currentTheme = () => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
   function syncThemeIcon() { $("#theme").textContent = currentTheme() === "dark" ? "☀️" : "🌙"; }
 
   function bind() {

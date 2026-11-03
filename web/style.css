@@ -1,12 +1,12 @@
 /* ============================================================ tokens */
 :root {
-  --bg: #f7f5f1;
-  --bg-2: #efebe4;
+  --bg: #ffffff;
+  --bg-2: #f4f4f5;
   --surface: #ffffff;
-  --surface-2: #faf8f5;
+  --surface-2: #f8f8f9;
   --text: #1b1915;
-  --muted: #6e685f;
-  --line: #e7e2d9;
+  --muted: #66625c;
+  --line: #e6e6e8;
   --accent: #e8590c;
   --accent-2: #f59f00;
   --accent-soft: #fff1e7;
@@ -529,3 +529,12 @@ html, body { max-width: 100%; overflow-x: clip; }          /* never a blank stri
 }
 .hdr-btns { display: inline-flex; gap: 8px; flex: none; align-items: center; }
 @media (max-width: 600px) { .hdr-btns { gap: 6px; } }
+
+/* ============================================================ white light theme */
+:root[data-theme="light"] .hero { background: linear-gradient(180deg, #fff6ef 0%, #ffffff 100%); }
+:root[data-theme="light"] .hero .b1 { opacity: .16; }
+:root[data-theme="light"] .hero .b2 { opacity: .1; }
+:root[data-theme="light"] .top { background: rgba(255, 255, 255, .92); }
+:root[data-theme="light"] .list > li, :root[data-theme="light"] .promo, :root[data-theme="light"] .stat,
+:root[data-theme="light"] .ihsg, :root[data-theme="light"] .lapor { border-color: #e9e9ec; }
+
