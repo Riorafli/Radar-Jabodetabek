@@ -717,11 +717,15 @@
     const sh = S.sh, el = $("#list-saham");
     const ihsg = sh.rows.find((r) => r.kode === "IHSG");
     const list = sh.rows.filter((r) => r.kode !== "IHSG" && r.harga != null);
-    if (!list.length && !ihsg) {
+    // no price data yet: hide the price section (sort row and list), the market news below stays
+    const kosong = !list.length && !ihsg;
+    $("#s-sort").closest(".filters").hidden = kosong;
+    el.hidden = kosong;
+    if (kosong) {
       $("#ihsg").innerHTML = "";
       $("#movers").innerHTML = "";
       $("#f-sektor").innerHTML = "";
-      el.innerHTML = empty("Data saham belum tersedia. Sumber datanya (Google Sheet) belum disambungkan.");
+      el.innerHTML = "";
       return;
     }
     const tw = (r) => (r.waktu_data ? new Date(r.waktu_data).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
