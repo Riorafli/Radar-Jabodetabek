@@ -789,7 +789,7 @@
   }
 
   // ------------------------------------------------------------ china
-  const KAT_CN = { teknologi: "💻 Teknologi", bisnis: "📊 Bisnis & pasar", kebijakan: "🏛️ Kebijakan", sosial: "👥 Sosial", lainnya: "📌 Lainnya" };
+  const KAT_CN = { teknologi: "💻 Teknologi", bisnis: "📊 Bisnis & pasar", fnb: "🍜 F&B & franchise", kebijakan: "🏛️ Kebijakan", sosial: "👥 Sosial", lainnya: "📌 Lainnya" };
 
   async function renderChina(append = false) {
     const el = $("#list-china"), cn = S.cn, rng = beritaRange(cn.w, 14);

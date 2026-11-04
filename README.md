@@ -175,7 +175,9 @@ News key points: `pipeline.inti` (every news run) fetches each new article, has 
 Pandaily, CGTN, Sixth Tone, ITHome, cnBeta, sspai, Solidot - list in
 `config/sources.yaml` -> `china`) hourly and the LLM translates headline + a 1-2
 sentence summary to Indonesian. Only headline + short summary + link are stored
-(copyright); kept 15 days (the tab filters up to 14). `pipeline.inti china` adds 2-4
+(copyright); kept 15 days (the tab filters up to 14). The 🍜 F&B & franchise category reads
+红餐网 (Canyin88) and 职业餐饮网 (canyin168) from their listing pages (no RSS; robots.txt allows it) plus the
+MYFNB Guide and Momentum Works feeds, where the LLM keeps only China F&B / Chinese-brand items. `pipeline.inti china` adds 2-4
 key points in Indonesian per article (same robots.txt AI opt-out rule as the Berita tab).
 Bot: `/china teknologi`.
 

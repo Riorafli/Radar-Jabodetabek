@@ -616,6 +616,8 @@ def test_inti_rapikan_poin():
         "Pramono minta Forkopimda menata Kampung Bahari", "Penataan menyusul penggerebekan narkoba"]
     assert rapikan_poin(["cuma satu poin yang cukup panjang"]) == []
     assert rapikan_poin("bukan list") == []
+    assert rapikan_poin(["Sushi tak terjual dalam 3 साल dibuang", "Harga mulai 4 yuan per butir", "Merek 蜜雪冰城 buka 500 gerai baru"]) == [
+        "Harga mulai 4 yuan per butir", "Merek 蜜雪冰城 buka 500 gerai baru"]   # stray Devanagari dropped, Han kept
     assert len(rapikan_poin([f"poin nomor {i} yang cukup panjang" for i in range(6)])) == 4
 
 
@@ -637,3 +639,37 @@ def test_cekfakta_cocokkan(monkeypatch):
     assert cekfakta.cocokkan(berita, klaim) == {10: 5}          # out-of-range and junk rows ignored
     monkeypatch.setattr(cekfakta.extract_llm, "ask_json", lambda p: None)
     assert cekfakta.cocokkan(berita, klaim) is None              # LLM failure -> retry next run
+
+
+def test_china_dari_halaman():
+    from collectors.china import dari_halaman
+    now = datetime(2026, 11, 4, 12, tzinfo=timezone.utc)
+    html = """<a href="/zixun/2026/11/04/114286.html">京东外卖上线“放心消费门店”；和府捞面新店</a>
+      <a href="/zixun/2026/11/04/114286.html">京东外卖…</a>
+      <a href="/zixun/2026/11/02/114200.html">卤味巨头集体返祖，万店生意做回热卤摊…</a>
+      <a href="/video/2026/11/04/1.html">视频不是资讯但标题很长很长</a>
+      <a href="https://other.com/zixun/2026/11/04/9.html">别的网站的文章标题</a>"""
+    out = dari_halaman(html, "https://www.canyin88.com/zixun/", r"^/zixun/\d{4}/\d{2}/\d{2}/\d+\.html$", now)
+    assert [e["link"] for _, e in out] == ["https://www.canyin88.com/zixun/2026/11/04/114286.html",
+                                           "https://www.canyin88.com/zixun/2026/11/02/114200.html"]
+    assert out[0][1]["title"] == "京东外卖上线“放心消费门店”；和府捞面新店" and not out[0][1]["potong"]   # longer text kept
+    assert out[1][1]["potong"] and not out[1][1]["title"].endswith("…")
+    assert out[1][0] == datetime(2026, 11, 2, tzinfo=timezone.utc)                            # date from the URL
+
+
+def test_china_saring_fnb(monkeypatch):
+    from collectors import china
+    monkeypatch.setattr(china.extract_llm, "ask_json", lambda p: {"hasil": [
+        {"no": 1, "judul": "Mixue buka 500 gerai di Indonesia", "kategori": "fnb"},
+        {"no": 2, "judul": "Toko roti Jepang ubah dapur", "kategori": "lainnya"},
+        {"no": 3, "judul": "Huawei rilis chip", "kategori": "teknologi"}]})
+    out = china.terjemahkan([(1, "蜜雪冰城", ""), (2, "日本面包店", ""), (3, "Huawei chip", "")], saring={1, 2})
+    assert out[1][2] == "fnb" and out[2][2] == "buang" and out[3][2] == "teknologi"   # only [SARING] rows can be dropped
+    # the LLM leaves non-China rows out: missing [SARING] rows are dropped, missing normal rows retried later
+    monkeypatch.setattr(china.extract_llm, "ask_json", lambda p: {"hasil": [{"no": 1, "judul": "Mixue buka gerai", "kategori": "fnb"}]})
+    out = china.terjemahkan([(1, "蜜雪冰城", ""), (2, "日本面包店", ""), (3, "Huawei chip", "")], saring={1, 2})
+    assert out[2] == (None, None, "buang") and 3 not in out
+    monkeypatch.setattr(china.extract_llm, "ask_json", lambda p: {"hasil": []})
+    assert china.terjemahkan([(2, "日本面包店", "")], saring={2}) == {2: (None, None, "buang")}
+    monkeypatch.setattr(china.extract_llm, "ask_json", lambda p: None)
+    assert china.terjemahkan([(2, "日本面包店", "")], saring={2}) == {}                 # LLM failure: nothing dropped

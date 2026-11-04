@@ -23,6 +23,9 @@ from pipeline.common import db, env, http, log, user_agent
 
 AI_BOTS = ("Google-Extended", "GPTBot", "ClaudeBot", "anthropic-ai", "CCBot")
 MAKS_TEKS = 4000          # characters of article text sent to the LLM
+# LLM glitches sometimes drop words from other scripts into Indonesian text (seen: "3 साल");
+# Han characters stay allowed for Chinese brand names
+ASING = re.compile(r"[Ѐ-ӿ֐-ۿऀ-෿฀-໿ᄀ-ᇿ가-힯]")
 BUANG = re.compile(r"baca juga|simak juga|lihat juga|ikuti (kami|berita)|whatsapp|google news|copyright|©", re.I)
 
 PROMPT = """Buat inti dari setiap berita berikut untuk pembaca yang tidak membuka artikelnya.
@@ -39,6 +42,7 @@ Untuk setiap berita tulis 2-4 poin singkat (masing-masing maksimal 160 karakter)
 EXTRA_CHINA = """Artikel berbahasa Inggris atau Mandarin (media China atau yang meliput China): tulis poinnya dalam Bahasa Indonesia.
 Nama perusahaan, orang, dan produk jangan diterjemahkan; untuk nama Mandarin tulis nama Latinnya (mis. 美团 -> Meituan).
 Selalu tulis "China" (bukan "Tiongkok"). Istilah teknis/keuangan tanpa padanan baku biarkan dalam bahasa Inggris.
+Mata uang: 元 / 人民币 / RMB = yuan, 日元 = yen, 港元 = dolar Hong Kong. Satuan: 万 = 10.000 (80万 = 800 ribu), 亿 = 100 juta.
 """
 
 # per target: rows to do (id, judul, url) and where the points go
@@ -82,7 +86,7 @@ def rapikan_poin(v):
     if not isinstance(v, list):
         return []
     out = [" ".join(str(p).split()).lstrip("-•* ")[:200] for p in v if isinstance(p, (str, int, float))]
-    out = [p for p in out if len(p) >= 15][:4]
+    out = [p for p in out if len(p) >= 15 and not ASING.search(p)][:4]
     return out if len(out) >= 2 else []
 
 

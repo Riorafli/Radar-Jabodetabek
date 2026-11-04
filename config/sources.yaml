@@ -296,6 +296,13 @@ china:
     - {nama: cnBeta, url: "https://www.cnbeta.com.tw/backend.php", bahasa: zh, kategori: teknologi, jenis: agregator}
     - {nama: 少数派 (sspai), url: "https://sspai.com/feed", bahasa: zh, kategori: teknologi, maks: 3, jenis: swasta}
     - {nama: Solidot, url: "https://www.solidot.org/index.rss", bahasa: zh, kategori: teknologi, maks: 3, jenis: agregator}
+    # F&B & franchise. fnb: semua = every item is F&B; fnb: saring = the LLM keeps only China F&B / Chinese brands
+    - {nama: MYFNB Guide, url: "https://www.myfnbguide.com/feed", bahasa: zh, kategori: fnb, fnb: saring, jenis: agregator}   # daily digest, also covers Japan/global
+    - {nama: Momentum Works, url: "https://thelowdown.momentum.asia/feed/", bahasa: en, kategori: fnb, fnb: saring, maks: 4, jenis: swasta}   # SEA research; Chinese brands abroad (Mixue, Chagee)
+  # sites without RSS: article links read from a listing page (robots.txt allows it)
+  halaman:
+    - {nama: 红餐网 (Canyin88), url: "https://www.canyin88.com/zixun/", pola: "^/zixun/\\d{4}/\\d{2}/\\d{2}/\\d+\\.html$", bahasa: zh, kategori: fnb, fnb: semua, jenis: swasta}
+    - {nama: 职业餐饮网 (canyin168), url: "http://www.canyin168.com/", pola: "^/Article/xw/\\d+\\.html$", bahasa: zh, kategori: fnb, fnb: semua, maks: 4, jenis: swasta}
 
 # Reddit (optional; needs REDDIT_CLIENT_ID/SECRET, app-only OAuth).
 reddit:
