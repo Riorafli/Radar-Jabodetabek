@@ -1,8 +1,8 @@
 # Radar Jabodetabek
 
 News, food promos and viral/busy places for Jabodetabek, filtered per city and
-per popular zone (Kemang, BSD, Margonda, …). Web + Telegram bot. Runs entirely
-on free tiers, with no credit card: GitHub Actions, Supabase, Cloudflare Pages/Workers,
+per popular zone (Kemang, BSD, Margonda, …), as a website. Runs entirely
+on free tiers, with no credit card: GitHub Actions, Supabase, Cloudflare Pages,
 Gemini/Groq, YouTube Data API, OpenStreetMap.
 
 Implements `Blueprint_Radar_Jabodetabek.docx` and all 12 stages of
@@ -12,9 +12,9 @@ Implements `Blueprint_Radar_Jabodetabek.docx` and all 12 stages of
 GitHub Actions (cron)                         Supabase Postgres (+PostGIS, pg_trgm, RLS)
   news  /15m : rss, bmkg, gdelt, dedup, geocode ─┐        │
   promo /3h  : promo pages -> LLM -> JSON        ├──────► │ ◄── web/ (Cloudflare Pages, anon key, read-only)
-  viral /2h  : youtube, reddit, trends           │        │ ◄── bot/ (Cloudflare Worker, service key)
+  viral /2h  : youtube, reddit, trends           │        │
   osm   daily: Overpass POIs per zone            │        │
-  score /1h  : viral score per zone + notify ────┘        │
+  score /1h  : viral score per zone ─────────────┘        │
   maintenance: sync config on push, daily cleanup
 ```
 
@@ -29,10 +29,9 @@ GitHub Actions (cron)                         Supabase Postgres (+PostGIS, pg_tr
 | `config/sources.yaml` | RSS feeds, BMKG, GDELT, promo pages, YouTube queries, Trends, Reddit, OSM |
 | `config/scoring.yaml` | Viral score weights (0.5/0.3/0.2), thresholds, notification settings |
 | `collectors/` | `rss`, `bmkg`, `gdelt`, `promo`, `belanja` (marketplace promos + cuci gudang from news RSS), `youtube`, `trends`, `trends_now` (Google Trends "Trending Now" ID), `reddit`, `osm` |
-| `pipeline/` | `geocode` (text → zone/city, LLM + Nominatim fallback), `extract_llm`, `entities`, `dedup`, `score`, `notify`, `cleanup`, `sync_config` |
+| `pipeline/` | `geocode` (text → zone/city, LLM + Nominatim fallback), `extract_llm`, `entities`, `dedup`, `score`, `cleanup`, `sync_config` |
 | `web/` | Static site: news / promo / viral / map tabs, area filter, "Dekat saya", crowd reports. Demo mode until configured. |
-| `bot/` | Telegram bot Worker: `/berita /promo /viral /baru /zona /langganan /berhenti /lapor /tambah_promo` |
-| `scripts/` | `check_setup.py`, `set_webhook.py`, `make_demo.py` |
+| `scripts/` | `check_setup.py`, `make_demo.py` |
 | `.github/workflows/` | `news`, `promo`, `viral`, `osm`, `score`, `maintenance`, `test` |
 
 ## Try it right now (no accounts needed)
@@ -45,11 +44,11 @@ Open http://localhost:8765, which shows demo mode with sample data, all marked "
 
 ## One-time setup (~2 hours)
 
-Never put a key in the code: the repo is public. Keys go in **GitHub Secrets**,
-**Worker secrets**, or your local `.env` (git-ignored).
+Never put a key in the code: the repo is public. Keys go in **GitHub Secrets**
+or your local `.env` (git-ignored).
 
 ### 1. Accounts
-Free accounts, no credit card: GitHub, Supabase, Cloudflare, Telegram,
+Free accounts, no credit card: GitHub, Supabase, Cloudflare,
 Google AI Studio (Gemini key). Optional: Groq (LLM fallback), Google Cloud
 (YouTube Data API v3 key; enable the API, no billing), Reddit app.
 
@@ -69,7 +68,6 @@ Google AI Studio (Gemini key). Optional: Groq (LLM fallback), Google Cloud
 | `GEMINI_API_KEY` | yes* | aistudio.google.com/apikey |
 | `GROQ_API_KEY` | optional* | fallback LLM (*at least one of the two) |
 | `YOUTUBE_API_KEY` | recommended | main viral signal |
-| `TELEGRAM_BOT_TOKEN` | for notifications | from @BotFather (step 6) |
 | `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` | optional | check Reddit's API terms first |
 | `CONTACT_EMAIL` | recommended | used in the User-Agent for Nominatim/Overpass |
 
@@ -91,49 +89,22 @@ python scripts/check_setup.py
 2. Cloudflare → **Workers & Pages → Create → Pages → Connect to Git** → pick the repo.
    Framework: *None*, build command: *empty*, output directory: `web`. Every push redeploys.
 
-### 5. Telegram bot
-1. Telegram → @BotFather → `/newbot` → save the token. Get your own user id from @userinfobot.
-2. Deploy the Worker:
-```bash
-cd bot
-```
-```bash
-npm install
-```
-```bash
-npx wrangler login
-```
-```bash
-npx wrangler deploy
-```
-3. Set its secrets (each command prompts for the value):
-```bash
-npx wrangler secret put BOT_TOKEN
-```
-```bash
-npx wrangler secret put WEBHOOK_SECRET
-```
-```bash
-npx wrangler secret put SUPABASE_URL
-```
-```bash
-npx wrangler secret put SUPABASE_SERVICE_KEY
-```
-```bash
-npx wrangler secret put ADMIN_IDS
-```
-   `WEBHOOK_SECRET` is any long random string you make up.
-4. Connect Telegram to the Worker: put `TELEGRAM_BOT_TOKEN`, `WORKER_URL` (from the deploy output)
-   and the same `WEBHOOK_SECRET` in `.env`, then:
-```bash
-python scripts/set_webhook.py
-```
-5. Send `/start` to your bot.
-
-### 6. Monitoring
+### 5. Monitoring
 - GitHub → profile **Settings → Notifications → Actions**: email on failed workflows.
-- UptimeRobot (free): monitor your Pages URL and the Worker URL.
+- UptimeRobot (free): monitor your Pages URL.
 - Supabase dashboard: check database size weekly (`maintenance` logs it too).
+
+### 6. Reliable news schedule (cron-job.org)
+GitHub often delays or drops scheduled runs on free accounts (the `news` cron ran only every
+3-7 hours). An external timer calling `workflow_dispatch` keeps it at every 15 minutes:
+1. GitHub → **Settings → Developer settings → Fine-grained tokens**: only this repo,
+   only **Actions: Read and write**, with an expiry. It cannot change code or read secrets.
+2. cron-job.org (2FA on) → new job every 15 min, **POST**
+   `https://api.github.com/repos/<owner>/<repo>/actions/workflows/news.yml/dispatches`,
+   headers `Authorization: Bearer <token>`, `Accept: application/vnd.github+json`,
+   `X-GitHub-Api-Version: 2022-11-28`, body `{"ref":"main"}`. A test run answers **204**.
+3. Leaked or expired token: delete it on GitHub and make a new one. `concurrency` in
+   `news.yml` queues overlapping runs, so double triggers are harmless.
 
 ## Day-to-day
 
@@ -143,13 +114,12 @@ python scripts/set_webhook.py
 | Add a brand alias | Edit `config/brands.yaml`, push. |
 | Add a news feed | Add to `config/sources.yaml` → `rss`. `filter_wilayah: true` for national feeds. |
 | Add a promo page | Add to `sources.yaml` → `promo`. Check robots.txt + ToS. The collector also enforces robots.txt. |
-| Marketplace / cuci gudang promo | Collected hourly by `collectors/belanja.py` from news RSS. Add one by hand in the bot: `/tambah_promo Shopee \| Flash sale 10.10 \| Diskon 90% \| 2026-10-31 \| \| https://… \| marketplace` |
-| Instagram-only promo | In the bot (admin): `/tambah_promo Brand \| Judul \| Diskon 20% \| 2026-12-31 \| bsd \| https://…` |
+| Marketplace / cuci gudang promo | Collected hourly by `collectors/belanja.py` from news RSS. |
 | Halal labels | Set `halal: true` per brand in `config/brands.yaml` only after checking the certificate at bpjph.halal.go.id. Promos without a clear signal get no label. |
 | Tune "viral" | `config/scoring.yaml`. Review the top list weekly. Early on, with little data, try `min_mention_24j: 2`. |
 | Regenerate demo data | `python scripts/make_demo.py` |
 | Run one collector locally | Fill `.env`, then e.g. `python -m collectors.rss` |
-| Run tests | `python -m pytest -q` and `node --test bot/worker.test.js` |
+| Run tests | `python -m pytest -q` |
 
 ### Free-quota budget
 | Service | Limit | Usage here |
@@ -179,7 +149,6 @@ sentence summary to Indonesian. Only headline + short summary + link are stored
 红餐网 (Canyin88) and 职业餐饮网 (canyin168) from their listing pages (no RSS; robots.txt allows it) plus the
 MYFNB Guide and Momentum Works feeds, where the LLM keeps only China F&B / Chinese-brand items. `pipeline.inti china` adds 2-4
 key points in Indonesian per article (same robots.txt AI opt-out rule as the Berita tab).
-Bot: `/china teknologi`.
 
 ## Saham (stock tab) - one-time Google Sheets setup
 
@@ -209,11 +178,10 @@ that read like advice ("rekomendasi", "target harga") are skipped.
 - **Sources tested 2026-10-08:** 12 RSS feeds work. Kompas megapolitan (404), Tempo metro (403),
   Radar Bogor and Radar Depok (timeouts) did not, and are left out. Of the promo pages, McDonald's,
   HokBen, Richeese, BCA, Mandiri and ShopeePay have readable static text. KFC, Pizza Hut, Domino's,
-  Starbucks and Grand Indonesia need JavaScript and are listed but `aktif: false`. Use the bot's
-  manual curation for those.
+  Starbucks and Grand Indonesia need JavaScript and are listed but `aktif: false`.
 - GoFood/GrabFood/ShopeeFood, Instagram/TikTok/X APIs and Google Places are deliberately not used (ToS / cost).
 - News stores only title, a summary of up to 300 characters, and the link (copyright). No personal user data
-  is stored, except Telegram chat ids of people who `/langganan`, which `/berhenti` deletes (UU PDP).
+  is stored (UU PDP).
 - "Ramai" is an estimate from mention spikes, not live crowd data. Updates lag 15–60 min (free cron).
 - GitHub disables cron on repos with no activity for 60 days. Push a commit or run a workflow manually.
 
@@ -224,8 +192,7 @@ that read like advice ("rekomendasi", "target harga") are skipped.
 | DB connection fails in Actions | Use the **Session pooler** string, not the direct host (IPv6). |
 | `violates foreign key constraint ... wilayah` | Run the **maintenance** workflow (config not synced yet). |
 | Web shows "Gagal memuat data" | Wrong URL/anon key in `web/config.js`, or `schema.sql` not run (grants/RLS). |
-| Bot does not answer | `python scripts/set_webhook.py` → check `getWebhookInfo.last_error_message`. Use the same `WEBHOOK_SECRET` in both places. |
-| Promo: "teks terlalu sedikit" | Page needs JavaScript. Set `aktif: false` and use `/tambah_promo`. |
+| Promo: "teks terlalu sedikit" | Page needs JavaScript. Set `aktif: false`. |
 | LLM returns invalid JSON | Logged and skipped automatically. If it is frequent, switch `GEMINI_MODEL` (default `gemini-flash-lite-latest`) or add `GROQ_API_KEY`. |
 | Viral list empty | Normal at first: needs ≥3 mentions from ≥2 platforms in 24 h. Check the `viral` logs, then lower thresholds in `scoring.yaml`. |
 | Wrong city on a news item | Add/adjust aliases or `kecuali` in `zones.yaml` / `wilayah.yaml`. |
@@ -238,7 +205,6 @@ that read like advice ("rekomendasi", "target harga") are skipped.
 - [ ] Most items have a city/zone label
 - [ ] Web on Cloudflare Pages, city filter works
 - [ ] Promo pages extracted and validated
-- [ ] Bot answers `/berita`, `/promo`, `/viral`
 - [ ] YouTube/Trends/OSM signals stored
 - [ ] Zone scores computed and reviewed manually
 - [ ] Map and "Dekat saya" work
