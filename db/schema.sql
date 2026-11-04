@@ -234,6 +234,7 @@ create table if not exists saham_berita (
   jenis  text not null default 'saham'      -- saham | kripto
 );
 alter table saham_berita add column if not exists jenis text not null default 'saham';
+alter table saham_berita add column if not exists gambar text;  -- publisher's photo URL ('' = none found)
 create index if not exists saham_berita_kode on saham_berita using gin (kode);
 create index if not exists saham_berita_terbit on saham_berita (terbit desc);
 

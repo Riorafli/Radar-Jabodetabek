@@ -17,6 +17,7 @@ import feedparser
 import yaml
 
 from pipeline.common import ROOT, WIB, clean_html, db, http, load_config, log, now_utc
+from pipeline.gambar import dari_entri
 
 KOSONG = ("", "#n/a", "#value!", "#ref!", "#error!", "loading...", "n/a", "-")
 
@@ -206,9 +207,9 @@ def main():
                 terbit = datetime(*t[:6], tzinfo=timezone.utc) if t else None
                 if terbit and terbit < batas:
                     continue
-                cur.execute("""insert into saham_berita (url, judul, sumber, terbit, kode, jenis)
-                               values (%s,%s,%s,coalesce(%s, now()),%s,%s) on conflict (url) do nothing""",
-                            (url, judul, f["nama"], terbit, kode, jenis or "saham"))
+                cur.execute("""insert into saham_berita (url, judul, sumber, terbit, kode, jenis, gambar)
+                               values (%s,%s,%s,coalesce(%s, now()),%s,%s,%s) on conflict (url) do nothing""",
+                            (url, judul, f["nama"], terbit, kode, jenis or "saham", dari_entri(e)))
                 baru += cur.rowcount
         log(f"saham berita: {baru} baru")
 

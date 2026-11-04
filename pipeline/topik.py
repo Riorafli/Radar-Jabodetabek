@@ -102,14 +102,14 @@ def pindah_ke_saham(cur, pola):
     """Copy pasar_modal news into saham_berita (the Saham tab's news list)."""
     from collectors.saham import jenis_pasar, kode_disebut
 
-    cur.execute("""select url, judul, sumber, published_at, coalesce(ringkasan, '') from item
+    cur.execute("""select url, judul, sumber, published_at, coalesce(ringkasan, ''), gambar from item
                    where 'pasar_modal' = any(topik) and url is not null
                    and not exists (select 1 from saham_berita s where s.url = item.url)""")
     rows = cur.fetchall()
-    for url, judul, sumber, terbit, ringkasan in rows:
-        cur.execute("""insert into saham_berita (url, judul, sumber, terbit, kode, jenis) values (%s,%s,%s,%s,%s,%s)
+    for url, judul, sumber, terbit, ringkasan, gambar in rows:
+        cur.execute("""insert into saham_berita (url, judul, sumber, terbit, kode, jenis, gambar) values (%s,%s,%s,%s,%s,%s,%s)
                        on conflict (url) do nothing""",
-                    (url, judul, sumber, terbit, kode_disebut(f"{judul} {ringkasan}", pola), jenis_pasar(judul, pola) or "saham"))
+                    (url, judul, sumber, terbit, kode_disebut(f"{judul} {ringkasan}", pola), jenis_pasar(judul, pola) or "saham", gambar))
     return len(rows)
 
 

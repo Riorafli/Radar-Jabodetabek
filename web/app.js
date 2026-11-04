@@ -265,14 +265,19 @@
       const since = new Date(Date.now() - 75 * 86400000).toISOString().slice(0, 10);
       return rest(`saham_harian?select=kode,tanggal,close&tanggal=gte.${since}&order=tanggal&limit=10000`);
     },
-    async pasarBerita(jenis, offset) {
+    async pasarBerita(jenis, offset, kode) {
       if (DEMO) return [];
-      return rest(`saham_berita?select=judul,url,sumber,terbit,kode,jenis&order=terbit.desc&limit=${PAGE}&offset=${offset}${jenis ? `&jenis=eq.${jenis}` : ""}`);
+      return rest(`saham_berita?select=judul,url,sumber,terbit,kode,jenis,gambar&order=terbit.desc&limit=${PAGE}&offset=${offset}${jenis ? `&jenis=eq.${jenis}` : ""}${kodeQS(kode)}`);
     },
-    async pasarHitung() {
+    async pasarHitung(kode) {
       if (DEMO) return { semua: 0, saham: 0, kripto: 0 };
-      const [semua, saham, kripto] = await Promise.all(["", "&jenis=eq.saham", "&jenis=eq.kripto"].map((q) => count(`saham_berita?select=id${q}`)));
+      const [semua, saham, kripto] = await Promise.all(["", "&jenis=eq.saham", "&jenis=eq.kripto"].map((q) => count(`saham_berita?select=id${q}${kodeQS(kode)}`)));
       return { semua, saham, kripto };
+    },
+    // codes named in market news over the last 7 days (the "paling banyak diberitakan" box)
+    async pasarTop() {
+      if (DEMO) return [];
+      return rest(`saham_berita?select=kode,jenis&terbit=gte.${new Date(Date.now() - 7 * 86400e3).toISOString()}&limit=3000`);
     },
     async sahamBerita(kode) {
       if (DEMO) return [];
@@ -288,7 +293,7 @@
   const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null,
     bf: { t: "semua", w: "semua", s: "", j: "", v: false },
     promos: [], outlets: [], outletKey: null,
-    sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false, pasar: "", pasarOff: 0 },
+    sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false, pasar: "", pasarOff: 0, kode: "" },
     cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0, jenis: "", w: "semua" },
     pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
@@ -669,31 +674,63 @@
     return `<svg class="spark ${vals[vals.length - 1] >= vals[0] ? "naik" : "turun"}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline points="${pts}"/></svg>`;
   }
 
+  const kodeQS = (k) => (k ? `&kode=cs.${encodeURIComponent(`{"${k}"}`)}` : "");
+
+  async function renderPasarTop() {
+    const el = $("#pasar-top");
+    try {
+      const n = {}, jenis = {};
+      for (const r of await data.pasarTop()) for (const k of r.kode || []) {
+        if (k === "IHSG") continue;
+        n[k] = (n[k] || 0) + 1;
+        jenis[k] = r.jenis;
+      }
+      const top = Object.entries(n).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      $("#pasar-top-sec").hidden = !top.length;
+      el.innerHTML = top.map(([k, c], i) => `<li><button type="button" data-top="${esc(k)}" class="${S.sh.kode === k ? "on" : ""}" aria-pressed="${S.sh.kode === k}">
+        <span class="rk num">${i + 1}</span><b>${esc(k)}</b><span class="jml"><span class="num">${c}</span> berita</span>
+        <span class="jn">${jenis[k] === "kripto" ? "Kripto" : "Saham"}</span></button></li>`).join("");
+    } catch (e) { $("#pasar-top-sec").hidden = true; console.error(e); }
+  }
+
+  function setKode(k) {
+    S.sh.kode = S.sh.kode === k ? "" : k;
+    renderPasar();
+    for (const b of document.querySelectorAll("#pasar-top button")) {
+      b.classList.toggle("on", b.dataset.top === S.sh.kode);
+      b.setAttribute("aria-pressed", String(b.dataset.top === S.sh.kode));
+    }
+    $("#pasar-head").scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" });
+  }
+
   async function renderPasar(append = false) {
     const el = $("#list-pasar"), sh = S.sh;
     if (!append) {
       sh.pasarOff = 0;
       el.innerHTML = skeleton(3);
       try {
-        const c = await data.pasarHitung();
+        $("#pasar-kode").hidden = !sh.kode;
+        $("#pasar-kode-n").textContent = sh.kode;
+        const c = await data.pasarHitung(sh.kode);
         $("#f-pasar").innerHTML = [["", "Semua", c.semua], ["saham", "Saham", c.saham], ["kripto", "Kripto", c.kripto]]
           .map(([k, label, n]) => `<button type="button" data-p="${k}" class="fchip ${sh.pasar === k ? "on" : ""}" ${!n && k ? "disabled" : ""}>${label} <span class="n">${n}</span></button>`).join("");
       } catch (e) { console.error(e); }
     }
     try {
-      const rows = await data.pasarBerita(sh.pasar, sh.pasarOff);
+      const rows = await data.pasarBerita(sh.pasar, sh.pasarOff, sh.kode);
       const html = rows.map((r, i) => {
         const url = safeUrl(r.url);
         const kode = (r.kode || []).filter((k) => k !== "IHSG").slice(0, 4);
-        return `<li style="--i:${i}" class="${r.jenis === "kripto" ? "kripto" : "saham"}">
+        return `<li style="--i:${i}" class="${r.jenis === "kripto" ? "kripto" : "saham"} ${r.gambar ? "ada-foto" : ""}">
+          ${fotoHTML(r.gambar, url)}<div class="teks">
           ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
           <div class="meta"><span class="chip ${r.jenis === "kripto" ? "soft" : ""}">${r.jenis === "kripto" ? "Kripto" : "Saham"}</span>
-            ${kode.map((k) => `<button type="button" class="kode-chip" data-kode="${esc(k)}">${esc(k)}</button>`).join("")}
-            <span>${esc(r.sumber || "")}</span><time>${timeAgo(r.terbit)}</time></div>
-        </li>`;
+            ${kode.map((k) => `<button type="button" class="kode-chip" data-kode="${esc(k)}" title="Berita tentang ${esc(k)}">${esc(k)}</button>`).join("")}
+            <span class="by">${esc(r.sumber || "")}</span><time>${timeAgo(r.terbit)}</time></div>
+        </div></li>`;
       }).join("");
       if (append) el.insertAdjacentHTML("beforeend", html);
-      else el.innerHTML = html || empty("Belum ada berita pasar modal.");
+      else el.innerHTML = html || empty(sh.kode ? `Belum ada berita tentang ${sh.kode}.` : "Belum ada berita pasar modal.");
       sh.pasarOff += rows.length;
       $("#more-pasar").hidden = rows.length < PAGE;
     } catch (e) { fail(el, e); }
@@ -701,6 +738,7 @@
 
   async function renderSaham() {
     renderPasar();
+    renderPasarTop();
     const el = $("#list-saham");
     if (!S.sh.loaded) el.innerHTML = skeleton(6);
     try {
@@ -721,6 +759,7 @@
     const kosong = !list.length && !ihsg;
     $("#s-sort").closest(".filters").hidden = kosong;
     el.hidden = kosong;
+    $("#sq").closest(".search").hidden = kosong;
     if (kosong) {
       $("#ihsg").innerHTML = "";
       $("#movers").innerHTML = "";
@@ -1004,9 +1043,11 @@
       const b = e.target.closest("button[data-kode]");
       if (!b) return;
       const li = document.querySelector(`.saham-row[data-kode="${CSS.escape(b.dataset.kode)}"]`);
-      if (li) { li.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "center" }); bukaSaham(li); }
-      else toast(`${b.dataset.kode} belum ada di daftar harga.`);
+      if (li && !$("#list-saham").hidden) { li.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "center" }); bukaSaham(li); }
+      else setKode(b.dataset.kode);
     });
+    $("#pasar-top").addEventListener("click", (e) => { const b = e.target.closest("button[data-top]"); if (b) setKode(b.dataset.top); });
+    $("#pasar-kode-x").addEventListener("click", () => setKode(S.sh.kode));
     $("#f-sektor").addEventListener("click", (e) => { const b = e.target.closest("button[data-s]"); if (b) { S.sh.sektor = b.dataset.s; drawSaham(); } });
     $("#s-sort").addEventListener("change", (e) => { S.sh.sort = e.target.value; drawSaham(); });
     let ts;

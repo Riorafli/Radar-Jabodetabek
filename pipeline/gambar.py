@@ -1,4 +1,4 @@
-"""News photos (every news / china run).  python -m pipeline.gambar [china]
+"""News photos (every news / china run).  python -m pipeline.gambar [china|saham]
 
 Only the URL of the publisher's own picture is stored, never the image: the RSS
 entry's media/enclosure image, else the article's og:image (fetched only when
@@ -26,6 +26,9 @@ TARGET = {
     "china": ("""select id, url from berita_china where gambar is null and url like 'http%%'
                  and kategori is distinct from 'buang' and terbit > now() - interval '2 days' order by terbit desc limit %s""",
               "update berita_china set gambar = %s where id = %s"),
+    "saham": ("""select id, url from saham_berita where gambar is null and url like 'http%%'
+                 and terbit > now() - interval '2 days' order by terbit desc limit %s""",
+              "update saham_berita set gambar = %s where id = %s"),
 }
 
 
