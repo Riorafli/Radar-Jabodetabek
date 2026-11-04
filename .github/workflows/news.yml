@@ -1,7 +1,7 @@
 name: news
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "7,22,37,52 * * * *"   # every 15 min, off the :00/:15 marks GitHub drops most under load
   workflow_dispatch:
 concurrency: { group: news, cancel-in-progress: false }
 jobs:
