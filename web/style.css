@@ -461,7 +461,7 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
   h2 { font-size: var(--text-xl); }
   .list .title { font-size: 1.1rem; }
   /* phones: every story with a photo reads like the lead, the photo full width on top, then the key points */
-  .news > li.ada-foto { display: flex; gap: var(--space-sm); }
+  .news > li.ada-foto, .news > li.ada-foto:first-child { display: flex; gap: var(--space-sm); }
   .news { gap: var(--space-sm); }
   .news > li { padding: var(--space-sm); }
   .sort select, .filter-row select { max-width: 62vw; }
