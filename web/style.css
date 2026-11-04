@@ -3,6 +3,7 @@
  * axes: light/slab-serif/warm · posture: restrained · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E4 S3 R4 V4 · weakest: S, six rubrics share one masthead, so each panel opens on its own Zilla head and a double rule */
 /* Hallmark · dropped https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js · Leaflet now loads on demand from app.js (loadLeaflet) when the Peta tab opens, to keep the first load light */
+/* Hallmark · answered: motion, the masthead mascot walks at the owner's request; transform and opacity only, still under reduced motion, hidden on phones */
 /* Hallmark · answered: performance, no web-font weight beyond 700/500/400, Leaflet loads only on the Peta tab, no infinite animation anywhere */
 @import url("./tokens.css");
 @import url("./base.css");
@@ -19,6 +20,8 @@
   --color-scrim: oklch(17% 0.012 60 / 0.72);
   --color-on-scrim: oklch(97% 0.008 90);
   --dur-state: var(--dur-micro);
+  --color-clawd: oklch(66% 0.14 42);
+  --color-clawd-mata: oklch(17% 0.012 60);
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -84,7 +87,7 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--color-ink); }
 .brand { font: 700 1.5rem/1 var(--font-display); letter-spacing: var(--tracking-display); color: var(--color-ink); text-decoration: none; }
 .brand:hover { text-decoration: underline; text-decoration-thickness: 2px; }
 .brand:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; }
-.area-ctl { display: flex; gap: var(--space-xs); flex: 1 1 320px; justify-content: flex-end; align-items: center; min-width: 0; }
+.area-ctl { display: flex; gap: var(--space-xs); flex: 0 1 auto; justify-content: flex-end; align-items: center; min-width: 0; }
 #area { flex: 0 1 260px; }
 .hdr-btns { display: inline-flex; gap: var(--space-xs); flex: none; }
 .hdr-btns .btn { padding-inline: var(--space-sm); }
@@ -103,6 +106,30 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--color-ink); }
 .tabs button[aria-selected="true"] { color: var(--color-ink); border-bottom-color: var(--color-accent); }
 
 .demo { background: var(--color-paper-2); border-bottom: var(--rule-hair) solid var(--color-rule); font-size: var(--text-sm); padding-block: var(--space-xs); }
+
+/* ============================================================ masthead mascot: an 8-bit walker between the name and the controls */
+.jalan { flex: 1 1 0; min-width: 0; align-self: stretch; display: flex; align-items: flex-end; padding-inline: var(--space-lg); }
+.lintasan { width: 100%; height: 30px; animation: mondar 18s linear infinite; }
+.clawd { position: relative; display: block; width: 36px; height: 30px; animation: balik 18s step-end infinite; }
+.clawd svg { display: block; animation: lompat 0.5s steps(2) infinite; }
+.clawd .t { fill: var(--color-clawd); }
+.clawd .m { fill: var(--color-clawd-mata); }
+.clawd .kb { opacity: 0; }
+.clawd .ka { animation: langkah 0.5s steps(1) infinite; }
+.clawd .kb { animation: langkah 0.5s steps(1) infinite reverse; }
+.sapa {
+  position: absolute; bottom: calc(100% + 6px); left: 50%; white-space: nowrap; pointer-events: none;
+  font: 500 var(--text-xs)/1.2 var(--font-body); color: var(--color-paper); background: var(--color-ink); padding: var(--space-2xs) var(--space-xs);
+  transform: translate(-50%, 0) scaleX(var(--arah, 1)); transition: clip-path var(--dur-short) var(--ease-out);
+}
+.jalan:hover .lintasan, .jalan:hover .clawd, .jalan:hover .clawd svg, .jalan:hover .clawd g { animation-play-state: paused; }
+.jalan:not(:hover) .sapa { clip-path: inset(100% 0 0 0); }   /* the bubble rises in on hover */
+@keyframes mondar { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(calc(100% - 36px)); } }
+@keyframes balik { 0% { transform: scaleX(1); --arah: 1; } 50% { transform: scaleX(-1); --arah: -1; } }
+@keyframes lompat { 0% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+@keyframes langkah { 0% { opacity: 1; } 50% { opacity: 0; } }
+@media (max-width: 760px) { .jalan { display: none; } }
+@media (prefers-reduced-motion: reduce) { .lintasan, .clawd, .clawd svg, .clawd g { animation: none !important; } .clawd .kb { opacity: 0; } }
 
 /* ============================================================ front: head + figures */
 .hero { padding-block: var(--space-lg) var(--space-md); }
