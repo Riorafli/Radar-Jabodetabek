@@ -673,3 +673,14 @@ def test_china_saring_fnb(monkeypatch):
     assert china.terjemahkan([(2, "日本面包店", "")], saring={2}) == {2: (None, None, "buang")}
     monkeypatch.setattr(china.extract_llm, "ask_json", lambda p: None)
     assert china.terjemahkan([(2, "日本面包店", "")], saring={2}) == {}                 # LLM failure: nothing dropped
+
+
+def test_gambar_dari_entri_dan_html():
+    from pipeline.gambar import dari_entri, dari_html, rapikan
+    assert dari_entri({"media_content": [{"url": "http://cdn.x.id/foto.jpg", "medium": "image"}]}) == "https://cdn.x.id/foto.jpg"
+    assert dari_entri({"links": [{"rel": "enclosure", "type": "image/jpeg", "href": "https://x.id/a.jpg"}]}) == "https://x.id/a.jpg"
+    assert dari_entri({"link": "https://x.id/b", "summary": '<p><img src="/img/c.jpg"></p>'}) == "https://x.id/img/c.jpg"
+    assert dari_entri({"media_thumbnail": [{"url": "https://x.id/logo.png"}]}) is None
+    assert dari_html('<meta property="og:image" content="https://x.id/d.jpg">', "https://x.id/") == "https://x.id/d.jpg"
+    assert dari_html('<meta content="/e.jpg" name="twitter:image">', "https://x.id/a/") == "https://x.id/e.jpg"
+    assert rapikan("data:image/png;base64,xx") is None and rapikan("https://x.id/pixel.gif") is None

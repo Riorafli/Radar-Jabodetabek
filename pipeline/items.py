@@ -7,16 +7,16 @@ from pipeline.entities import add_signal, brand_id
 
 def insert_item(cur, tipe, judul, url, sumber, ringkasan=None, published_at=None,
                 kode_wilayah=None, zona_id=None, entitas_id=None, lat=None, lon=None,
-                meta=None, label_status="baru", hash_key=None):
+                meta=None, label_status="baru", hash_key=None, gambar=None):
     """Returns the new item id, or None when it already existed (dedup)."""
     h = sha1(hash_key or url or f"{sumber}:{judul}")
     cur.execute(
         """insert into item (tipe, judul, url, sumber, ringkasan, published_at, kode_wilayah, zona_id,
-                             entitas_id, lat, lon, meta, label_status, hash_dedup)
-           values (%s,%s,%s,%s,%s, coalesce(%s, now()), %s,%s,%s,%s,%s,%s,%s,%s)
+                             entitas_id, lat, lon, meta, label_status, hash_dedup, gambar)
+           values (%s,%s,%s,%s,%s, coalesce(%s, now()), %s,%s,%s,%s,%s,%s,%s,%s,%s)
            on conflict (hash_dedup) do nothing returning id""",
         (tipe, judul[:300], url, sumber, ringkasan, published_at, kode_wilayah, zona_id,
-         entitas_id, lat, lon, Json(meta or {}), label_status, h),
+         entitas_id, lat, lon, Json(meta or {}), label_status, h, gambar),
     )
     row = cur.fetchone()
     return row[0] if row else None

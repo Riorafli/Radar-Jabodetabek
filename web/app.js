@@ -89,6 +89,9 @@
       $("#hoaks-box").hidden = !rows.length && !DEMO;
     } catch (e) { console.error(e); }
   }
+  // the publisher's own photo (pipeline/gambar.py), loaded from their site and linked to the article
+  const fotoHTML = (src, url) => (safeUrl(src) ? `<a class="foto" href="${esc(url || src)}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true">
+    <img src="${esc(safeUrl(src))}" alt="" loading="lazy" decoding="async" width="640" height="360"></a>` : "");
   const badgeSumber = (j) => (JENIS_SUMBER[j] ? `<span class="src-badge ${esc(j)}" title="${esc(JENIS_SUMBER[j][1])}">${JENIS_SUMBER[j][0]}</span>` : "");
 
   // ------------------------------------------------------------ berita filters
@@ -198,7 +201,7 @@
           && dalamRange(r.published_at, rng)).slice(offset, offset + PAGE);
       }
       const qs = (clean ? `&judul=ilike.${encodeURIComponent(`*${clean}*`)}` : "") + beritaQS(bf, rng);
-      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,inti,published_at,wilayah,zona,topik,jenis_sumber,pers,hoaks_judul,hoaks_label,hoaks_url,hoaks_sumber&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
+      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,inti,gambar,published_at,wilayah,zona,topik,jenis_sumber,pers,hoaks_judul,hoaks_label,hoaks_url,hoaks_sumber&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
     },
     async beritaMeta(area, rng = {}) {
       if (DEMO) return D().berita.filter((r) => areaMatch(r, area) && dalamRange(r.published_at, rng));
@@ -247,7 +250,7 @@
         + (jenis ? `&jenis_sumber=eq.${encodeURIComponent(jenis)}` : "")
         + terbitQS(rng)
         + (clean ? `&or=(judul_id.ilike.${encodeURIComponent(`*${clean}*`)},ringkasan_id.ilike.${encodeURIComponent(`*${clean}*`)},judul_asli.ilike.${encodeURIComponent(`*${clean}*`)})` : "");
-      return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,inti,kategori,jenis_sumber,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
+      return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,inti,gambar,kategori,jenis_sumber,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
     },
     async chinaMeta(rng = {}) {
       if (DEMO) return [];
@@ -371,7 +374,8 @@
       const html = rows.map((r, i) => {
         const url = safeUrl(r.url);
         const where = r.zona || r.wilayah;
-        return `<li class="${r.tipe === "info" ? "info" : ""}" style="--i:${i}">
+        return `<li class="${r.tipe === "info" ? "info" : ""} ${r.gambar ? "ada-foto" : ""}" style="--i:${i}">
+          ${fotoHTML(r.gambar, url)}<div class="teks">
           ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
           ${r.hoaks_judul ? hoaksHTML(r) : ""}
           ${r.inti ? intiHTML(r.inti, url, r.sumber) : r.ringkasan ? `<p class="sum">${esc(r.ringkasan)}</p>` : ""}
@@ -381,7 +385,7 @@
             ${badgeSumber(r.jenis_sumber)}
             ${r.pers ? "" : `<span class="chip warn" title="Media ini belum tercatat terverifikasi di Dewan Pers: cek juga di media lain">Belum terverifikasi</span>`}
             <span class="by">${esc(r.sumber)}</span>${verifHTML(r.pers)}<time>${timeAgo(r.published_at)}</time></div>
-        </li>`;
+        </div></li>`;
       }).join("");
       if (append) el.insertAdjacentHTML("beforeend", html);
       else el.innerHTML = html || empty(S.bf.t !== "semua" || S.bf.w !== "semua" || S.bf.s || S.bf.j || S.bf.v
@@ -815,14 +819,15 @@
       const rows = await data.china(cn.kat, cn.sumber, cn.q, cn.offset, cn.jenis, rng);
       const html = rows.map((r, i) => {
         const url = safeUrl(r.url);
-        return `<li style="--i:${i}" class="cn-${esc(r.kategori || "lainnya")}">
+        return `<li style="--i:${i}" class="cn-${esc(r.kategori || "lainnya")} ${r.gambar ? "ada-foto" : ""}">
+          ${fotoHTML(r.gambar, url)}<div class="teks">
           ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul_id)}</a>` : `<span class="title">${esc(r.judul_id)}</span>`}
           ${cn.asli ? `<p class="asli" lang="${r.bahasa === "zh" ? "zh" : "en"}">${esc(r.judul_asli)}</p>` : ""}
           ${r.inti ? intiHTML(r.inti, url, r.sumber) : r.ringkasan_id ? `<p class="sum">${esc(r.ringkasan_id)}</p>` : ""}
           <div class="meta"><span class="chip">${KAT_CN[r.kategori] || KAT_CN.lainnya}</span>
             ${badgeSumber(r.jenis_sumber)}
             <span class="lang">${r.bahasa === "zh" ? "中文" : "EN"}</span><span class="by">${esc(r.sumber || "")}</span><time>${timeAgo(r.terbit)}</time></div>
-        </li>`;
+        </div></li>`;
       }).join("");
       if (append) el.insertAdjacentHTML("beforeend", html);
       else el.innerHTML = html || empty(DEMO ? "Mode demo: belum ada berita China." : "Belum ada berita yang cocok.");
@@ -1053,6 +1058,11 @@
       store.set("theme", next);
       syncThemeIcon();
     });
+
+    document.addEventListener("error", (e) => {
+      const f = e.target.closest && e.target.closest(".foto");
+      if (f) { f.closest("li").classList.remove("ada-foto"); f.remove(); }
+    }, true);
 
     const toTop = $("#to-top");
     let scrollTick = false;   // at most one update per frame while scrolling

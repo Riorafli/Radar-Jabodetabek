@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import feedparser
 
 from pipeline.common import clean_html, db, env, http, load_config, log
+from pipeline.gambar import dari_entri
 from pipeline.entities import BrandMatcher
 from pipeline.geocode import Matcher, strip_dateline, zona_ids
 from pipeline.items import brand_mentions, insert_item
@@ -37,6 +38,7 @@ def parse_entry(e, feed, matcher):
         "judul": judul, "url": link, "ringkasan": ringkasan, "published_at": waktu,
         "zona": m.zona, "kode_wilayah": m.kode_wilayah or feed.get("default_wilayah"),
         "label_status": "teks" if m.ok else "baru",
+        "gambar": dari_entri(e),   # None: pipeline/gambar.py tries the article's og:image
     }
 
 
@@ -65,7 +67,7 @@ def main():
                 zona_id = zid.get(it["zona"])
                 item_id = insert_item(cur, feed.get("tipe", "berita"), it["judul"], it["url"], feed["nama"],
                                       it["ringkasan"], it["published_at"], it["kode_wilayah"], zona_id,
-                                      label_status=it["label_status"])
+                                      label_status=it["label_status"], gambar=it["gambar"])
                 if item_id:
                     baru += 1
                     brand_mentions(cur, item_id, brands.find(it["judul"], it["ringkasan"]), "berita",

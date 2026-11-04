@@ -255,6 +255,7 @@ create table if not exists berita_china (
 alter table berita_china add column if not exists jenis_sumber text;
 alter table berita_china add column if not exists inti text;          -- 2-4 key points in Indonesian (pipeline/inti.py)
 alter table berita_china add column if not exists inti_at timestamptz;
+alter table berita_china add column if not exists gambar text;  -- publisher's photo URL ('' = none found)
 create index if not exists berita_china_terbit on berita_china (terbit desc);
 
 -- ---------------------------------------------------------------- hoax check (pipeline/cekfakta.py)
@@ -279,6 +280,7 @@ create table if not exists hoaks (
 create index if not exists hoaks_terbit on hoaks (terbit desc);
 alter table item add column if not exists cek_at timestamptz;   -- set once checked against hoaks
 alter table item add column if not exists hoaks_id bigint references hoaks(id) on delete set null;
+alter table item add column if not exists gambar text;          -- publisher's photo URL ('' = none found), pipeline/gambar.py
 
 -- ---------------------------------------------------------------- views for web/bot
 create or replace view v_berita with (security_invoker = true) as
@@ -287,7 +289,8 @@ select i.id, i.tipe, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
        coalesce(i.lat, z.lat, w.lat) as lat, coalesce(i.lon, z.lon, w.lon) as lon,
        i.topik, i.jenis_sumber, i.inti,
        mv.status as pers,                                  -- null = not verified by Dewan Pers
-       h.judul as hoaks_judul, h.label as hoaks_label, h.url as hoaks_url, h.sumber as hoaks_sumber
+       h.judul as hoaks_judul, h.label as hoaks_label, h.url as hoaks_url, h.sumber as hoaks_sumber,
+       nullif(i.gambar, '') as gambar
 from item i
 left join wilayah w on w.kode = i.kode_wilayah
 left join zona z on z.id = i.zona_id

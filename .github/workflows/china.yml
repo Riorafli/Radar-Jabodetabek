@@ -19,5 +19,7 @@ jobs:
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt
       - run: python -m collectors.china
+      - run: python -m pipeline.gambar china
+        continue-on-error: true
       - run: python -m pipeline.inti china
         continue-on-error: true
