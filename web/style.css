@@ -221,9 +221,20 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
 .kode-chip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 
 /* news columns: the first story leads across the page, the rest run in 2 to 3 columns */
-.news { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); column-gap: var(--space-xl); border-top-width: 3px; border-top-style: double; }
-.news > li.empty, .news > li.sk { grid-column: 1 / -1; }
-.news > li { display: flex; flex-direction: column; gap: var(--space-sm); }
+/* each story is its own ruled frame (a heavy ink rule on top), so stories without a photo never run together */
+.news { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); gap: var(--space-lg); border-top: 0; }
+.news > li {
+  display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-md);
+  background: var(--color-paper); border: var(--rule-hair) solid var(--color-rule); border-top: 3px solid var(--color-ink);
+  transition: border-color var(--dur-state) var(--ease-out), background-color var(--dur-state) var(--ease-out);
+}
+.news > li:hover { border-color: var(--color-rule-2); border-top-color: var(--color-ink); }
+.news > li:focus-within { border-color: var(--color-ink); }
+.news > li.empty, .news > li.sk { grid-column: 1 / -1; border: 0; padding-inline: 0; background: none; }
+.news > li.info { border-top-color: var(--color-accent); }
+.news > li:not(.ada-foto) { background: var(--color-paper-2); }
+.news .teks { display: flex; flex-direction: column; flex: 1; }
+.news .meta { margin-top: auto; padding-top: var(--space-sm); }
 .news .title, .news .inti, .news .sum, .news .hoaks-warn { max-width: none; }
 .foto { display: block; aspect-ratio: 16 / 9; overflow: hidden; background: var(--color-paper-3); border: var(--rule-hair) solid var(--color-rule); }
 .foto img { width: 100%; height: 100%; object-fit: cover; transition: opacity var(--dur-short) var(--ease-out); }
@@ -416,6 +427,8 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
   .list .title { font-size: 1.1rem; }
   .news > li.ada-foto:first-child { display: flex; gap: var(--space-sm); }
   .news > li.ada-foto:not(:first-child) { display: block; }
+  .news { gap: var(--space-sm); }
+  .news > li { padding: var(--space-sm); }
   .news > li.ada-foto:not(:first-child) .foto { float: right; width: 34%; margin: var(--space-2xs) 0 var(--space-xs) var(--space-sm); }
   .news > li::after { content: ""; display: block; clear: both; }
   .sort select, .filter-row select { max-width: 62vw; }
