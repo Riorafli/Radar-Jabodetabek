@@ -701,3 +701,16 @@ def test_terjemah_validasi(monkeypatch):
     assert terjemah.terjemah(rows) == {1: ("Headline one", None, None), 2: ("Headline two", "Lead two in English", None)}
     monkeypatch.setattr(terjemah.extract_llm, "ask_json", lambda p: None)
     assert terjemah.terjemah(rows) is None
+
+
+def test_logo_helpers():
+    from pipeline.logo import host_milik, ikon_dari_html, judul_milik, tebak_sendiri
+    assert host_milik("McDonald's", "www.mcdonalds.co.id") and host_milik("HokBen", "www.hokben.co.id")
+    assert not host_milik("Ulivo Ristorante Italiano", "www.bca.co.id")
+    html = ('<link rel="icon" href="/f16.png" sizes="16x16"><link rel="apple-touch-icon" href="/a.png">'
+            '<link rel="mask-icon" href="/m.svg">')
+    assert ikon_dari_html(html, "https://x.id/") == "https://x.id/a.png"
+    assert ikon_dari_html("<p>no icon</p>", "https://x.id/") is None
+    assert judul_milik("Pepper Lunch", "<title>Pepper Lunch Indonesia</title>")
+    assert not judul_milik("Ppang!", "<title>ppang.com is for sale</title>")
+    assert tebak_sendiri("Pepper Lunch") == ["pepperlunch.co.id", "pepperlunch.com", "pepperlunch.id"]

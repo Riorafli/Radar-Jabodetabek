@@ -294,6 +294,14 @@ alter table berita_china add column if not exists en_at timestamptz;
 alter table saham_berita add column if not exists judul_en text;
 alter table saham_berita add column if not exists en_at timestamptz;
 
+-- merchant logos for promo cards (pipeline/logo.py); logo '' = none found, retried later
+create table if not exists brand_logo (
+  brand  text primary key,
+  domain text,
+  logo   text not null default '',
+  dicek  timestamptz not null default now()
+);
+
 -- ---------------------------------------------------------------- views for web/bot
 create or replace view v_berita with (security_invoker = true) as
 select i.id, i.tipe, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
@@ -322,9 +330,11 @@ select i.id, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
        p.brand, p.menu, p.harga, p.harga_teks, p.mulai, p.selesai, p.syarat,
        p.kota_berlaku, p.sumber_input,
        p.kategori, p.platform, p.produk, p.lokasi, p.diskon_persen, p.selesai_perkiraan, i.lat, i.lon,
-       p.jenis, p.halal
+       p.jenis, p.halal,
+       nullif(bl.logo, '') as logo
 from item i
 join promo p on p.item_id = i.id
+left join brand_logo bl on bl.brand = p.brand
 where p.selesai is null or p.selesai >= (now() at time zone 'Asia/Jakarta')::date;
 
 create or replace view v_viral with (security_invoker = true) as
@@ -354,7 +364,7 @@ declare t text;
 begin
   foreach t in array array['wilayah','kawasan','kawasan_wilayah','zona','entitas',
                            'item','promo','skor','zona_statistik','saham','saham_harian','saham_berita',
-                           'berita_china','media_verif','hoaks'] loop
+                           'berita_china','media_verif','hoaks','brand_logo'] loop
     execute format('alter table %I enable row level security', t);
     if not exists (select 1 from pg_policies where tablename = t and policyname = 'baca publik') then
       execute format('create policy "baca publik" on %I for select using (true)', t);

@@ -18,6 +18,7 @@
   --color-zone: var(--color-rule-2);
   --color-scrim: oklch(17% 0.012 60 / 0.72);
   --color-on-scrim: oklch(97% 0.008 90);
+  --color-logo-bg: oklch(99% 0.003 90);   /* merchant logos are drawn for white: keep it light in both themes */
   --dur-state: var(--dur-micro);
 }
 :root[data-theme="dark"] {
@@ -261,6 +262,9 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
 }
 .promo-head { display: flex; align-items: center; gap: var(--space-sm); }
 .avatar { flex: none; width: 36px; height: 36px; display: grid; place-items: center; font: 700 0.9rem/1 var(--font-display); color: var(--color-paper); background: var(--color-ink); }
+.avatar { position: relative; overflow: hidden; }
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: var(--space-3xs); background: var(--color-logo-bg); }
+.avatar.ada-logo { box-shadow: inset 0 0 0 var(--rule-hair) var(--color-rule); }
 .promo-brand { font: 700 var(--text-md)/1.2 var(--font-display); color: var(--color-ink); }
 .kchip { font-size: var(--text-xs); color: var(--color-muted); }
 .plats { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }

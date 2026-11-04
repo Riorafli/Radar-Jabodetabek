@@ -225,7 +225,7 @@
     },
     async promo(area) {
       if (DEMO) return D().promo.filter((r) => areaMatch(r, area, "promo"));
-      return rest(`v_promo?select=id,brand,judul,menu,harga,harga_teks,selesai,syarat,url,sumber,kota_berlaku,sumber_input,kategori,platform,produk,lokasi,diskon_persen,selesai_perkiraan,lat,lon,published_at,jenis,halal&order=published_at.desc&limit=300${areaQS(area, "promo")}`);
+      return rest(`v_promo?select=id,brand,judul,menu,harga,harga_teks,selesai,syarat,url,sumber,kota_berlaku,sumber_input,kategori,platform,produk,lokasi,diskon_persen,selesai_perkiraan,lat,lon,published_at,jenis,halal,logo&order=published_at.desc&limit=300${areaQS(area, "promo")}`);
     },
     async outlets(brands) {
       if (DEMO || !brands.length) return [];
@@ -552,7 +552,8 @@
       const linkTxt = r.sumber === "YouTube" ? T("Tonton videonya di YouTube")
         : k === "makanan" ? T("Lihat di {s}", { s: esc(r.sumber || T("sumber")) }) : T("Baca info lengkap ({s})", { s: esc(r.sumber || T("sumber")) });
       return `<li class="promo k-${k}" style="--i:${i}">
-        <div class="promo-head"><span class="avatar">${esc(initials(r.brand))}</span>
+        <div class="promo-head"><span class="avatar${r.logo && safeUrl(r.logo) ? " ada-logo" : ""}">${esc(initials(r.brand))}${
+          r.logo && safeUrl(r.logo) ? `<img src="${esc(r.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ""}</span>
           <div class="promo-who"><div class="promo-brand">${esc(r.brand)}</div>
             <span class="kchip">${esc(T(KAT[k].nama))}</span>${r.sumber_input === "manual" ? ` <span class="chip good">${T("kurasi")}</span>` : ""}</div>
           ${d ? `<span class="ribbon">-${d}%</span>` : ""}</div>
@@ -1167,6 +1168,7 @@
     document.addEventListener("error", (e) => {
       const f = e.target.closest && e.target.closest(".foto");
       if (f) { f.closest("li").classList.remove("ada-foto"); f.remove(); }
+      if (e.target.matches && e.target.matches(".avatar img")) { e.target.parentElement.classList.remove("ada-logo"); e.target.remove(); }
     }, true);
 
     const toTop = $("#to-top");
