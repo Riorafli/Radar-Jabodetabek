@@ -5,16 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Radar Jabodetabek</title>
   <meta name="description" content="Berita terkini, promo makanan, dan tempat viral di Jabodetabek per kota dan zona.">
-  <meta name="theme-color" content="#ffffff">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e8590c'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='white' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='white'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#eeebe3">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23231f1b'/%3E%3Ctext x='16' y='24' font-family='Georgia,serif' font-weight='700' font-size='22' text-anchor='middle' fill='%23eeebe3'%3ER%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&family=Spectral:ital,wght@0,400;0,500;1,400&family=Libre+Franklin:wght@500&display=swap">
   <link rel="stylesheet" href="style.css">
   <script>
-    // apply saved theme before paint (no flash)
-    // white/light theme by default; dark only when the visitor picks it with the moon button
+    // apply saved theme before paint (no flash); light by default, dark only when picked
     var t = "light"; try { t = localStorage.getItem("theme") || "light"; } catch (e) {}
     document.documentElement.dataset.theme = t;
   </script>
@@ -22,27 +20,24 @@
 <body>
   <header class="top">
     <div class="wrap top-row">
-      <a class="brand" href="#" aria-label="Radar Jabodetabek">
-        <span class="radar" aria-hidden="true"><span class="sweep"></span><span class="blip"></span></span>
-        <span class="brand-text">Radar <b>Jabodetabek</b></span>
-      </a>
+      <a class="brand" href="#">Radar Jabodetabek</a>
       <div class="area-ctl">
         <label class="sr" for="area">Pilih area</label>
         <select id="area"></select>
         <span class="hdr-btns">
-          <button id="near" class="btn ghost" type="button" title="Gunakan lokasi saya">📍<span class="hide-sm"> Dekat saya</span></button>
-          <button id="theme" class="icon-btn" type="button" aria-label="Ganti tema">🌙</button>
+          <button id="near" class="btn ghost" type="button" title="Gunakan lokasi saya">Dekat saya</button>
+          <button id="theme" class="btn ghost" type="button" aria-label="Ganti tema">Gelap</button>
         </span>
       </div>
     </div>
-    <nav class="wrap tabs" role="tablist">
+    <nav class="wrap tabs" role="tablist" aria-label="Rubrik">
       <span class="tab-ind" aria-hidden="true"></span>
-      <button role="tab" data-tab="berita" aria-selected="true">📰 Berita</button>
-      <button role="tab" data-tab="promo">🏷️ Promo</button>
-      <button role="tab" data-tab="viral">🔥 Viral</button>
-      <button role="tab" data-tab="saham">📈 Saham</button>
-      <button role="tab" data-tab="china">🇨🇳 China</button>
-      <button role="tab" data-tab="peta">🗺️ Peta</button>
+      <button role="tab" data-tab="berita" aria-selected="true">Berita</button>
+      <button role="tab" data-tab="promo">Promo</button>
+      <button role="tab" data-tab="viral">Viral</button>
+      <button role="tab" data-tab="saham">Saham</button>
+      <button role="tab" data-tab="china">China</button>
+      <button role="tab" data-tab="peta">Peta</button>
     </nav>
   </header>
 
@@ -51,16 +46,15 @@
   </div>
 
   <section class="hero">
-    <div class="blob b1" aria-hidden="true"></div>
-    <div class="blob b2" aria-hidden="true"></div>
     <div class="wrap hero-in">
-      <p class="live"><span class="live-dot"></span> LIVE <span id="updated" class="muted"></span></p>
-      <h1 class="hero-title">Apa yang lagi <span class="grad">rame</span> di <span id="hero-area">Jabodetabek</span>?</h1>
-      <p class="hero-sub">Berita terkini, promo makanan &amp; marketplace, cuci gudang, dan tempat viral, diperbarui otomatis.</p>
+      <div class="hero-text">
+        <h1 class="hero-title">Hari ini di <span id="hero-area">Jabodetabek</span></h1>
+        <p class="hero-sub">Berita, promo, dan tempat yang lagi ramai, diperbarui otomatis. <span id="updated"></span></p>
+      </div>
       <div class="stats">
         <div class="stat"><b data-count="berita">0</b><span>berita</span></div>
         <div class="stat"><b data-count="promo">0</b><span>promo aktif</span></div>
-        <button type="button" class="stat stat-link" id="stat-video" title="Lihat video kuliner"><b data-count="video">0</b><span>video kuliner ▸</span></button>
+        <button type="button" class="stat stat-link" id="stat-video" title="Lihat video kuliner"><b data-count="video">0</b><span>video kuliner</span></button>
         <div class="stat"><b data-count="tempat">0</b><span>tempat makan</span></div>
       </div>
     </div>
@@ -70,7 +64,7 @@
     <section id="tab-berita" class="panel">
       <div class="panel-head">
         <h2 id="h-berita">Berita terkini</h2>
-        <div class="search"><span aria-hidden="true">🔎</span><input id="q" type="search" placeholder="Cari judul…" aria-label="Cari berita"></div>
+        <div class="search"><input id="q" type="search" placeholder="Cari judul…" aria-label="Cari berita"></div>
       </div>
       <div class="filters">
         <div id="f-topik" class="chips" role="group" aria-label="Topik berita"></div>
@@ -93,15 +87,23 @@
             <input id="b-tgl" type="date" aria-label="Tanggal berita">
           </label>
           <label class="sort">Sumber <select id="b-sumber"><option value="">Semua sumber</option></select></label>
-          <label class="toggle"><input id="b-verif" type="checkbox"> ✓ Hanya media terverifikasi Dewan Pers</label>
+          <label class="toggle"><input id="b-verif" type="checkbox"> Hanya media terverifikasi Dewan Pers</label>
           <button id="b-reset" class="link-btn" type="button" hidden>Reset filter</button>
         </div>
-        <p class="note small legend-sumber">🏛️ Resmi pemerintah · 📡 Media negara (milik negara/BUMN) · 📰 Media swasta nasional ·
-          🏘️ Media lokal · 🔁 Lainnya. Sentuh label di berita untuk penjelasan.<br>
-          <span class="verif">✓</span> media terverifikasi Dewan Pers · <span class="chip warn mini">Belum terverifikasi</span> belum tercatat di Dewan Pers ·
-          berita dicek otomatis terhadap daftar hoaks TurnBackHoax &amp; CekFakta.com.</p>
+        <details class="legend-box">
+          <summary>Cara membaca label sumber</summary>
+          <dl class="legend-sumber">
+            <div><dt><span class="src-badge resmi">Resmi pemerintah</span></dt><dd>instansi resmi, mis. BMKG</dd></div>
+            <div><dt><span class="src-badge negara">Media negara</span></dt><dd>milik negara atau BUMN</dd></div>
+            <div><dt><span class="src-badge swasta">Media swasta</span></dt><dd>media swasta nasional</dd></div>
+            <div><dt><span class="src-badge lokal">Media lokal</span></dt><dd>liputan daerah</dd></div>
+            <div><dt><span class="verif">terverifikasi</span></dt><dd>tercatat di Dewan Pers</dd></div>
+            <div><dt><span class="chip warn">Belum terverifikasi</span></dt><dd>belum tercatat, cek media lain</dd></div>
+          </dl>
+          <p class="note">Tiap berita dicek otomatis terhadap daftar hoaks TurnBackHoax dan CekFakta.com.</p>
+        </details>
         <details id="hoaks-box" class="hoaks-box">
-          <summary>🛡️ Hoaks yang lagi beredar <span class="muted">· dari lembaga cek fakta</span></summary>
+          <summary>Hoaks yang lagi beredar <span class="muted">dari lembaga cek fakta</span></summary>
           <ul id="list-hoaks"></ul>
         </details>
       </div>
@@ -112,20 +114,20 @@
     <section id="tab-promo" class="panel" hidden>
       <div class="panel-head">
         <h2 id="h-promo">Promo &amp; diskon</h2>
-        <div class="search"><span aria-hidden="true">🔎</span><input id="pq" type="search" placeholder="Cari brand, produk, lokasi…" aria-label="Cari promo"></div>
+        <div class="search"><input id="pq" type="search" placeholder="Cari brand, produk, lokasi…" aria-label="Cari promo"></div>
       </div>
       <div class="filters">
         <div id="f-kat" class="chips" role="group" aria-label="Kategori promo"></div>
         <div id="f-plat" class="chips sub" role="group" aria-label="Platform" hidden></div>
         <div id="f-food" class="chips sub" role="group" aria-label="Jenis dan status halal" hidden></div>
-        <p id="halal-note" class="note small" hidden>Label halal hanya dipasang bila teks promo menyebutnya atau brand tercatat
+        <p id="halal-note" class="note" hidden>Label halal hanya dipasang bila teks promo menyebutnya atau brand tercatat
           bersertifikat halal; tanpa label berarti belum diketahui. Cek sertifikat resmi di
           <a href="https://bpjph.halal.go.id" target="_blank" rel="noopener noreferrer">BPJPH</a>.</p>
         <div class="filter-row">
           <label class="sort">Urutkan
             <select id="f-sort">
               <option value="baru">Terbaru</option>
-              <option value="dekat">📍 Terdekat</option>
+              <option value="dekat">Terdekat</option>
               <option value="akhir">Segera berakhir</option>
               <option value="diskon">Diskon terbesar</option>
               <option value="harga">Harga termurah</option>
@@ -140,11 +142,12 @@
     </section>
 
     <section id="tab-viral" class="panel" hidden>
-      <div class="panel-head"><h2 id="h-viral">Lagi viral &amp; ramai</h2></div>
-      <p class="note">Skor dihitung tiap jam dari lonjakan sebutan (YouTube, berita, Reddit), engagement, jumlah platform, dan laporan pengguna, dibanding rata-rata 14 hari di zona yang sama. "Ramai" adalah perkiraan, bukan data real-time.</p>
+      <div class="panel-head"><h2 id="h-viral">Lagi ramai</h2></div>
+      <p class="note">Skor dihitung tiap jam dari lonjakan sebutan (YouTube, berita, Reddit), engagement, jumlah platform, dan laporan pengguna, dibanding rata-rata 14 hari di zona yang sama. “Ramai” adalah perkiraan, bukan data real-time.</p>
       <ol id="list-viral" class="list rank"></ol>
       <div id="video-sec">
-        <h3>🎬 Video kuliner populer <span class="muted">· YouTube, 7 hari terakhir</span></h3>
+        <h3>Video kuliner populer</h3>
+        <p class="note">Dari YouTube, 7 hari terakhir.</p>
         <div class="filter-row">
           <label class="sort">Urutkan
             <select id="v-urut">
@@ -156,12 +159,13 @@
         <ul id="list-video" class="video-grid"></ul>
         <button id="more-video" class="btn more" type="button" hidden>Muat lebih banyak</button>
       </div>
-      <h3>🔎 Lagi dicari di Google <span class="muted">· Indonesia, 24 jam terakhir</span></h3>
+      <h3>Lagi dicari di Google</h3>
+      <p class="note">Indonesia, 24 jam terakhir.</p>
       <ul id="list-gtrends" class="trend-list"></ul>
-      <h3>🆕 Tempat makan baru</h3>
+      <h3>Tempat makan baru</h3>
       <ul id="list-baru" class="list compact"></ul>
       <form id="lapor" class="lapor">
-        <h3>👀 Lihat tempat yang lagi ramai?</h3>
+        <h3>Lihat tempat yang lagi ramai?</h3>
         <p class="note">Laporanmu ikut dihitung dalam skor viral jam berikutnya.</p>
         <div class="lapor-row">
           <select id="lapor-zona" aria-label="Zona" required></select>
@@ -174,9 +178,9 @@
     <section id="tab-saham" class="panel" hidden>
       <div class="panel-head">
         <h2>Saham BEI</h2>
-        <div class="search"><span aria-hidden="true">🔎</span><input id="sq" type="search" placeholder="Cari kode / nama…" aria-label="Cari saham"></div>
+        <div class="search"><input id="sq" type="search" placeholder="Cari kode / nama…" aria-label="Cari saham"></div>
       </div>
-      <p class="note disclaimer">⚠️ Data dari Google Finance, tertunda ±20 menit. Hanya informasi, <b>bukan rekomendasi atau saran investasi</b>.</p>
+      <p class="note disclaimer">Data dari Google Finance, tertunda sekitar 20 menit. Hanya informasi, <b>bukan rekomendasi atau saran investasi</b>.</p>
       <div id="ihsg" class="ihsg"></div>
       <div id="movers" class="movers"></div>
       <div class="filters">
@@ -184,7 +188,7 @@
         <div class="filter-row">
           <label class="sort">Urutkan
             <select id="s-sort">
-              <option value="kode">Kode A–Z</option>
+              <option value="kode">Kode A sampai Z</option>
               <option value="naik">Naik terbesar</option>
               <option value="turun">Turun terbesar</option>
               <option value="volume">Volume terbesar</option>
@@ -194,7 +198,7 @@
       </div>
       <ul id="list-saham" class="list saham-list"></ul>
 
-      <h3 class="pasar-head">📰 Berita pasar modal &amp; kripto</h3>
+      <h3 class="pasar-head">Berita pasar modal &amp; kripto</h3>
       <p class="note">Berita saham, IHSG, dan aset kripto dari media pasar modal serta berita yang dipindah dari tab Berita.
         Judul bernada rekomendasi disaring. Bukan saran investasi.</p>
       <div id="f-pasar" class="chips" role="group" aria-label="Jenis berita pasar"></div>
@@ -205,14 +209,18 @@
     <section id="tab-china" class="panel" hidden>
       <div class="panel-head">
         <h2>Pantauan berita China <span id="h-china-waktu"></span></h2>
-        <div class="search"><span aria-hidden="true">🔎</span><input id="cq" type="search" placeholder="Cari: AI, Huawei, BYD…" aria-label="Cari berita China"></div>
+        <div class="search"><input id="cq" type="search" placeholder="Cari: AI, Huawei, BYD…" aria-label="Cari berita China"></div>
       </div>
       <p class="note">Judul &amp; ringkasan dari media China dan media yang meliput China, <b>diterjemahkan otomatis oleh AI</b>
         (bisa ada kekeliruan). Diperbarui tiap jam. Baca artikel aslinya untuk detail.</p>
-      <p class="note legend-sumber">Jenis sumber:
-        <span class="src-badge negara">📡 Media negara</span> sudut pandang resmi pemerintah China ·
-        <span class="src-badge swasta">📰 Media swasta</span> ·
-        <span class="src-badge agregator">🔁 Agregator/cepat</span> sering menulis ulang media lain atau memuat bocoran, cek sumber aslinya.</p>
+      <details class="legend-box">
+        <summary>Cara membaca label sumber</summary>
+        <dl class="legend-sumber">
+          <div><dt><span class="src-badge negara">Media negara</span></dt><dd>sudut pandang resmi pemerintah China</dd></div>
+          <div><dt><span class="src-badge swasta">Media swasta</span></dt><dd>media swasta</dd></div>
+          <div><dt><span class="src-badge agregator">Agregator/cepat</span></dt><dd>sering menulis ulang atau memuat bocoran, cek sumber aslinya</dd></div>
+        </dl>
+      </details>
       <div class="filters">
         <div id="f-china" class="chips" role="group" aria-label="Kategori"></div>
         <div id="f-cjenis" class="chips sub" role="group" aria-label="Jenis sumber"></div>
@@ -226,7 +234,7 @@
               <option value="3h">3 hari terakhir</option>
               <option value="7h">7 hari terakhir</option>
               <option value="14h">14 hari terakhir</option>
-              <option value="atur">Atur jumlah hari (1–14)…</option>
+              <option value="atur">Atur jumlah hari (1 sampai 14)…</option>
               <option value="tgl">Pilih tanggal…</option>
             </select>
           </label>
@@ -249,18 +257,18 @@
     <section id="tab-peta" class="panel" hidden>
       <div class="panel-head"><h2>Peta tempat ramai</h2></div>
       <div id="map" role="region" aria-label="Peta"></div>
-      <p class="legend"><span class="lg hot"></span> viral (besar = skor tinggi) <span class="lg new"></span> tempat baru <span class="lg sale"></span> cuci gudang / sale <span class="lg zone"></span> zona</p>
+      <p class="legend"><span class="lg hot"></span> viral (besar berarti skor tinggi) <span class="lg new"></span> tempat baru <span class="lg sale"></span> cuci gudang / sale <span class="lg zone"></span> zona</p>
     </section>
   </main>
 
   <footer class="wrap foot">
+    <p class="foot-mark">Radar Jabodetabek</p>
     <p id="bot-link"></p>
   </footer>
 
-  <button id="to-top" class="to-top" type="button" aria-label="Kembali ke atas">↑</button>
+  <button id="to-top" class="to-top btn ghost" type="button" aria-label="Kembali ke atas">Ke atas</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="config.js"></script>
   <script src="demo.js"></script>
   <script src="app.js"></script>

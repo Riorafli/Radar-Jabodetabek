@@ -1,0 +1,26 @@
+[
+ {
+  "shape": "app screen",
+  "theme": "newsprint",
+  "axes": "light/slab-serif/warm",
+  "hero": "masthead head + figure row",
+  "nav": "ruled rubric bar",
+  "footer": "wordmark + bot link",
+  "imagery": "YouTube covers in colour",
+  "photos": 0,
+  "entry": "redesign full",
+  "sections": [
+   "berita",
+   "promo",
+   "viral",
+   "saham",
+   "china",
+   "peta"
+  ],
+  "signature": "ruled news column with key points",
+  "waived": [],
+  "prompt": "redesign web ini tapi pastikan tidak berat dan interaktif",
+  "date": "2026-11-04",
+  "mode": "build"
+ }
+]

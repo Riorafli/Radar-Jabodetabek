@@ -14,8 +14,7 @@
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
   };
-  /** stable hue 0-359 from a string, for brand/source colours */
-  const hue = (s) => { let h = 0; for (const c of String(s || "")) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+  /** brand initials for the promo mark */
   const initials = (s) => String(s || "?").replace(/[^A-Za-z0-9 ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 
   function timeAgo(iso) {
@@ -49,42 +48,32 @@
     toastTimer = setTimeout(() => t.classList.remove("show"), 2800);
   }
 
+  // figures are set, not counted up (the theme keeps still)
   function countUp(el, to) {
-    const from = Number(el.dataset.v || 0);
     el.dataset.v = to;
-    // no animation when reduced motion is on or the tab is hidden (rAF does not run there)
-    if (REDUCED || from === to || document.hidden) { el.textContent = to.toLocaleString("id-ID"); return; }
-    const t0 = performance.now(), dur = 900;
-    const step = (t) => {
-      const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
-      el.textContent = Math.round(from + (to - from) * e).toLocaleString("id-ID");
-      if (p < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-    // safety net: some browsers pause rAF (battery saver, embedded views); show the final number anyway
-    setTimeout(() => { if (el.dataset.v === String(to)) el.textContent = to.toLocaleString("id-ID"); }, dur + 300);
+    el.textContent = to.toLocaleString("id-ID");
   }
 
   const skeleton = (n) => Array.from({ length: n }, () => `<li class="sk" aria-hidden="true"><i></i><i></i><i></i></li>`).join("");
 
   // ------------------------------------------------------------ source types (Berita + China)
   const JENIS_SUMBER = {
-    resmi: ["🏛️ Resmi pemerintah", "Instansi resmi pemerintah (mis. BMKG): data dan peringatan resmi"],
-    negara: ["📡 Media negara", "Media milik negara/BUMN (Indonesia: Antara; China: CGTN, Sixth Tone): cenderung membawa sudut pandang resmi pemerintah"],
-    swasta: ["📰 Media swasta", "Media swasta nasional"],
-    lokal: ["🏘️ Media lokal", "Media lokal daerah: liputan dekat, jangkauan terbatas"],
-    agregator: ["🔁 Agregator/cepat", "Portal cepat yang sering menulis ulang media lain atau memuat bocoran: cek sumber aslinya"],
-    lainnya: ["🔁 Lainnya", "Sumber lain (mis. hasil pencarian GDELT): cek kredibilitas medianya"],
+    resmi: ["Resmi pemerintah", "Instansi resmi pemerintah (mis. BMKG): data dan peringatan resmi"],
+    negara: ["Media negara", "Media milik negara/BUMN (Indonesia: Antara; China: CGTN, Sixth Tone): cenderung membawa sudut pandang resmi pemerintah"],
+    swasta: ["Media swasta", "Media swasta nasional"],
+    lokal: ["Media lokal", "Media lokal daerah: liputan dekat, jangkauan terbatas"],
+    agregator: ["Agregator/cepat", "Portal cepat yang sering menulis ulang media lain atau memuat bocoran: cek sumber aslinya"],
+    lainnya: ["Lainnya", "Sumber lain (mis. hasil pencarian GDELT): cek kredibilitas medianya"],
   };
   // key points (pipeline/inti.py), one per line, plus a link to the full article
   const intiHTML = (inti, url, sumber) => `<ul class="inti" aria-label="Inti berita">${inti.split("\n").map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
-    ${url ? `<a class="baca" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Baca selengkapnya di ${esc(sumber)} ↗</a>` : ""}`;
+    ${url ? `<a class="baca" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Baca selengkapnya di ${esc(sumber)}</a>` : ""}`;
   // ------------------------------------------------------------ verification (pipeline/cekfakta.py)
   const PERS = { faktual: "Terverifikasi faktual Dewan Pers", administratif: "Terverifikasi administratif Dewan Pers", resmi: "Sumber resmi pemerintah" };
-  const verifHTML = (p) => (PERS[p] ? `<span class="verif" title="${PERS[p]}" aria-label="${PERS[p]}">✓</span>` : "");
+  const verifHTML = (p) => (PERS[p] ? `<span class="verif" title="${PERS[p]}">terverifikasi</span>` : "");
   const hoaksHTML = (r) => {
     const u = safeUrl(r.hoaks_url);
-    return `<p class="hoaks-warn">⚠️ Mirip klaim yang dinyatakan <b>${esc(r.hoaks_label || "SALAH")}</b> oleh ${esc(r.hoaks_sumber || "lembaga cek fakta")}:
+    return `<p class="hoaks-warn"><b>Cek fakta.</b> Mirip klaim yang dinyatakan <b>${esc(r.hoaks_label || "SALAH")}</b> oleh ${esc(r.hoaks_sumber || "lembaga cek fakta")}:
       ${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(r.hoaks_judul)}</a>` : esc(r.hoaks_judul)}</p>`;
   };
   async function renderHoaks() {
@@ -95,7 +84,7 @@
       el.innerHTML = rows.map((r) => {
         const u = safeUrl(r.url);
         return `<li><span class="chip warn mini">${esc(r.label)}</span> ${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : esc(r.judul)}
-          <span class="muted">· ${esc(r.sumber)}</span></li>`;
+          <span class="muted">${esc(r.sumber)}</span></li>`;
       }).join("") || `<li class="muted">Belum ada data cek fakta.</li>`;
       $("#hoaks-box").hidden = !rows.length && !DEMO;
     } catch (e) { console.error(e); }
@@ -104,9 +93,9 @@
 
   // ------------------------------------------------------------ berita filters
   const TOPIK = {
-    lalu_lintas: "🚦 Lalu lintas", cuaca_bencana: "🌧️ Cuaca & bencana", peristiwa: "🚨 Peristiwa", kriminal: "⚖️ Kriminal & hukum",
-    pemerintahan: "🏛️ Pemerintahan", ekonomi: "💼 Ekonomi & kerja", kesehatan: "🏥 Kesehatan", pendidikan: "🎓 Pendidikan",
-    gaya_hidup: "🎉 Gaya hidup", olahraga: "⚽ Olahraga", umum: "📌 Umum",
+    lalu_lintas: "Lalu lintas", cuaca_bencana: "Cuaca & bencana", peristiwa: "Peristiwa", kriminal: "Kriminal & hukum",
+    pemerintahan: "Pemerintahan", ekonomi: "Ekonomi & kerja", kesehatan: "Kesehatan", pendidikan: "Pendidikan",
+    gaya_hidup: "Gaya hidup", olahraga: "Olahraga", umum: "Umum",
   };
   // WIB calendar helpers (dates as "YYYY-MM-DD")
   const WIB_MS = 7 * 3600e3;
@@ -135,6 +124,8 @@
     const n = /^(?:atur:)?(\d{1,2})h?$/.exec(w || "");
     return n ? `${n[1]} hari terakhir` : "";
   }
+  // for heads: "Berita hari ini di Bekasi"
+  const judulWaktu = (w) => (w === "hari" ? "hari ini" : labelWaktu(w));
   const cocokTopik = (r, t) => !t || t === "semua" || (t === "info" ? r.tipe === "info" : (r.topik || ["umum"]).includes(t));
   function beritaQS(bf, r = {}) {
     let qs = "";
@@ -324,7 +315,7 @@
     try {
       const s = await data.stats(S.area);
       for (const el of document.querySelectorAll("[data-count]")) countUp(el, s[el.dataset.count] || 0);
-      $("#updated").textContent = s.updated ? `· diperbarui ${timeAgo(s.updated)}` : "";
+      $("#updated").textContent = s.updated ? `Diperbarui ${timeAgo(s.updated)}` : "";
     } catch (e) { console.error(e); }
   }
 
@@ -356,8 +347,8 @@
         jenisKeys.forEach((j, i) => { cj[j] = nj[i]; });
       }
       $("#f-jenis").innerHTML = jenisKeys.map((j) => `<button type="button" data-j="${j}" class="fchip ${bf.j === j ? "on" : ""}" ${!cj[j] && j && bf.j !== j ? "disabled" : ""}>
-        ${j ? JENIS_SUMBER[j][0] : "🗂️ Semua jenis sumber"} <span class="n">${cj[j] || 0}</span></button>`).join("");
-      const opsi = [["semua", "📰 Semua"], ["info", "⚠️ Info layanan"], ...Object.entries(TOPIK)];
+        ${j ? JENIS_SUMBER[j][0] : "Semua jenis sumber"} <span class="n">${cj[j] || 0}</span></button>`).join("");
+      const opsi = [["semua", "Semua"], ["info", "Info layanan"], ...Object.entries(TOPIK)];
       $("#f-topik").innerHTML = opsi.map(([k, label]) => `<button type="button" data-t="${k}" class="fchip ${bf.t === k ? "on" : ""}" ${!ct[k] && k !== "semua" && bf.t !== k ? "disabled" : ""}>${label} <span class="n">${ct[k] || 0}</span></button>`).join("");
       $("#b-sumber").innerHTML = `<option value="">Semua sumber</option>` + Object.keys(cs).sort()
         .map((s) => `<option value="${esc(s)}" ${bf.s === s ? "selected" : ""}>${esc(s)}</option>`).join("")
@@ -373,7 +364,7 @@
 
   async function renderBerita(append = false) {
     const el = $("#list-berita");
-    $("#h-berita").textContent = `Berita ${labelWaktu(S.bf.w) ? `· ${labelWaktu(S.bf.w)}` : "terkini"} · ${areaName()}`;
+    $("#h-berita").textContent = `Berita ${judulWaktu(S.bf.w) || "terkini"} di ${areaName()}`;
     if (!append) { S.offset = 0; el.innerHTML = skeleton(5); drawBeritaFilters(); }
     try {
       const rows = await data.berita(S.area, S.q, S.offset, S.bf);
@@ -384,12 +375,12 @@
           ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
           ${r.hoaks_judul ? hoaksHTML(r) : ""}
           ${r.inti ? intiHTML(r.inti, url, r.sumber) : r.ringkasan ? `<p class="sum">${esc(r.ringkasan)}</p>` : ""}
-          <div class="meta">${r.tipe === "info" ? '<span class="chip info">⚠️ Info layanan</span>' : ""}
-            ${where ? `<span class="chip">📍 ${esc(where)}</span>` : ""}
+          <div class="meta">${r.tipe === "info" ? '<span class="chip info">Info layanan</span>' : ""}
+            ${where ? `<span class="chip place">${esc(where)}</span>` : ""}
             ${(r.topik || []).filter((t) => t !== "umum" && TOPIK[t]).map((t) => `<span class="chip soft">${TOPIK[t]}</span>`).join("")}
             ${badgeSumber(r.jenis_sumber)}
-            ${r.pers ? "" : `<span class="chip warn" title="Media ini belum tercatat terverifikasi di Dewan Pers: cek juga di media lain">⚠️ Belum terverifikasi</span>`}
-            <span class="src" style="--h:${hue(r.sumber)}">${esc(initials(r.sumber).slice(0, 1))}</span><span>${esc(r.sumber)}</span>${verifHTML(r.pers)}·<span>${timeAgo(r.published_at)}</span></div>
+            ${r.pers ? "" : `<span class="chip warn" title="Media ini belum tercatat terverifikasi di Dewan Pers: cek juga di media lain">Belum terverifikasi</span>`}
+            <span class="by">${esc(r.sumber)}</span>${verifHTML(r.pers)}<time>${timeAgo(r.published_at)}</time></div>
         </li>`;
       }).join("");
       if (append) el.insertAdjacentHTML("beforeend", html);
@@ -406,25 +397,23 @@
     const d = daysLeft(selesai);
     if (d == null) return `<span class="chip good">Periode tidak disebut</span>`;
     if (perkiraan) return `<span class="chip soft" title="Sumber tidak menyebut tanggal berakhir">± s.d. ${esc(tgl(selesai))}</span>`;
-    if (d <= 0) return `<span class="chip urgent">⏰ Berakhir hari ini</span>`;
-    if (d <= 3) return `<span class="chip urgent">⏰ ${d} hari lagi</span>`;
+    if (d <= 0) return `<span class="chip urgent">Berakhir hari ini</span>`;
+    if (d <= 3) return `<span class="chip urgent">${d} hari lagi</span>`;
     return `<span class="chip">s.d. ${esc(tgl(selesai))}</span>`;
   }
 
   const KAT = {
-    makanan: { ikon: "🍜", nama: "Makanan" },
-    marketplace: { ikon: "🛒", nama: "Marketplace" },
-    cuci_gudang: { ikon: "🏷️", nama: "Cuci gudang & sale" },
-    lainnya: { ikon: "💳", nama: "Lainnya" },
+    makanan: { nama: "Makanan" },
+    marketplace: { nama: "Marketplace" },
+    cuci_gudang: { nama: "Cuci gudang & sale" },
+    lainnya: { nama: "Lainnya" },
   };
-  const PLAT_WARNA = { Shopee: "#ee4d2d", Tokopedia: "#03ac0e", Lazada: "#1a1aa6", Blibli: "#0095da",
-    "TikTok Shop": "#fe2c55", Bukalapak: "#e31e52", Zalora: "#222", "JD.ID": "#e1251b" };
   const kat = (r) => r.kategori || "makanan";
   const diskonOf = (r) => r.diskon_persen || Number(((r.harga_teks || r.judul || "").match(/(\d{1,2})\s*%/) || [])[1]) || 0;
 
   async function renderPromo() {
     const el = $("#list-promo");
-    $("#h-promo").textContent = `Promo & diskon · ${areaName()}`;
+    $("#h-promo").textContent = `Promo & diskon di ${areaName()}`;
     el.innerHTML = skeleton(6);
     $("#promo-count").textContent = "";
     try {
@@ -464,13 +453,13 @@
     return new Promise((res) => {
       if (S.me) return res(true);
       if (!navigator.geolocation) { toast("Browser ini tidak mendukung lokasi."); return res(false); }
-      toast("📡 Mencari lokasi Anda…");
+      toast("Mencari lokasi Anda…");
       navigator.geolocation.getCurrentPosition((p) => { S.me = { lat: p.coords.latitude, lon: p.coords.longitude }; res(true); },
         () => { toast("Izin lokasi ditolak. Urutan terdekat butuh lokasi Anda."); res(false); },
         { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
     });
   }
-  const JENIS = { makanan: "🍔 Makanan", minuman: "🥤 Minuman", campuran: "🍽️ Makanan & minuman" };
+  const JENIS = { makanan: "Makanan", minuman: "Minuman", campuran: "Makanan & minuman" };
 
   /** filter + sort the cached promos and redraw (no network) */
   function drawPromo() {
@@ -478,9 +467,9 @@
     // category chips with counts
     const counts = { semua: all.length };
     for (const r of all) counts[kat(r)] = (counts[kat(r)] || 0) + 1;
-    $("#f-kat").innerHTML = [["semua", "✨", "Semua"], ...Object.entries(KAT).map(([k, v]) => [k, v.ikon, v.nama])]
-      .map(([k, ikon, nama]) => `<button type="button" data-k="${k}" class="fchip ${f.k === k ? "on" : ""}" ${!counts[k] && k !== "semua" ? "disabled" : ""}>
-        ${ikon} ${esc(nama)} <span class="n">${counts[k] || 0}</span></button>`).join("");
+    $("#f-kat").innerHTML = [["semua", "Semua"], ...Object.entries(KAT).map(([k, v]) => [k, v.nama])]
+      .map(([k, nama]) => `<button type="button" data-k="${k}" class="fchip ${f.k === k ? "on" : ""}" ${!counts[k] && k !== "semua" ? "disabled" : ""}>
+        ${esc(nama)} <span class="n">${counts[k] || 0}</span></button>`).join("");
     // platform chips (marketplace)
     const mp = all.filter((r) => kat(r) === "marketplace");
     const plats = {};
@@ -489,8 +478,8 @@
     $("#f-plat").hidden = !showPlat;
     if (!plats[f.p] && f.p !== "semua") f.p = "semua";
     $("#f-plat").innerHTML = showPlat ? [["semua", mp.length], ...Object.entries(plats).sort((a, b) => b[1] - a[1])]
-      .map(([p, n]) => `<button type="button" data-p="${esc(p)}" class="fchip plat ${f.p === p ? "on" : ""}" style="--pc:${PLAT_WARNA[p] || "var(--accent)"}">
-        ${p === "semua" ? "🛒 Semua platform" : esc(p)} <span class="n">${n}</span></button>`).join("") : "";
+      .map(([p, n]) => `<button type="button" data-p="${esc(p)}" class="fchip plat ${f.p === p ? "on" : ""}">
+        ${p === "semua" ? "Semua platform" : esc(p)} <span class="n">${n}</span></button>`).join("") : "";
     // food chips: jenis + halal (only for the Makanan category)
     const food = all.filter((r) => kat(r) === "makanan");
     const cj = { semua: food.length }, ch = { semua: food.length };
@@ -500,9 +489,9 @@
     $("#f-food").hidden = !showFood;
     $("#halal-note").hidden = !showFood;
     $("#f-food").innerHTML = showFood
-      ? chip("j", "semua", "🍽️ Semua jenis", cj.semua) + chip("j", "makanan", "🍔 Makanan", cj.makanan) + chip("j", "minuman", "🥤 Minuman", cj.minuman)
+      ? chip("j", "semua", "Semua jenis", cj.semua) + chip("j", "makanan", "Makanan", cj.makanan) + chip("j", "minuman", "Minuman", cj.minuman)
         + '<span class="sep" aria-hidden="true"></span>'
-        + chip("h", "semua", "Semua status", ch.semua) + chip("h", "halal", "✅ Halal", ch.halal) + chip("h", "non_halal", "🚫 Non-halal", ch.non_halal)
+        + chip("h", "semua", "Semua status", ch.semua) + chip("h", "halal", "Halal", ch.halal) + chip("h", "non_halal", "Non-halal", ch.non_halal)
       : "";
     if (f.s === "dekat" && !S.me) f.s = "baru";
     $("#f-sort").value = f.s;
@@ -531,28 +520,28 @@
       const k = kat(r);
       const harga = r.harga_teks || rupiah(r.harga);
       const title = k === "makanan" ? (r.menu || r.judul) : r.judul;
-      const plat = (r.platform || []).map((p) => `<span class="pchip" style="--pc:${PLAT_WARNA[p] || "var(--accent)"}">${esc(p)}</span>`).join("");
+      const plat = (r.platform || []).map((p) => `<span class="pchip">${esc(p)}</span>`).join("");
       const d = diskonOf(r);
-      const where = r.lokasi ? `📍 ${esc(r.lokasi)}${r.kota_berlaku && r.kota_berlaku.length ? `, ${esc(kodeNama(r.kota_berlaku[0]))}` : ""}`
-        : k === "marketplace" ? "🌐 Online" : r.kota_berlaku && r.kota_berlaku.length ? esc(r.kota_berlaku.map(kodeNama).join(", ")) : "Semua kota";
-      const linkTxt = r.sumber === "YouTube" ? "▶ Tonton videonya di YouTube"
+      const where = r.lokasi ? `${esc(r.lokasi)}${r.kota_berlaku && r.kota_berlaku.length ? `, ${esc(kodeNama(r.kota_berlaku[0]))}` : ""}`
+        : k === "marketplace" ? "Online" : r.kota_berlaku && r.kota_berlaku.length ? esc(r.kota_berlaku.map(kodeNama).join(", ")) : "Semua kota";
+      const linkTxt = r.sumber === "YouTube" ? "Tonton videonya di YouTube"
         : k === "makanan" ? `Lihat di ${esc(r.sumber || "sumber")}` : `Baca info lengkap (${esc(r.sumber || "sumber")})`;
-      return `<li class="promo k-${k}" style="--i:${i};--h:${hue(r.brand)}">
+      return `<li class="promo k-${k}" style="--i:${i}">
         ${d ? `<span class="ribbon">-${d}%</span>` : ""}
         <div class="promo-head"><span class="avatar">${esc(initials(r.brand))}</span>
           <div><div class="promo-brand">${esc(r.brand)}</div>
-            <span class="kchip">${KAT[k].ikon} ${esc(KAT[k].nama)}</span>${r.sumber_input === "manual" ? ' <span class="chip good">✓ kurasi</span>' : ""}</div></div>
+            <span class="kchip">${esc(KAT[k].nama)}</span>${r.sumber_input === "manual" ? ' <span class="chip good">kurasi</span>' : ""}</div></div>
         ${plat ? `<div class="plats">${plat}</div>` : ""}
         <span class="promo-title">${esc(title)}</span>
-        ${r.produk && k !== "makanan" && !r.judul.toLowerCase().includes(r.produk.toLowerCase()) ? `<span class="promo-syarat">🎁 ${esc(r.produk)}</span>` : ""}
+        ${r.produk && k !== "makanan" && !r.judul.toLowerCase().includes(r.produk.toLowerCase()) ? `<span class="promo-syarat">${esc(r.produk)}</span>` : ""}
         ${harga ? `<span class="promo-price">${esc(harga)}</span>` : ""}
         ${r.syarat ? `<span class="promo-syarat">${esc(r.syarat)}</span>` : ""}
         ${k === "makanan" ? `<div class="tags">${r.jenis ? `<span class="chip soft">${JENIS[r.jenis] || ""}</span>` : ""}${
-          r.halal === "halal" ? '<span class="chip halal" title="Dari teks promo atau sertifikasi brand yang tercatat">✅ Halal</span>'
-          : r.halal === "non_halal" ? '<span class="chip nonhalal">🚫 Non-halal</span>' : ""}</div>` : ""}
+          r.halal === "halal" ? '<span class="chip halal" title="Dari teks promo atau sertifikasi brand yang tercatat">Halal</span>'
+          : r.halal === "non_halal" ? '<span class="chip nonhalal">Non-halal</span>' : ""}</div>` : ""}
         <span class="meta">${sisaChip(r.selesai, r.selesai_perkiraan)}<span>${where}</span></span>
-        ${near.get(r) ? `<span class="near">🏪 ${esc(near.get(r).nama)} · ${(near.get(r).d / 1000).toFixed(1).replace(".", ",")} km${near.get(r).kira ? " (perkiraan)" : ""}</span>` : ""}
-        ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${linkTxt} <span>→</span></a>` : ""}
+        ${near.get(r) ? `<span class="near">${esc(near.get(r).nama)}, <span class="num">${(near.get(r).d / 1000).toFixed(1).replace(".", ",")} km</span>${near.get(r).kira ? " (perkiraan)" : ""}</span>` : ""}
+        ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${linkTxt}</a>` : ""}
       </li>`;
     }).join("") || empty(all.length ? "Tidak ada promo yang cocok dengan filter ini." : `Belum ada promo aktif untuk ${areaName()}.`);
   }
@@ -565,11 +554,10 @@
   }
 
   const sudahLapor = (id) => Date.now() - Number(store.get(`lapor:${id}`) || 0) < 6 * 3600 * 1000;
-  const MEDAL = ["🥇", "🥈", "🥉"];
-
+  
   async function renderViral() {
     const el = $("#list-viral"), elBaru = $("#list-baru");
-    $("#h-viral").textContent = `Lagi viral & ramai · ${areaName()}`;
+    $("#h-viral").textContent = `Lagi ramai di ${areaName()}`;
     el.innerHTML = skeleton(4);
     elBaru.innerHTML = skeleton(2);
     try {
@@ -586,18 +574,18 @@
         const medal = tier === 1 && viralNo < 3 ? viralNo : -1;
         if (tier === 1) viralNo++;
         const head = tier === 2 && (i === 0 || (rows[i - 1].tier || 1) === 1)
-          ? `<li class="tier-head" style="--i:${i}">📈 Lagi dibicarakan <span class="muted">· paling banyak disebut 7 hari terakhir</span></li>` : "";
+          ? `<li class="tier-head" style="--i:${i}">Lagi dibicarakan <span class="muted">paling banyak disebut 7 hari terakhir</span></li>` : "";
         const jumlah = tier === 2 ? `${(r.detail && r.detail.mention_7h) || r.mention_24j} sebutan/7 hari` : `${r.mention_24j} sebutan/24 jam`;
         return `${head}<li class="${medal >= 0 ? "top" : ""} ${tier === 2 ? "t2" : ""}" style="--i:${i}">
-          <span class="no ${medal >= 0 ? `medal m${medal + 1}` : ""}">${medal >= 0 ? MEDAL[medal] : i + 1}</span>
+          <span class="no num ${medal >= 0 ? "medal" : ""}">${i + 1 - (tier === 2 ? rows.filter((x) => (x.tier || 1) === 1).length : 0)}</span>
           <div>
             ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.nama)}</a>` : `<span class="title">${esc(r.nama)}</span>`}
-            <div class="meta">${tier === 1 ? '<span class="chip urgent">🔥 Viral</span>' : ""}${r.zona || r.kode_wilayah ? `<span class="chip">📍 ${esc(r.zona || kodeNama(r.kode_wilayah))}</span>` : ""}
-              <span>${medal >= 0 ? '<span class="flame">🔥</span> ' : ""}${jumlah}</span>·<span>${r.platform} platform${src.length ? ` (${esc(src.join(", "))})` : ""}</span>
-              ${r.jarak != null ? `·<span>${(r.jarak / 1000).toFixed(1)} km</span>` : ""}</div>
-            <div class="bar"><span style="width:${Math.max(4, (r.skor / max[tier]) * 100).toFixed(0)}%"></span></div>
+            <div class="meta">${tier === 1 ? '<span class="chip urgent">Viral</span>' : ""}${r.zona || r.kode_wilayah ? `<span class="chip place">${esc(r.zona || kodeNama(r.kode_wilayah))}</span>` : ""}
+              <span>${jumlah}</span><span>${r.platform} platform${src.length ? ` (${esc(src.join(", "))})` : ""}</span>
+              ${r.jarak != null ? `<span>${(r.jarak / 1000).toFixed(1)} km</span>` : ""}</div>
+            <div class="bar"><span style="--p:${Math.max(0.04, r.skor / max[tier]).toFixed(3)}"></span></div>
           </div>
-          <button class="btn ghost ${done ? "done" : ""}" type="button" data-lapor="${r.entitas_id}" data-zona="${r.zona_id ?? ""}" ${done ? "disabled" : ""}>${done ? "✓ Terkirim" : "🔥 Ramai"}</button>
+          <button class="btn ghost ${done ? "done" : ""}" type="button" data-lapor="${r.entitas_id}" data-zona="${r.zona_id ?? ""}" ${done ? "disabled" : ""}>${done ? "Terkirim" : "Ramai di sini"}</button>
         </li>`;
       }).join("") || empty(`Belum ada tempat yang dibicarakan di ${areaName()} minggu ini. Coba pilih "Semua Jabodetabek".`);
     } catch (e) { fail(el, e); }
@@ -606,8 +594,8 @@
     try {
       const baru = await data.baru(S.area);
       elBaru.innerHTML = baru.map((r, i) => `<li style="--i:${i}"><b>${esc(r.nama)}</b>
-        <span class="meta">${r.zona ? `<span class="chip good">📍 ${esc(r.zona)}</span>` : ""}<span>tercatat ${timeAgo(r.baru_sejak)}</span>·
-        <a href="https://www.openstreetmap.org/?mlat=${Number(r.lat)}&mlon=${Number(r.lon)}#map=18/${Number(r.lat)}/${Number(r.lon)}" target="_blank" rel="noopener noreferrer">lihat peta →</a></span></li>`).join("")
+        <span class="meta">${r.zona ? `<span class="chip place">${esc(r.zona)}</span>` : ""}<span>tercatat ${timeAgo(r.baru_sejak)}</span>
+        <a href="https://www.openstreetmap.org/?mlat=${Number(r.lat)}&mlon=${Number(r.lon)}#map=18/${Number(r.lat)}/${Number(r.lon)}" target="_blank" rel="noopener noreferrer">lihat peta</a></span></li>`).join("")
         || empty("Belum ada tempat baru tercatat. Muncul setelah pemindaian OSM harian menemukan tempat yang baru ditambahkan.");
     } catch (e) { fail(elBaru, e); }
   }
@@ -632,9 +620,9 @@
     const html = part.map((r, i) => {
       const id = ytId(r.url), where = (S.zonas.find((z) => z.id === r.zona_id) || {}).nama || PROV[r.kode_wilayah] || kodeNama(r.kode_wilayah);
       return `<li style="--i:${i}"><a href="https://www.youtube.com/watch?v=${id}" target="_blank" rel="noopener noreferrer">
-        <span class="thumb"><img src="https://i.ytimg.com/vi/${id}/mqdefault.jpg" alt="" loading="lazy" width="320" height="180"><span class="play" aria-hidden="true">▶</span></span>
+        <span class="thumb"><img src="https://i.ytimg.com/vi/${id}/mqdefault.jpg" alt="" loading="lazy" width="320" height="180"><span class="play" aria-hidden="true"></span></span>
         <span class="vt">${esc(r.judul)}</span></a>
-        <span class="meta">${where ? `<span class="chip">📍 ${esc(where)}</span>` : ""}<span>${esc((r.meta && r.meta.channel) || "YouTube")}</span>·<span>${fmtViews(r.views)} ditonton</span>·<span>${timeAgo(r.published_at)}</span></span></li>`;
+        <span class="meta">${where ? `<span class="chip place">${esc(where)}</span>` : ""}<span>${esc((r.meta && r.meta.channel) || "YouTube")}</span><span>${fmtViews(r.views)} ditonton</span><span>${timeAgo(r.published_at)}</span></span></li>`;
     }).join("");
     if (more) el.insertAdjacentHTML("beforeend", html);
     else el.innerHTML = html || empty(`Belum ada video kuliner minggu ini untuk ${areaName()}.`);
@@ -660,7 +648,7 @@
         const hot = n >= max * 0.5 && n >= 1000;
         return `<li style="--i:${i}"><a class="trend ${hot ? "hot" : ""}" href="${esc(url || `https://www.google.com/search?q=${encodeURIComponent(r.judul)}`)}"
           target="_blank" rel="noopener noreferrer" title="${esc(r.ringkasan || "")}">
-          <span class="trend-q">${hot ? "🔥 " : ""}${esc(r.judul)}</span>${n ? `<span class="trend-n">${fmtTraffic(n)}</span>` : ""}</a></li>`;
+          <span class="trend-q">${esc(r.judul)}</span>${n ? `<span class="trend-n">${fmtTraffic(n)}</span>` : ""}</a></li>`;
       }).join("") || `<li class="empty">Belum ada data trending. Diperbarui tiap 15 menit.</li>`;
     } catch (e) { el.innerHTML = `<li class="empty">Gagal memuat trending.</li>`; console.error(e); }
   }
@@ -684,7 +672,7 @@
       el.innerHTML = skeleton(3);
       try {
         const c = await data.pasarHitung();
-        $("#f-pasar").innerHTML = [["", "📰 Semua", c.semua], ["saham", "📈 Saham", c.saham], ["kripto", "🪙 Kripto", c.kripto]]
+        $("#f-pasar").innerHTML = [["", "Semua", c.semua], ["saham", "Saham", c.saham], ["kripto", "Kripto", c.kripto]]
           .map(([k, label, n]) => `<button type="button" data-p="${k}" class="fchip ${sh.pasar === k ? "on" : ""}" ${!n && k ? "disabled" : ""}>${label} <span class="n">${n}</span></button>`).join("");
       } catch (e) { console.error(e); }
     }
@@ -695,9 +683,9 @@
         const kode = (r.kode || []).filter((k) => k !== "IHSG").slice(0, 4);
         return `<li style="--i:${i}" class="${r.jenis === "kripto" ? "kripto" : "saham"}">
           ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
-          <div class="meta"><span class="chip ${r.jenis === "kripto" ? "soft" : ""}">${r.jenis === "kripto" ? "🪙 Kripto" : "📈 Saham"}</span>
+          <div class="meta"><span class="chip ${r.jenis === "kripto" ? "soft" : ""}">${r.jenis === "kripto" ? "Kripto" : "Saham"}</span>
             ${kode.map((k) => `<button type="button" class="kode-chip" data-kode="${esc(k)}">${esc(k)}</button>`).join("")}
-            <span>${esc(r.sumber || "")}</span>·<span>${timeAgo(r.terbit)}</span></div>
+            <span>${esc(r.sumber || "")}</span><time>${timeAgo(r.terbit)}</time></div>
         </li>`;
       }).join("");
       if (append) el.insertAdjacentHTML("beforeend", html);
@@ -737,7 +725,7 @@
       <div class="ihsg-main"><span class="lbl">IHSG</span><b class="val">${fmtNum(ihsg.harga, 2)}</b>
         <span class="pill ${arah(ihsg.persen)}">${panah(ihsg.perubahan)} ${fmtNum(Math.abs(ihsg.perubahan || 0), 2)} (${fmtPct(ihsg.persen)})</span></div>
       ${sparkline(sh.hist.IHSG, 320, 64)}
-      <span class="note">Indeks Harga Saham Gabungan · data ${esc(tw(ihsg))} WIB · grafik 70 hari</span>` : "";
+      <span class="note">Indeks Harga Saham Gabungan. Data ${esc(tw(ihsg))} WIB, grafik 70 hari.</span>` : "";
     const naik = [...list].filter((r) => r.persen > 0).sort((a, b) => b.persen - a.persen).slice(0, 3);
     const turun = [...list].filter((r) => r.persen < 0).sort((a, b) => a.persen - b.persen).slice(0, 3);
     const mv = (r) => `<button type="button" class="mover ${arah(r.persen)}" data-kode="${esc(r.kode)}"><b>${esc(r.kode)}</b> ${fmtPct(r.persen)}</button>`;
@@ -778,18 +766,18 @@
         <div><dt>Terendah</dt><dd>${fmtNum(r.terendah)}</dd></div><div><dt>Tutup kemarin</dt><dd>${fmtNum(r.tutup_kemarin)}</dd></div>
         <div><dt>Perubahan</dt><dd class="${arah(r.perubahan)}">${panah(r.perubahan)} ${fmtNum(Math.abs(r.perubahan || 0))}</dd></div>
         <div><dt>Volume</dt><dd>${fmtNum(r.volume)}</dd></div></dl>
-      <p class="note">${r.sektor ? `Sektor ${esc(r.sektor)} · ` : ""}<a href="https://www.google.com/finance/quote/${encodeURIComponent(r.kode)}:IDX" target="_blank" rel="noopener noreferrer">Lihat di Google Finance →</a></p>
-      <h4>📰 Berita terkait</h4><ul class="sh-news"><li class="note">Memuat…</li></ul>`;
+      <p class="note">${r.sektor ? `Sektor ${esc(r.sektor)}. ` : ""}<a href="https://www.google.com/finance/quote/${encodeURIComponent(r.kode)}:IDX" target="_blank" rel="noopener noreferrer">Lihat di Google Finance</a></p>
+      <h4>Berita terkait</h4><ul class="sh-news"><li class="note">Memuat…</li></ul>`;
     det.dataset.ok = "1";
     try {
       const news = await data.sahamBerita(r.kode);
       det.querySelector(".sh-news").innerHTML = news.map((n) => `<li><a href="${esc(safeUrl(n.url) || "#")}" target="_blank" rel="noopener noreferrer">${esc(n.judul)}</a>
-        <span class="note">${esc(n.sumber || "")} · ${timeAgo(n.terbit)}</span></li>`).join("") || `<li class="note">Belum ada berita 7 hari terakhir.</li>`;
+        <span class="note">${esc(n.sumber || "")}, ${timeAgo(n.terbit)}</span></li>`).join("") || `<li class="note">Belum ada berita 7 hari terakhir.</li>`;
     } catch (e) { det.querySelector(".sh-news").innerHTML = `<li class="note">Gagal memuat berita.</li>`; }
   }
 
   // ------------------------------------------------------------ china
-  const KAT_CN = { teknologi: "💻 Teknologi", bisnis: "📊 Bisnis & pasar", fnb: "🍜 F&B & franchise", kebijakan: "🏛️ Kebijakan", sosial: "👥 Sosial", lainnya: "📌 Lainnya" };
+  const KAT_CN = { teknologi: "Teknologi", bisnis: "Bisnis & pasar", fnb: "F&B & franchise", kebijakan: "Kebijakan", sosial: "Sosial", lainnya: "Lainnya" };
 
   async function renderChina(append = false) {
     const el = $("#list-china"), cn = S.cn, rng = beritaRange(cn.w, 14);
@@ -802,7 +790,7 @@
       $("#c-tgl-wrap").hidden = mode !== "tgl";
       if (mode === "atur") { const n = parseInt(w.slice(5), 10) || 7; $("#c-hari").value = n; $("#c-hari-n").textContent = `${n} hari`; }
       if (mode === "tgl") $("#c-tgl").value = w.slice(4);
-      $("#h-china-waktu").textContent = labelWaktu(w) ? `· ${labelWaktu(w)}` : "";
+      $("#h-china-waktu").textContent = judulWaktu(w);
       $("#c-reset").hidden = cn.kat === "semua" && w === "semua" && !cn.sumber && !cn.jenis;
       try {
         // same layout as Berita: category chips, source-type chips, then Waktu / Sumber
@@ -814,10 +802,10 @@
           if ((cn.kat === "semua" || kat(m) === cn.kat) && (!cn.sumber || m.sumber === cn.sumber)) { cj[""]++; cj[m.jenis_sumber] = (cj[m.jenis_sumber] || 0) + 1; }
           if ((cn.kat === "semua" || kat(m) === cn.kat) && (!cn.jenis || m.jenis_sumber === cn.jenis)) cs[m.sumber] = (cs[m.sumber] || 0) + 1;
         }
-        $("#f-china").innerHTML = [["semua", "🌏 Semua"], ...Object.entries(KAT_CN)].map(([k, label]) =>
+        $("#f-china").innerHTML = [["semua", "Semua"], ...Object.entries(KAT_CN)].map(([k, label]) =>
           `<button type="button" data-k="${k}" class="fchip ${cn.kat === k ? "on" : ""}" ${!ck[k] && k !== "semua" && cn.kat !== k ? "disabled" : ""}>${label} <span class="n">${ck[k] || 0}</span></button>`).join("");
         $("#f-cjenis").innerHTML = ["", "negara", "swasta", "agregator"].map((j) => `<button type="button" data-j="${j}" class="fchip ${cn.jenis === j ? "on" : ""}" ${!cj[j] && j && cn.jenis !== j ? "disabled" : ""}>
-          ${j ? JENIS_SUMBER[j][0] : "🗂️ Semua jenis sumber"} <span class="n">${cj[j] || 0}</span></button>`).join("");
+          ${j ? JENIS_SUMBER[j][0] : "Semua jenis sumber"} <span class="n">${cj[j] || 0}</span></button>`).join("");
         $("#c-sumber").innerHTML = `<option value="">Semua sumber</option>` + Object.keys(cs).sort().map((s) =>
           `<option value="${esc(s)}" ${cn.sumber === s ? "selected" : ""}>${esc(s)}</option>`).join("")
           + (cn.sumber && !cs[cn.sumber] ? `<option value="${esc(cn.sumber)}" selected>${esc(cn.sumber)}</option>` : "");
@@ -833,7 +821,7 @@
           ${r.inti ? intiHTML(r.inti, url, r.sumber) : r.ringkasan_id ? `<p class="sum">${esc(r.ringkasan_id)}</p>` : ""}
           <div class="meta"><span class="chip">${KAT_CN[r.kategori] || KAT_CN.lainnya}</span>
             ${badgeSumber(r.jenis_sumber)}
-            <span class="lang">${r.bahasa === "zh" ? "中文" : "EN"}</span><span>${esc(r.sumber || "")}</span>·<span>${timeAgo(r.terbit)}</span></div>
+            <span class="lang">${r.bahasa === "zh" ? "中文" : "EN"}</span><span class="by">${esc(r.sumber || "")}</span><time>${timeAgo(r.terbit)}</time></div>
         </li>`;
       }).join("");
       if (append) el.insertAdjacentHTML("beforeend", html);
@@ -855,12 +843,30 @@
   }
   const pinIcon = (size, cls = "") => L.divIcon({ className: "", html: `<span class="pin ${cls}"></span>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
 
+  // Leaflet (about 150 kB) loads only when the Peta tab is first opened
+  let leaflet;
+  function loadLeaflet() {
+    if (window.L) return Promise.resolve();
+    if (leaflet) return leaflet;
+    const base = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/";
+    const css = document.createElement("link");
+    css.rel = "stylesheet"; css.href = `${base}leaflet.min.css`;
+    document.head.appendChild(css);
+    leaflet = new Promise((ok, no) => {
+      const js = document.createElement("script");
+      js.src = `${base}leaflet.min.js`; js.onload = ok; js.onerror = no;
+      document.head.appendChild(js);
+    });
+    return leaflet;
+  }
+
   async function renderMap() {
+    try { await loadLeaflet(); } catch (e) { $("#map").textContent = "Peta gagal dimuat. Coba lagi nanti."; leaflet = null; return; }
     ensureMap();
     if (!S.map) return;
     S.map.invalidateSize();
     S.layers.clearLayers();
-    const info = getComputedStyle(document.documentElement).getPropertyValue("--info").trim();
+    const info = getComputedStyle(document.documentElement).getPropertyValue("--color-zone").trim();
     for (const z of S.zonas) {
       L.circle([z.lat, z.lon], { radius: z.radius_m, color: info, weight: 1.5, dashArray: "5 5", fillOpacity: 0.04 })
         .bindTooltip(esc(z.nama)).addTo(S.layers);
@@ -871,20 +877,20 @@
         if (r.lat == null || kat(r) !== "cuci_gudang") continue;
         const url = safeUrl(r.url);
         L.marker([r.lat, r.lon], { icon: pinIcon(16, "sale"), zIndexOffset: 500 })
-          .bindPopup(`<b>🏷️ ${esc(r.judul)}</b><br>${esc(r.lokasi || "")}${r.harga_teks ? `<br>${esc(r.harga_teks)}` : ""}<br>s.d. ${esc(tgl(r.selesai))}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">info lengkap →</a>` : ""}`)
+          .bindPopup(`<b>${esc(r.judul)}</b><br>${esc(r.lokasi || "")}${r.harga_teks ? `<br>${esc(r.harga_teks)}` : ""}<br>s.d. ${esc(tgl(r.selesai))}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">info lengkap</a>` : ""}`)
           .addTo(S.layers);
       }
       const max = Math.max(0.001, ...viral.map((r) => r.skor));
       for (const r of baru) {
         if (r.lat == null) continue;
         L.marker([r.lat, r.lon], { icon: pinIcon(12, "new") })
-          .bindPopup(`<b>${esc(r.nama)}</b><br>🆕 Tempat baru · ${esc(r.zona || "")}`).addTo(S.layers);
+          .bindPopup(`<b>${esc(r.nama)}</b><br>Tempat baru${r.zona ? `, ${esc(r.zona)}` : ""}`).addTo(S.layers);
       }
       for (const r of viral) {
         if (r.lat == null) continue;
         const url = safeUrl(r.contoh_url);
         L.marker([r.lat, r.lon], { icon: pinIcon(Math.round(14 + 16 * (r.skor / max))), zIndexOffset: 1000 })
-          .bindPopup(`<b>${(r.tier || 1) === 1 ? "🔥" : "📈"} ${esc(r.nama)}</b><br>${esc(r.zona || "")}<br>${(r.tier || 1) === 1 ? `${r.mention_24j} sebutan/24 jam` : `${(r.detail && r.detail.mention_7h) || r.mention_24j} sebutan/7 hari`} · skor ${r.skor.toFixed(2)}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">contoh konten →</a>` : ""}`)
+          .bindPopup(`<b>${esc(r.nama)}</b><br>${esc(r.zona || "")}<br>${(r.tier || 1) === 1 ? `${r.mention_24j} sebutan/24 jam` : `${(r.detail && r.detail.mention_7h) || r.mention_24j} sebutan/7 hari`}, skor ${r.skor.toFixed(2)}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">contoh konten</a>` : ""}`)
           .addTo(S.layers);
       }
     } catch (e) { console.error(e); }
@@ -933,7 +939,11 @@
   }
 
   const currentTheme = () => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
-  function syncThemeIcon() { $("#theme").textContent = currentTheme() === "dark" ? "☀️" : "🌙"; }
+  function syncThemeIcon() {
+    const dark = currentTheme() === "dark";
+    $("#theme").textContent = dark ? "Terang" : "Gelap";
+    $("#theme").setAttribute("aria-label", dark ? "Ganti ke tema terang" : "Ganti ke tema gelap");
+  }
 
   function bind() {
     $("#area").addEventListener("change", (e) => { S.area = areaFromValue(e.target.value); render(true); });
@@ -1057,14 +1067,14 @@
       const btn = $("#near");
       if (!navigator.geolocation) { toast("Browser ini tidak mendukung lokasi."); return; }
       btn.disabled = true;
-      toast("📡 Mencari lokasi Anda…");
+      toast("Mencari lokasi Anda…");
       navigator.geolocation.getCurrentPosition((pos) => {
         S.me = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         const v = nearest(S.me.lat, S.me.lon);
         btn.disabled = false;
         if (!v) { toast("Lokasi Anda di luar Jabodetabek."); return; }
         $("#area").value = v; S.area = areaFromValue(v);
-        toast(`📍 Menampilkan area ${S.area.nama}`);
+        toast(`Menampilkan area ${S.area.nama}`);
         if (S.tab === "berita" || S.tab === "promo") S.tab = "viral";
         render(true);
       }, () => { btn.disabled = false; toast("Izin lokasi ditolak atau tidak tersedia."); },
@@ -1078,8 +1088,8 @@
       try {
         await data.lapor({ entitas_id: Number(b.dataset.lapor), zona_id: b.dataset.zona ? Number(b.dataset.zona) : null, jenis: "ramai" });
         store.set(`lapor:${b.dataset.lapor}`, String(Date.now()));
-        b.textContent = "✓ Terkirim"; b.classList.add("done");
-        toast("🔥 Terima kasih! Laporan masuk ke skor jam berikutnya.");
+        b.textContent = "Terkirim"; b.classList.add("done");
+        toast("Terima kasih. Laporan masuk ke skor jam berikutnya.");
       } catch (err) { b.disabled = false; toast("Gagal mengirim laporan."); console.error(err); }
     });
 
@@ -1089,7 +1099,7 @@
       if (!zona || !nama) return;
       try {
         await data.lapor({ zona_id: zona, nama_tempat: nama.slice(0, 120), jenis: "ramai" });
-        toast(DEMO ? "Mode demo: laporan tidak disimpan." : "🙌 Terima kasih! Laporan masuk ke perhitungan skor.");
+        toast(DEMO ? "Mode demo: laporan tidak disimpan." : "Terima kasih. Laporan masuk ke perhitungan skor.");
         $("#lapor-nama").value = "";
       } catch (err) { toast("Gagal mengirim laporan."); console.error(err); }
     });
