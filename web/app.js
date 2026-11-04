@@ -589,7 +589,7 @@
           <span class="no num ${medal >= 0 ? "medal" : ""}">${i + 1 - (tier === 2 ? rows.filter((x) => (x.tier || 1) === 1).length : 0)}</span>
           <div>
             ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.nama)}</a>` : `<span class="title">${esc(r.nama)}</span>`}
-            <div class="meta">${tier === 1 ? '<span class="chip urgent">Viral</span>' : ""}${r.zona || r.kode_wilayah ? `<span class="chip place">${esc(r.zona || kodeNama(r.kode_wilayah))}</span>` : ""}
+            <div class="meta">${tier === 1 ? `<span class="chip urgent">${NAIK}Viral</span>` : ""}${r.zona || r.kode_wilayah ? `<span class="chip place">${esc(r.zona || kodeNama(r.kode_wilayah))}</span>` : ""}
               <span>${jumlah}</span><span>${r.platform} platform${src.length ? ` (${esc(src.join(", "))})` : ""}</span>
               ${r.jarak != null ? `<span>${(r.jarak / 1000).toFixed(1)} km</span>` : ""}</div>
             <div class="bar"><span style="--p:${Math.max(0.04, r.skor / max[tier]).toFixed(3)}"></span></div>
@@ -639,6 +639,8 @@
     $("#more-video").hidden = S.videoN >= S.videos.length;
   }
 
+  // three rising bars: the small "this is surging" mark on hot trends and viral places
+  const NAIK = '<span class="naik" aria-hidden="true"><i></i><i></i><i></i></span>';
   const fmtTraffic = (n) => (n >= 1e6 ? `${Math.round(n / 1e6)}jt+` : n >= 1000 ? `${Math.round(n / 1000)}rb+` : n ? `${n}+` : "");
 
   async function renderGtrends() {
@@ -657,7 +659,7 @@
         const hot = n >= max * 0.5 && n >= 1000;
         return `<li style="--i:${i}"><a class="trend ${hot ? "hot" : ""}" href="${esc(url || `https://www.google.com/search?q=${encodeURIComponent(r.judul)}`)}"
           target="_blank" rel="noopener noreferrer" title="${esc(r.ringkasan || "")}">
-          <span class="trend-q">${esc(r.judul)}</span>${n ? `<span class="trend-n">${fmtTraffic(n)}</span>` : ""}</a></li>`;
+          ${hot ? NAIK : ""}<span class="trend-q">${esc(r.judul)}</span>${hot ? '<span class="sr">, lagi naik</span>' : ""}${n ? `<span class="trend-n">${fmtTraffic(n)}</span>` : ""}</a></li>`;
       }).join("") || `<li class="empty">Belum ada data trending. Diperbarui tiap 15 menit.</li>`;
     } catch (e) { el.innerHTML = `<li class="empty">Gagal memuat trending.</li>`; console.error(e); }
   }
