@@ -23,3 +23,5 @@ jobs:
         continue-on-error: true
       - run: python -m pipeline.inti china
         continue-on-error: true
+      - run: python -m pipeline.terjemah china
+        continue-on-error: true

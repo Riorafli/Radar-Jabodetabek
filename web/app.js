@@ -24,6 +24,8 @@
   };
   const LOC = () => (LANG === "en" ? "en-GB" : "id-ID");
   const dec = (x) => (LANG === "en" ? x : x.replace(".", ","));   // decimal comma in Indonesian
+  /** story text in the page language: the English column when it exists, else the Indonesian one */
+  const isi = (r, en, id) => (LANG === "en" && r[en]) || r[id];
   /** brand initials for the promo mark */
   const initials = (s) => String(s || "?").replace(/[^A-Za-z0-9 ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 
@@ -214,8 +216,8 @@
           && cocokTopik(r, bf.t) && (!bf.s || r.sumber === bf.s) && (!bf.j || r.jenis_sumber === bf.j) && (!bf.v || r.pers)
           && dalamRange(r.published_at, rng)).slice(offset, offset + PAGE);
       }
-      const qs = (clean ? `&judul=ilike.${encodeURIComponent(`*${clean}*`)}` : "") + beritaQS(bf, rng);
-      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,inti,gambar,published_at,wilayah,zona,topik,jenis_sumber,pers,hoaks_judul,hoaks_label,hoaks_url,hoaks_sumber&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
+      const qs = (clean ? `&or=(judul.ilike.${encodeURIComponent(`*${clean}*`)},judul_en.ilike.${encodeURIComponent(`*${clean}*`)})` : "") + beritaQS(bf, rng);
+      return rest(`v_berita?select=id,tipe,judul,url,sumber,ringkasan,inti,gambar,judul_en,ringkasan_en,inti_en,published_at,wilayah,zona,topik,jenis_sumber,pers,hoaks_judul,hoaks_label,hoaks_url,hoaks_sumber&order=published_at.desc&limit=${PAGE}&offset=${offset}${areaQS(area)}${qs}`);
     },
     async beritaMeta(area, rng = {}) {
       if (DEMO) return D().berita.filter((r) => areaMatch(r, area) && dalamRange(r.published_at, rng));
@@ -263,8 +265,8 @@
         + (sumber ? `&sumber=eq.${encodeURIComponent(sumber)}` : "")
         + (jenis ? `&jenis_sumber=eq.${encodeURIComponent(jenis)}` : "")
         + terbitQS(rng)
-        + (clean ? `&or=(judul_id.ilike.${encodeURIComponent(`*${clean}*`)},ringkasan_id.ilike.${encodeURIComponent(`*${clean}*`)},judul_asli.ilike.${encodeURIComponent(`*${clean}*`)})` : "");
-      return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,inti,gambar,kategori,jenis_sumber,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
+        + (clean ? `&or=(judul_id.ilike.${encodeURIComponent(`*${clean}*`)},ringkasan_id.ilike.${encodeURIComponent(`*${clean}*`)},judul_en.ilike.${encodeURIComponent(`*${clean}*`)},judul_asli.ilike.${encodeURIComponent(`*${clean}*`)})` : "");
+      return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,inti,judul_en,ringkasan_en,inti_en,gambar,kategori,jenis_sumber,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
     },
     async chinaMeta(rng = {}) {
       if (DEMO) return [];
@@ -281,7 +283,7 @@
     },
     async pasarBerita(jenis, offset, kode) {
       if (DEMO) return [];
-      return rest(`saham_berita?select=judul,url,sumber,terbit,kode,jenis,gambar&order=terbit.desc&limit=${PAGE}&offset=${offset}${jenis ? `&jenis=eq.${jenis}` : ""}${kodeQS(kode)}`);
+      return rest(`saham_berita?select=judul,judul_en,url,sumber,terbit,kode,jenis,gambar&order=terbit.desc&limit=${PAGE}&offset=${offset}${jenis ? `&jenis=eq.${jenis}` : ""}${kodeQS(kode)}`);
     },
     async pasarHitung(kode) {
       if (DEMO) return { semua: 0, saham: 0, kripto: 0 };
@@ -295,7 +297,7 @@
     },
     async sahamBerita(kode) {
       if (DEMO) return [];
-      return rest(`saham_berita?select=judul,url,sumber,terbit&kode=cs.${encodeURIComponent(`{"${kode}"}`)}&order=terbit.desc&limit=6`);
+      return rest(`saham_berita?select=judul,judul_en,url,sumber,terbit&kode=cs.${encodeURIComponent(`{"${kode}"}`)}&order=terbit.desc&limit=6`);
     },
     async lapor(body) {
       if (DEMO) return;
@@ -395,9 +397,9 @@
         const where = r.zona || r.wilayah;
         return `<li class="${r.tipe === "info" ? "info" : ""} ${r.gambar ? "ada-foto" : ""}" style="--i:${i}">
           ${fotoHTML(r.gambar, url)}<div class="teks">
-          ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
+          ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(isi(r, "judul_en", "judul"))}</a>` : `<span class="title">${esc(isi(r, "judul_en", "judul"))}</span>`}
           ${r.hoaks_judul ? hoaksHTML(r) : ""}
-          ${r.inti ? intiHTML(r.inti, url, r.sumber) : r.ringkasan ? `<p class="sum">${esc(r.ringkasan)}</p>` : ""}
+          ${r.inti ? intiHTML(isi(r, "inti_en", "inti"), url, r.sumber) : r.ringkasan ? `<p class="sum">${esc(isi(r, "ringkasan_en", "ringkasan"))}</p>` : ""}
           <div class="meta">${r.tipe === "info" ? `<span class="chip info">${T("Info layanan")}</span>` : ""}
             ${where ? `<span class="chip place">${esc(where)}</span>` : ""}
             ${(r.topik || []).filter((t) => t !== "umum" && TOPIK[t]).map((t) => `<span class="chip soft">${T(TOPIK[t])}</span>`).join("")}
@@ -739,7 +741,7 @@
         const kode = (r.kode || []).filter((k) => k !== "IHSG").slice(0, 4);
         return `<li style="--i:${i}" class="${r.jenis === "kripto" ? "kripto" : "saham"} ${r.gambar ? "ada-foto" : ""}">
           ${fotoHTML(r.gambar, url)}<div class="teks">
-          ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul)}</a>` : `<span class="title">${esc(r.judul)}</span>`}
+          ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(isi(r, "judul_en", "judul"))}</a>` : `<span class="title">${esc(isi(r, "judul_en", "judul"))}</span>`}
           <div class="meta"><span class="chip ${r.jenis === "kripto" ? "soft" : ""}">${r.jenis === "kripto" ? T("Kripto") : T("Saham")}</span>
             ${kode.map((k) => `<button type="button" class="kode-chip" data-kode="${esc(k)}" title="${T("Berita tentang {k}", { k: esc(k) })}">${esc(k)}</button>`).join("")}
             <span class="by">${esc(r.sumber || "")}</span><time>${timeAgo(r.terbit)}</time></div>
@@ -834,7 +836,7 @@
     det.dataset.ok = "1";
     try {
       const news = await data.sahamBerita(r.kode);
-      det.querySelector(".sh-news").innerHTML = news.map((n) => `<li><a href="${esc(safeUrl(n.url) || "#")}" target="_blank" rel="noopener noreferrer">${esc(n.judul)}</a>
+      det.querySelector(".sh-news").innerHTML = news.map((n) => `<li><a href="${esc(safeUrl(n.url) || "#")}" target="_blank" rel="noopener noreferrer">${esc(isi(n, "judul_en", "judul"))}</a>
         <span class="note">${esc(n.sumber || "")}, ${timeAgo(n.terbit)}</span></li>`).join("") || `<li class="note">${T("Belum ada berita 7 hari terakhir.")}</li>`;
     } catch (e) { det.querySelector(".sh-news").innerHTML = `<li class="note">${T("Gagal memuat berita.")}</li>`; }
   }
@@ -880,9 +882,9 @@
         const url = safeUrl(r.url);
         return `<li style="--i:${i}" class="cn-${esc(r.kategori || "lainnya")} ${r.gambar ? "ada-foto" : ""}">
           ${fotoHTML(r.gambar, url)}<div class="teks">
-          ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.judul_id)}</a>` : `<span class="title">${esc(r.judul_id)}</span>`}
+          ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(isi(r, "judul_en", "judul_id"))}</a>` : `<span class="title">${esc(isi(r, "judul_en", "judul_id"))}</span>`}
           ${cn.asli ? `<p class="asli" lang="${r.bahasa === "zh" ? "zh" : "en"}">${esc(r.judul_asli)}</p>` : ""}
-          ${r.inti ? intiHTML(r.inti, url, r.sumber) : r.ringkasan_id ? `<p class="sum">${esc(r.ringkasan_id)}</p>` : ""}
+          ${r.inti ? intiHTML(isi(r, "inti_en", "inti"), url, r.sumber) : r.ringkasan_id ? `<p class="sum">${esc(isi(r, "ringkasan_en", "ringkasan_id"))}</p>` : ""}
           <div class="meta"><span class="chip">${T(KAT_CN[r.kategori] || KAT_CN.lainnya)}</span>
             ${badgeSumber(r.jenis_sumber)}
             <span class="lang">${r.bahasa === "zh" ? "中文" : "EN"}</span><span class="by">${esc(r.sumber || "")}</span><time>${timeAgo(r.terbit)}</time></div>

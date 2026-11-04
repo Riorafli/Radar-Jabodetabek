@@ -282,6 +282,17 @@ create index if not exists hoaks_terbit on hoaks (terbit desc);
 alter table item add column if not exists cek_at timestamptz;   -- set once checked against hoaks
 alter table item add column if not exists hoaks_id bigint references hoaks(id) on delete set null;
 alter table item add column if not exists gambar text;          -- publisher's photo URL ('' = none found), pipeline/gambar.py
+-- English versions for the site's language switch (pipeline/terjemah.py); en_at = tried
+alter table item add column if not exists judul_en text;
+alter table item add column if not exists ringkasan_en text;
+alter table item add column if not exists inti_en text;
+alter table item add column if not exists en_at timestamptz;
+alter table berita_china add column if not exists judul_en text;
+alter table berita_china add column if not exists ringkasan_en text;
+alter table berita_china add column if not exists inti_en text;
+alter table berita_china add column if not exists en_at timestamptz;
+alter table saham_berita add column if not exists judul_en text;
+alter table saham_berita add column if not exists en_at timestamptz;
 
 -- ---------------------------------------------------------------- views for web/bot
 create or replace view v_berita with (security_invoker = true) as
@@ -291,7 +302,8 @@ select i.id, i.tipe, i.judul, i.url, i.sumber, i.ringkasan, i.published_at,
        i.topik, i.jenis_sumber, i.inti,
        mv.status as pers,                                  -- null = not verified by Dewan Pers
        h.judul as hoaks_judul, h.label as hoaks_label, h.url as hoaks_url, h.sumber as hoaks_sumber,
-       nullif(i.gambar, '') as gambar
+       nullif(i.gambar, '') as gambar,
+       i.judul_en, i.ringkasan_en, i.inti_en
 from item i
 left join wilayah w on w.kode = i.kode_wilayah
 left join zona z on z.id = i.zona_id

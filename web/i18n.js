@@ -1,5 +1,5 @@
 // English for the interface. Indonesian is the default and the key; anything missing here stays Indonesian.
-// "{x}" are placeholders filled by app.js. News content itself is not translated.
+// "{x}" are placeholders filled by app.js. Story text comes translated from pipeline/terjemah.py.
 window.RADAR_I18N = {
   en: {
     // ---- header, tabs, hero

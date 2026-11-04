@@ -684,3 +684,20 @@ def test_gambar_dari_entri_dan_html():
     assert dari_html('<meta property="og:image" content="https://x.id/d.jpg">', "https://x.id/") == "https://x.id/d.jpg"
     assert dari_html('<meta content="/e.jpg" name="twitter:image">', "https://x.id/a/") == "https://x.id/e.jpg"
     assert rapikan("data:image/png;base64,xx") is None and rapikan("https://x.id/pixel.gif") is None
+
+
+def test_terjemah_validasi(monkeypatch):
+    from pipeline import terjemah
+    assert terjemah.bersih("  TNI speaks   out ", 300) == "TNI speaks out"
+    assert terjemah.bersih("Warga yang tinggal dengan aman", 300) is None   # still Indonesian
+    assert terjemah.bersih("", 300) is None and terjemah.bersih(None, 300) is None
+    rows = [(1, "Judul satu", None, "poin a satu\npoin b dua"), (2, "Judul dua", "lead dua", None)]
+    reply = {"hasil": [
+        {"no": 1, "judul": "Headline one", "poin": ["point a one"]},             # point count differs -> no points
+        {"no": 2, "judul": "Headline two", "ringkasan": "Lead two in English"},
+        {"no": 9, "judul": "out of range"},
+    ]}
+    monkeypatch.setattr(terjemah.extract_llm, "ask_json", lambda p: reply)
+    assert terjemah.terjemah(rows) == {1: ("Headline one", None, None), 2: ("Headline two", "Lead two in English", None)}
+    monkeypatch.setattr(terjemah.extract_llm, "ask_json", lambda p: None)
+    assert terjemah.terjemah(rows) is None

@@ -33,6 +33,10 @@ jobs:
         continue-on-error: true
       - run: python -m pipeline.inti
         continue-on-error: true
+      - run: python -m pipeline.terjemah
+        continue-on-error: true
+      - run: python -m pipeline.terjemah saham
+        continue-on-error: true
       - run: python -m pipeline.cekfakta
         continue-on-error: true
       - run: python -m pipeline.geocode
