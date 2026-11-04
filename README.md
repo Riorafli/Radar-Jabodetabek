@@ -1,211 +1,43 @@
 # Radar Jabodetabek
 
-News, food promos and viral/busy places for Jabodetabek, filtered per city and
-per popular zone (Kemang, BSD, Margonda, …), as a website. Runs entirely
-on free tiers, with no credit card: GitHub Actions, Supabase, Cloudflare Pages,
-Gemini/Groq, YouTube Data API, OpenStreetMap.
+Berita, promo, tempat viral, saham, dan pantauan berita China untuk Jabodetabek, dalam satu halaman dan bisa dipilah per kota atau per zona.
 
-Implements `Blueprint_Radar_Jabodetabek.docx` and all 12 stages of
-`Panduan_Step_by_Step_Radar_Jabodetabek.docx`.
+**Lihat langsung:** https://riorafli.github.io/Radar-Jabodetabek/
 
-```
-GitHub Actions (cron)                         Supabase Postgres (+PostGIS, pg_trgm, RLS)
-  news  /15m : rss, bmkg, gdelt, dedup, geocode ─┐        │
-  promo /3h  : promo pages -> LLM -> JSON        ├──────► │ ◄── web/ (Cloudflare Pages, anon key, read-only)
-  viral /2h  : youtube, reddit, trends           │        │
-  osm   daily: Overpass POIs per zone            │        │
-  score /1h  : viral score per zone ─────────────┘        │
-  maintenance: sync config on push, daily cleanup
-```
+## Keunggulan
 
-## What is where
+### Lokal sampai level zona
+- Semua konten bisa dipilah per **14 kota/kabupaten** dan **20 zona populer** (Kemang, BSD, Margonda, dan lainnya).
+- Tombol **"Dekat saya"** memakai lokasi pengunjung untuk langsung menampilkan area terdekat dan mengurutkan promo dari yang paling dekat.
 
-| Path | What |
-|---|---|
-| `db/schema.sql` | All tables, indexes, views (`v_berita`, `v_promo`, `v_viral`, `v_tempat_baru`), RLS policies. Idempotent. |
-| `config/wilayah.yaml` | 14 kota/kabupaten with Kemendagri codes + aliases + centres |
-| `config/zones.yaml` | 20 popular zones (centre + radius + aliases + `kecuali` for ambiguous names) |
-| `config/brands.yaml` | 25 food brands + aliases (`kokenang` → Kopi Kenangan) |
-| `config/sources.yaml` | RSS feeds, BMKG, GDELT, promo pages, YouTube queries, Trends, Reddit, OSM |
-| `config/scoring.yaml` | Viral score weights (0.5/0.3/0.2), thresholds, notification settings |
-| `collectors/` | `rss`, `bmkg`, `gdelt`, `promo`, `belanja` (marketplace promos + cuci gudang from news RSS), `youtube`, `trends`, `trends_now` (Google Trends "Trending Now" ID), `reddit`, `osm` |
-| `pipeline/` | `geocode` (text → zone/city, LLM + Nominatim fallback), `extract_llm`, `entities`, `dedup`, `score`, `cleanup`, `sync_config` |
-| `web/` | Static site: news / promo / viral / map tabs, area filter, "Dekat saya", crowd reports. Demo mode until configured. |
-| `scripts/` | `check_setup.py`, `make_demo.py` |
-| `.github/workflows/` | `news`, `promo`, `viral`, `osm`, `score`, `maintenance`, `test` |
+### Berita yang cepat dipahami
+- **Key points** otomatis: 2 sampai 4 poin singkat per berita, ditulis ulang oleh AI dengan kata-kata sendiri, jadi inti beritanya bisa ditangkap tanpa membuka artikel.
+- Selalu ada link ke artikel aslinya. Media yang memasang opt-out AI di robots.txt dihormati dan tidak diringkas.
+- **Foto** dari tiap media, dengan tampilan kartu yang tetap rapi di laptop maupun HP.
 
-## Try it right now (no accounts needed)
+### Bisa dipercaya
+- **Label sumber**: resmi pemerintah, media negara, media swasta, media lokal, atau agregator.
+- **Status verifikasi Dewan Pers**, plus filter "Hanya media terverifikasi".
+- **Cek hoaks otomatis**: berita yang mirip klaim yang sudah dinyatakan salah oleh TurnBackHoax atau CekFakta.com diberi peringatan dan link ke hasil cek faktanya.
 
-```bash
-python -m http.server 8765 --directory web
-```
+### Dua bahasa
+- Tampilan dalam **Bahasa Indonesia** (default) dan **English**, tinggal satu klik.
+- Dalam mode English, judul, key points, dan ringkasan berita ikut diterjemahkan, termasuk tab China dan Saham.
 
-Open http://localhost:8765, which shows demo mode with sample data, all marked "Contoh".
+### Lebih dari sekadar berita
+- **Promo**: makanan, marketplace, dan cuci gudang, lengkap dengan logo merchant, sisa waktu promo, besar diskon, dan label halal yang hanya dipasang bila ada dasar yang jelas.
+- **Viral**: skor tempat yang lagi ramai per zona, dihitung dari lonjakan sebutan di YouTube, berita, dan Reddit, ditambah laporan pengunjung. Ada juga video kuliner populer, pencarian Google yang sedang naik, dan tempat makan baru dari OpenStreetMap.
+- **Saham**: IHSG, saham yang paling naik dan turun, grafik harga, dan kode saham atau kripto yang paling banyak diberitakan. Hanya informasi, bukan saran investasi.
+- **China**: berita teknologi, bisnis, kebijakan, serta F&B dan franchise dari media China, diterjemahkan otomatis.
+- **Peta**: tempat viral, tempat baru, dan lokasi sale dalam satu peta.
 
-## One-time setup (~2 hours)
+### Ringan dan otomatis
+- Situs statis tanpa framework. Peta baru dimuat saat tab Peta dibuka, dan ada mode gelap.
+- Seluruh data diperbarui sendiri lewat GitHub Actions, tanpa server yang harus dijaga.
+- Berjalan sepenuhnya di **layanan gratis** (GitHub, Supabase, Gemini/Groq, YouTube Data API, OpenStreetMap). Data lama dibersihkan otomatis supaya database tetap kecil.
 
-Never put a key in the code: the repo is public. Keys go in **GitHub Secrets**
-or your local `.env` (git-ignored).
-
-### 1. Accounts
-Free accounts, no credit card: GitHub, Supabase, Cloudflare,
-Google AI Studio (Gemini key). Optional: Groq (LLM fallback), Google Cloud
-(YouTube Data API v3 key; enable the API, no billing), Reddit app.
-
-### 2. Supabase
-1. New project (region Singapore). Save the database password.
-2. **SQL Editor** → paste all of `db/schema.sql` → Run. (It enables `postgis` and `pg_trgm` itself.)
-3. **Connect → Session pooler** → copy the connection string → this is `DATABASE_URL`.
-4. **Project Settings → API** → copy *Project URL*, *anon public* key, *service_role* key.
-
-### 3. GitHub repo
-1. Create a **public** repo `radar-jabodetabek` (public = unlimited Actions minutes) and push this folder.
-2. **Settings → Secrets and variables → Actions → New repository secret**:
-
-| Secret | Required | Value |
-|---|---|---|
-| `DATABASE_URL` | yes | Session pooler string |
-| `GEMINI_API_KEY` | yes* | aistudio.google.com/apikey |
-| `GROQ_API_KEY` | optional* | fallback LLM (*at least one of the two) |
-| `YOUTUBE_API_KEY` | recommended | main viral signal |
-| `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` | optional | check Reddit's API terms first |
-| `CONTACT_EMAIL` | recommended | used in the User-Agent for Nominatim/Overpass |
-
-3. **Actions** tab → enable workflows → run **maintenance** manually first. That loads
-   the regions, zones and brands into the database. Then run **news**, **osm**, **viral** and **score**
-   once each (Run workflow) and check they are green.
-
-Check everything locally at any point:
-```bash
-pip install -r requirements.txt
-```
-```bash
-python scripts/check_setup.py
-```
-
-### 4. Web on Cloudflare Pages
-1. Edit `web/config.js`: `SUPABASE_URL` + **anon** key (safe because RLS only allows reads).
-   **Never** the service_role key. Commit + push.
-2. Cloudflare → **Workers & Pages → Create → Pages → Connect to Git** → pick the repo.
-   Framework: *None*, build command: *empty*, output directory: `web`. Every push redeploys.
-
-### 5. Monitoring
-- GitHub → profile **Settings → Notifications → Actions**: email on failed workflows.
-- UptimeRobot (free): monitor your Pages URL.
-- Supabase dashboard: check database size weekly (`maintenance` logs it too).
-
-### 6. Reliable news schedule (cron-job.org)
-GitHub often delays or drops scheduled runs on free accounts (the `news` cron ran only every
-3-7 hours). An external timer calling `workflow_dispatch` keeps it at every 15 minutes:
-1. GitHub → **Settings → Developer settings → Fine-grained tokens**: only this repo,
-   only **Actions: Read and write**, with an expiry. It cannot change code or read secrets.
-2. cron-job.org (2FA on) → new job every 15 min, **POST**
-   `https://api.github.com/repos/<owner>/<repo>/actions/workflows/news.yml/dispatches`,
-   headers `Authorization: Bearer <token>`, `Accept: application/vnd.github+json`,
-   `X-GitHub-Api-Version: 2022-11-28`, body `{"ref":"main"}`. A test run answers **204**.
-3. Leaked or expired token: delete it on GitHub and make a new one. `concurrency` in
-   `news.yml` queues overlapping runs, so double triggers are harmless.
-
-## Day-to-day
-
-| Want to… | Do this |
-|---|---|
-| Add/adjust a zone | Edit `config/zones.yaml`, push. `maintenance` syncs it. Verify coordinates on openstreetmap.org. |
-| Add a brand alias | Edit `config/brands.yaml`, push. |
-| Add a news feed | Add to `config/sources.yaml` → `rss`. `filter_wilayah: true` for national feeds. |
-| Add a promo page | Add to `sources.yaml` → `promo`. Check robots.txt + ToS. The collector also enforces robots.txt. |
-| Marketplace / cuci gudang promo | Collected hourly by `collectors/belanja.py` from news RSS. |
-| Halal labels | Set `halal: true` per brand in `config/brands.yaml` only after checking the certificate at bpjph.halal.go.id. Promos without a clear signal get no label. |
-| Tune "viral" | `config/scoring.yaml`. Review the top list weekly. Early on, with little data, try `min_mention_24j: 2`. |
-| Regenerate demo data | `python scripts/make_demo.py` |
-| Run one collector locally | Fill `.env`, then e.g. `python -m collectors.rss` |
-| Run tests | `python -m pytest -q` |
-
-### Free-quota budget
-| Service | Limit | Usage here |
-|---|---|---|
-| GitHub Actions | unlimited (public repo) | ~170 short runs/day |
-| YouTube Data API | 10,000 units/day | 4 searches × 12 runs ≈ 4,900 units |
-| Gemini/Groq | per-minute/day limits | promo pages only when the page text changes; place/location extraction batched (1 call per run) |
-| Nominatim | 1 req/s | max 15 lookups per news run, cached forever |
-| Overpass | fair use | 20 queries/day at 03:00 WIB, 5 s apart |
-| Supabase | 500 MB | daily cleanup (02:30 WIB): news > 31 days, videos > 30 days, expired promos, signals > 30 days. Change with repo variables `RETENSI_BERITA_HARI` / `RETENSI_POST_HARI`. |
-
-Hoax check: `pipeline.cekfakta` (every news run). (1) Sources are matched against
-`config/media.yaml`, the Dewan Pers verified-media list (re-check yearly); unlisted sources show
-"Belum terverifikasi" and can be hidden with the "Hanya media terverifikasi" filter. (2) Claims rated
-false/fraud by TurnBackHoax (Mafindo) and CekFakta.com are stored 90 days. (3) The LLM flags news
-that repeats such a claim (not news that debunks it); flagged cards link the fact-check.
-
-News key points: `pipeline.inti` (every news run) fetches each new article, has the LLM write 2-4 points in its own words, and stores only those points (~0.5 KB per item). Sites whose robots.txt opts out of AI crawlers (e.g. Tempo) are skipped and keep the RSS lead.
-
-## China news tab
-
-`collectors/china.py` reads China tech / business / policy feeds (SCMP, TechNode,
-Pandaily, CGTN, Sixth Tone, ITHome, cnBeta, sspai, Solidot - list in
-`config/sources.yaml` -> `china`) hourly and the LLM translates headline + a 1-2
-sentence summary to Indonesian. Only headline + short summary + link are stored
-(copyright); kept 15 days (the tab filters up to 14). The 🍜 F&B & franchise category reads
-红餐网 (Canyin88) and 职业餐饮网 (canyin168) from their listing pages (no RSS; robots.txt allows it) plus the
-MYFNB Guide and Momentum Works feeds, where the LLM keeps only China F&B / Chinese-brand items. `pipeline.inti china` adds 2-4
-key points in Indonesian per article (same robots.txt AI opt-out rule as the Berita tab).
-
-## Saham (stock tab) - one-time Google Sheets setup
-
-Free IDX prices come from **your own Google Sheet** using `GOOGLEFINANCE`
-(about 20 minutes delayed). Twelve Data's free plan does not include IDX,
-idx.co.id blocks bots, and Yahoo's robots.txt forbids them.
-
-1. `python scripts/make_saham_template.py` (already done: see `templates/`).
-2. sheets.new → **File → Settings → Locale: United States** → Save.
-   Same dialog, tab **Calculation → Recalculation: On change and every minute** → Save.
-3. **File → Import → Upload** `templates/saham.csv` → *Replace current sheet*,
-   keep "Convert text to numbers, dates, and formulas" ticked. Rename the tab `saham`.
-4. **File → Import → Upload** `templates/riwayat.csv` → *Insert new sheet(s)*.
-5. **File → Share → Publish to web**: choose tab `saham`, format **CSV**, Publish, copy the link.
-   Repeat for tab `riwayat`.
-6. Paste both links into `config/sources.yaml` → `saham.csv_kutipan` / `saham.csv_riwayat`, push.
-
-If the IHSG row shows nothing, change its symbol (cell B2) from `IDX:COMPOSITE`
-to `INDEXIDX:COMPOSITE`. The site only shows data - no buy/sell advice; headlines
-that read like advice ("rekomendasi", "target harga") are skipped.
-
-## Things to know
-
-- **Region codes:** the blueprint lists `31.71–31.75` without the order. Verified against BMKG
-  (Kemendagri): **31.71 Jakarta Pusat, 31.72 Utara, 31.73 Barat, 31.74 Selatan, 31.75 Timur**.
-  BPS numbering differs (BPS 3171 = Jaksel), so don't mix datasets.
-- **Sources tested 2026-10-08:** 12 RSS feeds work. Kompas megapolitan (404), Tempo metro (403),
-  Radar Bogor and Radar Depok (timeouts) did not, and are left out. Of the promo pages, McDonald's,
-  HokBen, Richeese, BCA, Mandiri and ShopeePay have readable static text. KFC, Pizza Hut, Domino's,
-  Starbucks and Grand Indonesia need JavaScript and are listed but `aktif: false`.
-- GoFood/GrabFood/ShopeeFood, Instagram/TikTok/X APIs and Google Places are deliberately not used (ToS / cost).
-- News stores only title, a summary of up to 300 characters, and the link (copyright). No personal user data
-  is stored (UU PDP).
-- "Ramai" is an estimate from mention spikes, not live crowd data. Updates lag 15–60 min (free cron).
-- GitHub disables cron on repos with no activity for 60 days. Push a commit or run a workflow manually.
-
-## Troubleshooting
-
-| Symptom | Fix |
-|---|---|
-| DB connection fails in Actions | Use the **Session pooler** string, not the direct host (IPv6). |
-| `violates foreign key constraint ... wilayah` | Run the **maintenance** workflow (config not synced yet). |
-| Web shows "Gagal memuat data" | Wrong URL/anon key in `web/config.js`, or `schema.sql` not run (grants/RLS). |
-| Promo: "teks terlalu sedikit" | Page needs JavaScript. Set `aktif: false`. |
-| LLM returns invalid JSON | Logged and skipped automatically. If it is frequent, switch `GEMINI_MODEL` (default `gemini-flash-lite-latest`) or add `GROQ_API_KEY`. |
-| Viral list empty | Normal at first: needs ≥3 mentions from ≥2 platforms in 24 h. Check the `viral` logs, then lower thresholds in `scoring.yaml`. |
-| Wrong city on a news item | Add/adjust aliases or `kecuali` in `zones.yaml` / `wilayah.yaml`. |
-| YouTube quota exceeded | Lower `youtube.per_run` in `sources.yaml`. |
-
-## Final checklist (from the guide)
-- [ ] Public repo, no secrets in code
-- [ ] Supabase: PostGIS + pg_trgm on, RLS on (`check_setup.py` all OK)
-- [ ] `news` runs every 15 min, green
-- [ ] Most items have a city/zone label
-- [ ] Web on Cloudflare Pages, city filter works
-- [ ] Promo pages extracted and validated
-- [ ] YouTube/Trends/OSM signals stored
-- [ ] Zone scores computed and reviewed manually
-- [ ] Map and "Dekat saya" work
-- [ ] Cleanup + monitoring active
+### Main aman
+- Hanya mengambil dari sumber yang mengizinkan lewat robots.txt dan syarat layanannya. Marketplace dan media sosial yang melarang scraping tidak disentuh.
+- Yang disimpan hanya judul, ringkasan pendek, dan link, bukan artikel utuh.
+- Tidak menyimpan data pribadi pengunjung.
+- Tidak ada kunci rahasia di kode. Database publik hanya bisa dibaca, tidak bisa diubah.
