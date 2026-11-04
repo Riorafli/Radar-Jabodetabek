@@ -460,12 +460,10 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
   .fchip { font-size: var(--text-xs); min-height: 30px; padding-inline: var(--space-xs); }
   h2 { font-size: var(--text-xl); }
   .list .title { font-size: 1.1rem; }
-  .news > li.ada-foto:first-child { display: flex; gap: var(--space-sm); }
-  .news > li.ada-foto:not(:first-child) { display: block; }
+  /* phones: every story with a photo reads like the lead, the photo full width on top, then the key points */
+  .news > li.ada-foto { display: flex; gap: var(--space-sm); }
   .news { gap: var(--space-sm); }
   .news > li { padding: var(--space-sm); }
-  .news > li.ada-foto:not(:first-child) .foto { float: right; width: 34%; margin: var(--space-2xs) 0 var(--space-xs) var(--space-sm); }
-  .news > li::after { content: ""; display: block; clear: both; }
   .sort select, .filter-row select { max-width: 62vw; }
   .rank > li { grid-template-columns: 2rem minmax(0, 1fr); }
   .rank .btn { grid-column: 2; justify-self: start; }
