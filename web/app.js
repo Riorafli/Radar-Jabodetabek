@@ -552,10 +552,10 @@
       const linkTxt = r.sumber === "YouTube" ? T("Tonton videonya di YouTube")
         : k === "makanan" ? T("Lihat di {s}", { s: esc(r.sumber || T("sumber")) }) : T("Baca info lengkap ({s})", { s: esc(r.sumber || T("sumber")) });
       return `<li class="promo k-${k}" style="--i:${i}">
-        ${d ? `<span class="ribbon">-${d}%</span>` : ""}
         <div class="promo-head"><span class="avatar">${esc(initials(r.brand))}</span>
-          <div><div class="promo-brand">${esc(r.brand)}</div>
-            <span class="kchip">${esc(T(KAT[k].nama))}</span>${r.sumber_input === "manual" ? ` <span class="chip good">${T("kurasi")}</span>` : ""}</div></div>
+          <div class="promo-who"><div class="promo-brand">${esc(r.brand)}</div>
+            <span class="kchip">${esc(T(KAT[k].nama))}</span>${r.sumber_input === "manual" ? ` <span class="chip good">${T("kurasi")}</span>` : ""}</div>
+          ${d ? `<span class="ribbon">-${d}%</span>` : ""}</div>
         ${plat ? `<div class="plats">${plat}</div>` : ""}
         <span class="promo-title">${esc(title)}</span>
         ${r.produk && k !== "makanan" && !r.judul.toLowerCase().includes(r.produk.toLowerCase()) ? `<span class="promo-syarat">${esc(r.produk)}</span>` : ""}

@@ -268,7 +268,8 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
 .promo-title { color: var(--color-ink); line-height: 1.35; }
 .promo-price { font: 500 var(--text-xl)/1.1 var(--font-outlier); font-variant-numeric: tabular-nums; color: var(--color-ink); }
 .promo-syarat { font-size: var(--text-sm); color: var(--color-muted); }
-.ribbon { position: absolute; top: var(--space-md); right: var(--space-md); font: 500 var(--text-sm)/1 var(--font-outlier); color: var(--color-accent); border: var(--rule-hair) solid var(--color-accent); padding: var(--space-2xs) var(--space-xs); }
+.promo-who { flex: 1 1 auto; min-width: 0; overflow-wrap: break-word; }
+.ribbon { flex: none; align-self: flex-start; margin-left: auto; font: 500 var(--text-sm)/1 var(--font-outlier); color: var(--color-accent); border: var(--rule-hair) solid var(--color-accent); padding: var(--space-2xs) var(--space-xs); }
 .tags { display: flex; gap: var(--space-2xs); flex-wrap: wrap; }
 .near { font-size: var(--text-sm); color: var(--color-ink-2); }
 .promo > a { margin-top: auto; padding-top: var(--space-xs); font-size: var(--text-sm); }
