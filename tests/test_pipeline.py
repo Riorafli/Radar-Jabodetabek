@@ -714,3 +714,10 @@ def test_logo_helpers():
     assert judul_milik("Pepper Lunch", "<title>Pepper Lunch Indonesia</title>")
     assert not judul_milik("Ppang!", "<title>ppang.com is for sale</title>")
     assert tebak_sendiri("Pepper Lunch") == ["pepperlunch.co.id", "pepperlunch.com", "pepperlunch.id"]
+
+
+def test_saham_tanggal_serial_sheets():
+    from collectors.saham import parse_riwayat, tanggal
+    assert str(tanggal("46260.66667")) == "2026-08-26" and str(tanggal("2026-08-26")) == "2026-08-26"
+    csv_text = "IHSG,,,USDIDR,,\nDate,Close,,Date,Close,\n46260.66667,6405.69,,46260.99861,17778,\n"
+    assert [(k, str(d), v) for k, d, v in parse_riwayat(csv_text)] == [("IHSG", "2026-08-26", 6405.69), ("USDIDR", "2026-08-26", 17778.0)]

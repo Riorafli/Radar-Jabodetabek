@@ -65,6 +65,9 @@ def waktu(s):
 
 def tanggal(s):
     t = (s or "").strip()
+    # unformatted date cells publish as Sheets serial numbers (days since 1899-12-30): 46260.66667
+    if re.fullmatch(r"\d{5}(\.\d+)?", t):
+        return (datetime(1899, 12, 30) + timedelta(days=float(t))).date()
     for f in ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y"):
         try:
             return datetime.strptime(t, f).date()

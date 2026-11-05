@@ -279,7 +279,14 @@
     async sahamRiwayat() {
       if (DEMO) return [];
       const since = new Date(Date.now() - 75 * 86400000).toISOString().slice(0, 10);
-      return rest(`saham_harian?select=kode,tanggal,close&tanggal=gte.${since}&order=tanggal&limit=10000`);
+      // the API answers at most 1000 rows per request: page through (~45 codes x 75 days)
+      const out = [];
+      for (let off = 0; off < 20000; off += 1000) {
+        const part = await rest(`saham_harian?select=kode,tanggal,close&tanggal=gte.${since}&order=tanggal,kode&limit=1000&offset=${off}`);
+        out.push(...part);
+        if (part.length < 1000) break;
+      }
+      return out;
     },
     async pasarBerita(jenis, offset, kode) {
       if (DEMO) return [];

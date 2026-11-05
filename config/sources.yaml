@@ -261,7 +261,7 @@ google_trends_now:
 # "Publish to web" CSV links here. Empty = prices skipped, news still collected.
 saham:
   csv_kutipan: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5UhsO2M11Q2V94GqJCIsDsZZ0ynvxNWG9eJNN0q3M2932MvBkoKtQoLvtwNOVO8Z7uc5dfhEzCV7L/pub?gid=1760786841&single=true&output=csv"
-  csv_riwayat: ""
+  csv_riwayat: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNJaoMb26NeHnS7rY2Rz5EqxaTNFMIYAnjJxJK3GMjQXiNnbXAieUAqFdLQOAlL7eN2mVkrELo18vu/pub?gid=607245981&single=true&output=csv"
   # headlines that read like advice are skipped - this site gives no investment advice
   judul_dilewati: "rekomendasi|target harga|layak (dibeli|dikoleksi|dicermati)|saham pilihan|pilihan saham|cuan|top picks?|saham (yang )?(bisa|wajib) (dibeli|dikoleksi|dicermati)|emas antam"
   rss:
