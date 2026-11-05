@@ -13,11 +13,12 @@ sys.path.insert(0, str(ROOT))
 from collectors.saham import daftar_saham  # noqa: E402
 
 IHSG = ("IHSG", "IDX:COMPOSITE")
+KURS = ("USDIDR", "CURRENCY:USDIDR")   # GOOGLEFINANCE gives currencies a price only; the site derives the change from history
 
 
 def main():
     saham = [(s["kode"], f"IDX:{s['kode']}") for s in daftar_saham()]
-    rows = [IHSG] + saham
+    rows = [IHSG, KURS] + saham
     out = ROOT / "templates"
     out.mkdir(exist_ok=True)
     kolom = [("nama", "name"), ("harga", "price"), ("perubahan", "change"), ("persen", "changepct"),
@@ -38,7 +39,7 @@ def main():
         w = csv.writer(f)
         w.writerow(head)
         w.writerow(form)
-    print(f"templates/saham.csv + templates/riwayat.csv: {len(rows)} baris (IHSG + {len(saham)} saham)")
+    print(f"templates/saham.csv + templates/riwayat.csv: {len(rows)} baris (IHSG + USD/IDR + {len(saham)} saham)")
 
 
 if __name__ == "__main__":
