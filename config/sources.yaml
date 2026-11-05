@@ -335,3 +335,22 @@ cekfakta:
       url: https://turnbackhoax.id/feed/
     - nama: CekFakta.com
       url: https://cekfakta.com/feed
+
+# Game tab (collectors/game.py). Every feed was checked on 2026-11-05: robots.txt allows our bot
+# and the AI crawlers (sites with an AI opt-out such as GameSpot, Eurogamer, Polygon and
+# Kotakgame are left out). English headlines are translated by the LLM.
+game:
+  max_hari: 3
+  maks_per_feed: 10
+  terjemah_per_run: 40
+  rss:
+    - { nama: detikInet Games, url: "https://inet.detik.com/games/rss", bahasa: id }
+    - { nama: Jagat Play, url: "https://jagatplay.com/feed", bahasa: id }
+    - { nama: Gamebrott, url: "https://gamebrott.com/feed", bahasa: id }
+    - { nama: RevivalTV, url: "https://revivaltv.id/feed/", bahasa: id, kategori: esports }
+    - { nama: IGN, url: "https://feeds.feedburner.com/ign/all", bahasa: en }
+    - { nama: PC Gamer, url: "https://www.pcgamer.com/rss/", bahasa: en }
+    - { nama: Gematsu, url: "https://www.gematsu.com/feed", bahasa: en }
+  # Steam store lists, prices in rupiah (robots.txt allows /api/)
+  steam:
+    url: "https://store.steampowered.com/api/featuredcategories?cc=id&l=indonesian"

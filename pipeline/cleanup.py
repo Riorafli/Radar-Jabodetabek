@@ -37,6 +37,7 @@ def main():
         ("geocode_cache lama", "delete from geocode_cache where dibuat < now() - interval '180 days'"),
         ("berita saham lama", "delete from saham_berita where terbit < now() - interval '30 days'"),
         ("berita china lama", "delete from berita_china where terbit < now() - interval '15 days'"),
+        ("berita game lama", "delete from game_berita where terbit < now() - interval '15 days'"),
         ("klaim hoaks lama", "delete from hoaks where terbit < now() - interval '90 days'"),
         ("harga harian lama", "delete from saham_harian where tanggal < current_date - 400"),
         ("tempat tanpa sinyal", """delete from entitas e where e.tipe='tempat' and e.osm_id is null

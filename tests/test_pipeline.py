@@ -728,3 +728,20 @@ def test_kuliner_prefilter():
     assert kuliner("Bek & Brew: Menikmati Gurihnya Bakmi Bebek di Senopati")
     assert kuliner("Kafe baru di Bekasi", "puding mangga")
     assert not kuliner("Banjir rendam 3 RT di Jakarta Timur")
+
+
+def test_game_steam_rows():
+    from collectors.game import steam_rows
+    data = {"top_sellers": {"items": [
+                {"id": 1, "name": "Game A", "original_price": 99900000, "final_price": 99900000, "discount_percent": 0},
+                {"id": 1, "name": "Game A", "original_price": 99900000, "final_price": 99900000},
+                {"id": 2, "name": "Steam Frame", "original_price": None, "final_price": 0}]},
+            "specials": {"items": [
+                {"id": 3, "name": "Game C", "original_price": 43900000, "final_price": 21950000, "discount_percent": 50,
+                 "discount_expiration": 1794416439},
+                {"id": 4, "name": "No discount", "original_price": 100, "final_price": 100, "discount_percent": 0}]}}
+    rows = steam_rows(data)
+    assert [(r[0], r[1], r[2]) for r in rows] == [("terlaris", 1, 1), ("terlaris", 2, 2), ("diskon", 3, 1)]
+    assert rows[0][4:7] == (999000, 999000, 0)
+    assert rows[1][4:6] == (None, 0)
+    assert rows[2][5] == 219500 and rows[2][8] is not None

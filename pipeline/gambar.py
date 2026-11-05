@@ -26,6 +26,9 @@ TARGET = {
     "china": ("""select id, url from berita_china where gambar is null and url like 'http%%'
                  and kategori is distinct from 'buang' and terbit > now() - interval '2 days' order by terbit desc limit %s""",
               "update berita_china set gambar = %s where id = %s"),
+    "game": ("""select id, url from game_berita where gambar is null and url like 'http%%'
+                and terbit > now() - interval '2 days' order by terbit desc limit %s""",
+             "update game_berita set gambar = %s where id = %s"),
     "saham": ("""select id, url from saham_berita where gambar is null and url like 'http%%'
                  and terbit > now() - interval '2 days' order by terbit desc limit %s""",
               "update saham_berita set gambar = %s where id = %s"),

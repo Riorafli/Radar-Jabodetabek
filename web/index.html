@@ -37,6 +37,7 @@
       <button role="tab" data-tab="promo">Promo</button>
       <button role="tab" data-tab="viral">Viral</button>
       <button role="tab" data-tab="saham">Saham</button>
+      <button role="tab" data-tab="game">Game</button>
       <button role="tab" data-tab="china">China</button>
       <button role="tab" data-tab="peta">Peta</button>
     </nav>
@@ -213,6 +214,32 @@
         <button id="pasar-kode-x" class="link-btn" type="button">Tampilkan semua</button></p>
       <ul id="list-pasar" class="list news"></ul>
       <button id="more-pasar" class="btn more" type="button" hidden>Muat lebih banyak</button>
+    </section>
+
+    <section id="tab-game" class="panel" hidden>
+      <div class="panel-head">
+        <h2>Steam minggu ini</h2>
+        <div id="f-steam" class="chips" role="group" aria-label="Daftar Steam">
+          <button type="button" data-d="terlaris" class="fchip on">Terlaris</button>
+          <button type="button" data-d="diskon" class="fchip">Lagi diskon</button>
+        </div>
+      </div>
+      <ul id="list-steam" class="video-grid steam-grid"></ul>
+      <p class="note">Harga Steam Indonesia dalam rupiah, diperbarui tiap jam. Cek harga akhir di Steam sebelum membeli.</p>
+
+      <div class="panel-head game-head">
+        <h2>Berita game</h2>
+        <div class="search"><input id="gq" type="search" placeholder="Cari: GTA 6, Mobile Legends, PS5…" aria-label="Cari berita game"></div>
+      </div>
+      <p class="note">Dari media game Indonesia dan internasional. Berita berbahasa Inggris <b>diterjemahkan otomatis oleh AI</b> (bisa ada kekeliruan).</p>
+      <div class="filters">
+        <div id="f-game" class="chips" role="group" aria-label="Kategori game"></div>
+        <div class="filter-row">
+          <label class="sort">Sumber <select id="g-sumber"><option value="">Semua sumber</option></select></label>
+        </div>
+      </div>
+      <ul id="list-game" class="list news"></ul>
+      <button id="more-game" class="btn more" type="button" hidden>Muat lebih banyak</button>
     </section>
 
     <section id="tab-china" class="panel" hidden>

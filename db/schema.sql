@@ -295,6 +295,43 @@ alter table berita_china add column if not exists en_at timestamptz;
 alter table saham_berita add column if not exists judul_en text;
 alter table saham_berita add column if not exists en_at timestamptz;
 
+-- Game tab (collectors/game.py): game news, Indonesian and English sources
+create table if not exists game_berita (
+  id             bigserial primary key,
+  url            text unique not null,
+  sumber         text,
+  bahasa         text,                    -- id | en
+  judul_asli     text not null,
+  ringkasan_asli text,                    -- max 400 chars, never the full article
+  judul_id       text,                    -- Indonesian headline (copied for id sources, LLM for en)
+  ringkasan_id   text,
+  kategori       text,                    -- pc | konsol | mobile | esports | hardware | industri | lainnya
+  gambar         text,
+  inti           text,
+  inti_at        timestamptz,
+  judul_en       text,
+  ringkasan_en   text,
+  inti_en        text,
+  en_at          timestamptz,
+  terbit         timestamptz not null default now(),
+  dibuat         timestamptz not null default now()
+);
+create index if not exists game_berita_terbit on game_berita (terbit desc);
+-- Steam store lists in rupiah (top sellers, discounts), replaced every run
+create table if not exists game_steam (
+  daftar     text not null,               -- terlaris | diskon
+  app_id     bigint not null,
+  urut       int not null,
+  nama       text not null,
+  harga_awal bigint,                      -- rupiah
+  harga      bigint,
+  diskon     int not null default 0,      -- percent
+  gambar     text,
+  berakhir   timestamptz,                 -- discount end
+  diperbarui timestamptz not null default now(),
+  primary key (daftar, app_id)
+);
+
 -- merchant logos for promo cards (pipeline/logo.py); logo '' = none found, retried later
 create table if not exists brand_logo (
   brand  text primary key,
@@ -365,7 +402,7 @@ declare t text;
 begin
   foreach t in array array['wilayah','kawasan','kawasan_wilayah','zona','entitas',
                            'item','promo','skor','zona_statistik','saham','saham_harian','saham_berita',
-                           'berita_china','media_verif','hoaks','brand_logo'] loop
+                           'berita_china','media_verif','hoaks','brand_logo','game_berita','game_steam'] loop
     execute format('alter table %I enable row level security', t);
     if not exists (select 1 from pg_policies where tablename = t and policyname = 'baca publik') then
       execute format('create policy "baca publik" on %I for select using (true)', t);

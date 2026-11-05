@@ -1,6 +1,6 @@
 # Radar Jabodetabek
 
-Berita, promo, tempat viral, saham, dan pantauan berita China untuk Jabodetabek, dalam satu halaman dan bisa dipilah per kota atau per zona.
+Berita, promo, tempat viral, saham, game, dan pantauan berita China untuk Jabodetabek, dalam satu halaman dan bisa dipilah per kota atau per zona.
 
 **Lihat langsung:** https://riorafli.github.io/Radar-Jabodetabek/
 
@@ -22,12 +22,13 @@ Berita, promo, tempat viral, saham, dan pantauan berita China untuk Jabodetabek,
 
 ### Dua bahasa
 - Tampilan dalam **Bahasa Indonesia** (default) dan **English**, tinggal satu klik.
-- Dalam mode English, judul, key points, dan ringkasan berita ikut diterjemahkan, termasuk tab China dan Saham.
+- Dalam mode English, judul, key points, dan ringkasan berita ikut diterjemahkan, termasuk tab Game, China, dan Saham.
 
 ### Lebih dari sekadar berita
 - **Promo**: makanan, marketplace, dan cuci gudang, lengkap dengan logo merchant, sisa waktu promo, besar diskon, dan label halal yang hanya dipasang bila ada dasar yang jelas.
 - **Viral**: skor tempat yang lagi ramai per zona, dihitung dari lonjakan sebutan di YouTube, berita, dan Reddit, ditambah laporan pengunjung. Ada juga video kuliner populer, pencarian Google yang sedang naik, dan tempat makan baru dari OpenStreetMap.
 - **Saham**: IHSG, saham yang paling naik dan turun, grafik harga, dan kode saham atau kripto yang paling banyak diberitakan. Hanya informasi, bukan saran investasi.
+- **Game**: berita game dari media Indonesia dan internasional (PC, konsol, mobile, esports, hardware), plus daftar terlaris dan diskon Steam dengan harga rupiah.
 - **China**: berita teknologi, bisnis, kebijakan, serta F&B dan franchise dari media China, diterjemahkan otomatis.
 - **Peta**: tempat viral, tempat baru, dan lokasi sale dalam satu peta.
 

@@ -45,6 +45,10 @@ Selalu tulis "China" (bukan "Tiongkok"). Istilah teknis/keuangan tanpa padanan b
 Mata uang: 元 / 人民币 / RMB = yuan, 日元 = yen, 港元 = dolar Hong Kong. Satuan: 万 = 10.000 (80万 = 800 ribu), 亿 = 100 juta.
 """
 
+EXTRA_GAME = """Artikel tentang game, bisa berbahasa Indonesia atau Inggris: tulis poinnya dalam Bahasa Indonesia.
+Nama game, studio, orang, dan produk jangan diterjemahkan; istilah game yang lazim (DLC, patch, early access) biarkan.
+"""
+
 # per target: rows to do (id, judul, url) and where the points go
 TARGET = {
     "berita": ("""select id, judul, url from item where tipe = 'berita' and inti_at is null and url like 'http%%'
@@ -53,6 +57,9 @@ TARGET = {
     "china": ("""select id, judul_asli, url from berita_china where inti_at is null and judul_id is not null
                  and url like 'http%%' and terbit > now() - interval '2 days' order by terbit desc limit %s""",
               "update berita_china set inti = %s, inti_at = now() where id = %s", EXTRA_CHINA),
+    "game": ("""select id, judul_asli, url from game_berita where inti_at is null and judul_id is not null
+                and url like 'http%%' and terbit > now() - interval '2 days' order by terbit desc limit %s""",
+             "update game_berita set inti = %s, inti_at = now() where id = %s", EXTRA_GAME),
 }
 
 

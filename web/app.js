@@ -268,6 +268,22 @@
         + (clean ? `&or=(judul_id.ilike.${encodeURIComponent(`*${clean}*`)},ringkasan_id.ilike.${encodeURIComponent(`*${clean}*`)},judul_en.ilike.${encodeURIComponent(`*${clean}*`)},judul_asli.ilike.${encodeURIComponent(`*${clean}*`)})` : "");
       return rest(`berita_china?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,inti,judul_en,ringkasan_en,inti_en,gambar,kategori,jenis_sumber,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
     },
+    async game(kategori, sumber, q, offset) {
+      if (DEMO) return [];
+      const clean = (q || "").replace(/[,()*%]/g, " ").trim();
+      const qs = (kategori && kategori !== "semua" ? `&kategori=eq.${kategori}` : "")
+        + (sumber ? `&sumber=eq.${encodeURIComponent(sumber)}` : "")
+        + (clean ? `&or=(judul_id.ilike.${encodeURIComponent(`*${clean}*`)},judul_asli.ilike.${encodeURIComponent(`*${clean}*`)},judul_en.ilike.${encodeURIComponent(`*${clean}*`)})` : "");
+      return rest(`game_berita?select=id,url,sumber,bahasa,judul_asli,judul_id,ringkasan_id,inti,judul_en,ringkasan_en,inti_en,gambar,kategori,terbit&judul_id=not.is.null&order=terbit.desc&limit=${PAGE}&offset=${offset}${qs}`);
+    },
+    async gameMeta() {
+      if (DEMO) return [];
+      return rest("game_berita?select=kategori,sumber&judul_id=not.is.null&limit=2000");
+    },
+    async steam() {
+      if (DEMO) return [];
+      return rest("game_steam?select=*&order=urut");
+    },
     async chinaMeta(rng = {}) {
       if (DEMO) return [];
       return rest(`berita_china?select=kategori,sumber,jenis_sumber&judul_id=not.is.null&limit=2000${terbitQS(rng)}`);
@@ -317,6 +333,7 @@
     bf: { t: "semua", w: "semua", s: "", j: "", v: false },
     promos: [], outlets: [], outletKey: null,
     sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", semua: false, loaded: false, pasar: "", pasarOff: 0, kode: "" },
+    gm: { kat: "semua", sumber: "", q: "", offset: 0, daftar: "terlaris", steam: null },
     cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0, jenis: "", w: "semua" },
     pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
@@ -893,6 +910,71 @@
     } catch (e) { det.querySelector(".sh-news").innerHTML = `<li class="note">${T("Gagal memuat berita.")}</li>`; }
   }
 
+  // ------------------------------------------------------------ game
+  const KAT_GAME = { pc: "PC", konsol: "Konsol", mobile: "Mobile", esports: "Esports", hardware: "Hardware", industri: "Industri", lainnya: "Lainnya" };
+
+  function drawSteam() {
+    const el = $("#list-steam"), gm = S.gm;
+    for (const b of document.querySelectorAll("#f-steam button")) b.classList.toggle("on", b.dataset.d === gm.daftar);
+    const rows = (gm.steam || []).filter((r) => r.daftar === gm.daftar).slice(0, 10);
+    el.innerHTML = rows.map((r, i) => {
+      const url = `https://store.steampowered.com/app/${encodeURIComponent(r.app_id)}/`;
+      const sisa = r.berakhir ? Math.ceil((new Date(r.berakhir) - Date.now()) / 86400000) : null;
+      // Steam sends 0 without a list price for things not on sale yet (hardware, pre-release): show no price
+      const harga = r.harga === 0 ? (r.harga_awal === 0 ? T("Gratis") : "") : r.harga == null ? ""
+        : `${r.diskon && r.harga_awal ? `<s>${rupiah(r.harga_awal)}</s> ` : ""}<b>${rupiah(r.harga)}</b>`;
+      return `<li style="--i:${i}"><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">
+        <span class="thumb">${r.gambar ? `<img src="${esc(safeUrl(r.gambar) || "")}" alt="" loading="lazy" decoding="async">` : ""}
+          ${r.diskon ? `<span class="st-diskon">-${r.diskon}%</span>` : ""}</span>
+        <span class="vt">${gm.daftar === "terlaris" ? `<span class="st-no">${r.urut}</span> ` : ""}${esc(r.nama)}</span>
+        <span class="st-harga">${harga}</span>
+        ${sisa != null && sisa > 0 ? `<span class="meta">${T("Diskon berakhir {n} hari lagi", { n: sisa })}</span>` : ""}
+      </a></li>`;
+    }).join("") || empty(T("Daftar Steam belum tersedia."));
+  }
+
+  async function renderGame(append = false) {
+    const el = $("#list-game"), gm = S.gm;
+    if (!append) {
+      gm.offset = 0;
+      el.innerHTML = skeleton(5);
+      if (!gm.steam) {
+        $("#list-steam").innerHTML = skeleton(2);
+        data.steam().then((r) => { gm.steam = r; drawSteam(); }).catch((e) => fail($("#list-steam"), e));
+      } else drawSteam();
+      try {
+        const meta = await data.gameMeta();
+        const kat = (m) => m.kategori || "lainnya";
+        const ck = { semua: 0 }, cs = {};
+        for (const m of meta) {
+          if (!gm.sumber || m.sumber === gm.sumber) { ck.semua++; ck[kat(m)] = (ck[kat(m)] || 0) + 1; }
+          if (gm.kat === "semua" || kat(m) === gm.kat) cs[m.sumber] = (cs[m.sumber] || 0) + 1;
+        }
+        $("#f-game").innerHTML = [["semua", "Semua"], ...Object.entries(KAT_GAME)].map(([k, label]) =>
+          `<button type="button" data-k="${k}" class="fchip ${gm.kat === k ? "on" : ""}" ${!ck[k] && k !== "semua" && gm.kat !== k ? "disabled" : ""}>${T(label)} <span class="n">${ck[k] || 0}</span></button>`).join("");
+        $("#g-sumber").innerHTML = `<option value="">${T("Semua sumber")}</option>` + Object.keys(cs).sort().map((s) =>
+          `<option value="${esc(s)}" ${gm.sumber === s ? "selected" : ""}>${esc(s)}</option>`).join("");
+      } catch (e) { console.error(e); }
+    }
+    try {
+      const rows = await data.game(gm.kat, gm.sumber, gm.q, gm.offset);
+      const html = rows.map((r, i) => {
+        const url = safeUrl(r.url), judul = isi(r, "judul_en", "judul_id");
+        return `<li style="--i:${i}" class="${r.gambar ? "ada-foto" : ""}">
+          ${fotoHTML(r.gambar, url)}<div class="teks">
+          ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(judul)}</a>` : `<span class="title">${esc(judul)}</span>`}
+          ${r.inti ? intiHTML(isi(r, "inti_en", "inti"), url, r.sumber) : r.ringkasan_id ? `<p class="sum">${esc(isi(r, "ringkasan_en", "ringkasan_id"))}</p>` : ""}
+          <div class="meta"><span class="chip">${T(KAT_GAME[r.kategori] || KAT_GAME.lainnya)}</span>
+            <span class="lang">${r.bahasa === "en" ? "EN" : "ID"}</span><span class="by">${esc(r.sumber || "")}</span><time>${timeAgo(r.terbit)}</time></div>
+        </div></li>`;
+      }).join("");
+      if (append) el.insertAdjacentHTML("beforeend", html);
+      else el.innerHTML = html || empty(DEMO ? T("Mode demo: belum ada berita game.") : T("Belum ada berita yang cocok."));
+      gm.offset += rows.length;
+      $("#more-game").hidden = rows.length < PAGE;
+    } catch (e) { fail(el, e); }
+  }
+
   // ------------------------------------------------------------ china
   const KAT_CN = { teknologi: "Teknologi", bisnis: "Bisnis & pasar", fnb: "F&B & franchise", kebijakan: "Kebijakan", sosial: "Sosial", lainnya: "Lainnya" };
 
@@ -1027,11 +1109,11 @@
 
   function render(withStats = false) {
     for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === S.tab));
-    for (const t of ["berita", "promo", "viral", "saham", "china", "peta"]) $(`#tab-${t}`).hidden = t !== S.tab;
+    for (const t of ["berita", "promo", "viral", "saham", "game", "china", "peta"]) $(`#tab-${t}`).hidden = t !== S.tab;
     moveIndicator();
     saveHash();
     if (withStats) renderStats();
-    ({ berita: renderBerita, promo: renderPromo, viral: renderViral, saham: renderSaham, china: renderChina, peta: renderMap })[S.tab]();
+    ({ berita: renderBerita, promo: renderPromo, viral: renderViral, saham: renderSaham, game: renderGame, china: renderChina, peta: renderMap })[S.tab]();
   }
 
   function fillSelects() {
@@ -1113,6 +1195,12 @@
     $("#c-reset").addEventListener("click", () => { Object.assign(S.cn, { kat: "semua", w: "semua", sumber: "", jenis: "" }); renderChina(); });
     $("#c-asli").addEventListener("change", (e) => { S.cn.asli = e.target.checked; renderChina(); });
     $("#more-china").addEventListener("click", () => renderChina(true));
+    $("#f-game").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) { S.gm.kat = b.dataset.k; renderGame(); } });
+    $("#g-sumber").addEventListener("change", (e) => { S.gm.sumber = e.target.value; renderGame(); });
+    $("#more-game").addEventListener("click", () => renderGame(true));
+    $("#f-steam").addEventListener("click", (e) => { const b = e.target.closest("button[data-d]"); if (b) { S.gm.daftar = b.dataset.d; drawSteam(); } });
+    let tg;
+    $("#gq").addEventListener("input", (e) => { clearTimeout(tg); tg = setTimeout(() => { S.gm.q = e.target.value; renderGame(); }, 300); });
     $("#more-video").addEventListener("click", () => renderVideos(true));
     $("#v-urut").addEventListener("change", () => renderVideos());
     // the "video kuliner" counter opens the Viral tab at the video list
@@ -1290,7 +1378,7 @@
     fillSelects();
     bind();
     const [tab, area] = location.hash.slice(1).split("/");
-    if (["berita", "promo", "viral", "saham", "china", "peta"].includes(tab)) S.tab = tab;
+    if (["berita", "promo", "viral", "saham", "game", "china", "peta"].includes(tab)) S.tab = tab;
     S.area = areaFromValue(area);
     $("#area").value = areaValue(S.area);
     render(true);

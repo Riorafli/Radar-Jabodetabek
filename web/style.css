@@ -326,6 +326,15 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
 .video-grid .vt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: var(--space-xs); font: 700 var(--text-md)/1.25 var(--font-display); }
 .video-grid a:hover .vt { text-decoration: underline; text-decoration-thickness: 2px; }
 .video-grid .meta { font-size: var(--text-xs); }
+/* Steam cards: capsule art, rank, price; the discount tag sits on the art */
+.steam-grid { margin-bottom: var(--space-sm); grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: var(--space-md) var(--space-sm); }
+.steam-grid .vt { font-size: var(--text-sm); }
+.steam-grid .thumb { aspect-ratio: 616 / 353; }
+.st-diskon { position: absolute; right: 0; bottom: 0; padding: var(--space-2xs) var(--space-xs); font: 700 var(--text-sm)/1 var(--font-body); background: var(--color-good); color: var(--color-paper); }
+.st-no { font-family: var(--font-outlier); color: var(--color-ink-2); font-weight: 500; }
+.st-harga { display: block; margin-top: var(--space-2xs); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.st-harga s { color: var(--color-ink-2); }
+.game-head { margin-top: var(--space-2xl); }
 #video-sec { scroll-margin-top: 120px; }
 #video-sec .filter-row { margin-bottom: var(--space-sm); }
 
@@ -465,9 +474,9 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
   .brand { flex: 1 1 100%; font-size: 1.3rem; }
   .area-ctl { flex: 1 1 100%; justify-content: flex-start; flex-wrap: wrap; }
   #area { flex: 1 1 10em; }
-  .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+  .tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
   .tabs button { padding-block: var(--space-sm); border-bottom-width: 3px; border-right: var(--rule-hair) solid var(--color-rule); }
-  .tabs button:nth-child(4), .tabs button:nth-child(7) { border-right: 0; }
+  .tabs button:nth-child(5), .tabs button:last-child { border-right: 0; }
   .tabs button:nth-child(n+5) { border-top: var(--rule-hair) solid var(--color-rule); }
   .hero { padding-block: var(--space-md) var(--space-sm); }
   .hero-sub { font-size: var(--text-sm); }

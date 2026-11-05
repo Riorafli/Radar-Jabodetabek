@@ -47,6 +47,12 @@ TARGET = {
              and (inti_at is not null or terbit < now() - interval '3 hours')
            order by terbit desc limit %s""",
         "update berita_china set judul_en = coalesce(judul_en, %s), ringkasan_en = coalesce(ringkasan_en, %s), inti_en = %s, en_at = now() where id = %s"),
+    "game": (
+        """select id, judul_id, case when inti is null then ringkasan_id end, inti from game_berita
+           where en_at is null and judul_id is not null and terbit > now() - make_interval(days => %s)
+             and (inti_at is not null or terbit < now() - interval '3 hours')
+           order by terbit desc limit %s""",
+        "update game_berita set judul_en = coalesce(judul_en, %s), ringkasan_en = coalesce(ringkasan_en, %s), inti_en = %s, en_at = now() where id = %s"),
     "saham": (
         """select id, judul, null, null from saham_berita
            where en_at is null and terbit > now() - make_interval(days => %s)
@@ -56,6 +62,10 @@ TARGET = {
 # English-language China sources: the original headline and lead are already English
 CHINA_ASLI = """update berita_china set judul_en = judul_asli, ringkasan_en = left(ringkasan_asli, 400)
                 where bahasa = 'en' and judul_en is null and judul_id is not null"""
+
+
+GAME_ASLI = """update game_berita set judul_en = judul_asli, ringkasan_en = left(ringkasan_asli, 400)
+               where bahasa = 'en' and judul_en is null and judul_id is not null"""
 
 
 def bersih(v, n):
@@ -106,8 +116,8 @@ def terjemah(rows):
 def main(target="berita"):
     pilih, simpan = TARGET[target]
     with db() as cur:
-        if target == "china":
-            cur.execute(CHINA_ASLI)
+        if target in ("china", "game"):
+            cur.execute(CHINA_ASLI if target == "china" else GAME_ASLI)
             cur.connection.commit()
         if not extract_llm.available():
             log("terjemah: GEMINI_API_KEY / GROQ_API_KEY belum diisi, dilewati")
