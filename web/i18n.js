@@ -220,8 +220,6 @@ window.RADAR_I18N = {
     "Saham BEI": "IDX stocks",
     "Cari kode / nama…": "Search code / name…",
     "Cari saham": "Search stocks",
-    "Data dari Google Finance, tertunda sekitar 20 menit. Hanya informasi,": "Data from Google Finance, delayed about 20 minutes. Information only,",
-    "bukan rekomendasi atau saran investasi": "not a recommendation or investment advice",
     "Sektor": "Sector",
     "Semua sektor": "All sectors",
     "Kode A sampai Z": "Code A to Z",
