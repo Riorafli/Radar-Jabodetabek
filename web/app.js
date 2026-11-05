@@ -776,12 +776,15 @@
     } catch (e) { fail(el, e); }
   }
 
+  const INDEKS = new Set(["IHSG", "USDIDR"]);   // shown as cards above the list, not as stocks
+
   function drawSaham() {
     const sh = S.sh, el = $("#list-saham");
     const ihsg = sh.rows.find((r) => r.kode === "IHSG");
-    const list = sh.rows.filter((r) => r.kode !== "IHSG" && r.harga != null);
+    const kurs = sh.rows.find((r) => r.kode === "USDIDR" && r.harga != null);
+    const list = sh.rows.filter((r) => !INDEKS.has(r.kode) && r.harga != null);
     // no price data yet: hide the price section (sort row and list), the market news below stays
-    const kosong = !list.length && !ihsg;
+    const kosong = !list.length && !ihsg && !kurs;
     $("#s-sort").closest(".filters").hidden = kosong;
     el.hidden = kosong;
     $("#sq").closest(".search").hidden = kosong;
@@ -793,11 +796,21 @@
       return;
     }
     const tw = (r) => (r.waktu_data ? new Date(r.waktu_data).toLocaleString(LOC(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
-    $("#ihsg").innerHTML = ihsg ? `
+    // USD/IDR: Google gives currencies a price only, so the change is against the previous day's stored close
+    const kh = sh.hist.USDIDR || [];
+    const kPrev = kh.length >= 2 ? kh[kh.length - 2] : null;
+    const kUbah = kurs && kPrev ? kurs.harga - kPrev : null;
+    const kPct = kUbah != null ? (kUbah / kPrev) * 100 : null;
+    $("#ihsg").innerHTML = (ihsg ? `<div class="idx">
       <div class="ihsg-main"><span class="lbl">IHSG</span><b class="val">${fmtNum(ihsg.harga, 2)}</b>
         <span class="pill ${arah(ihsg.persen)}">${panah(ihsg.perubahan)} ${fmtNum(Math.abs(ihsg.perubahan || 0), 2)} (${fmtPct(ihsg.persen)})</span></div>
       ${sparkline(sh.hist.IHSG, 320, 64)}
-      <span class="note">${T("Indeks Harga Saham Gabungan. Data {t} WIB, grafik 70 hari.", { t: esc(tw(ihsg)) })}</span>` : "";
+      <span class="note">${T("Indeks Harga Saham Gabungan. Data {t} WIB, grafik 70 hari.", { t: esc(tw(ihsg)) })}</span></div>` : "")
+      + (kurs ? `<div class="idx">
+      <div class="ihsg-main"><span class="lbl">${T("Kurs USD/IDR")}</span><b class="val">${fmtNum(kurs.harga, 2)}</b>
+        ${kUbah != null ? `<span class="pill">${panah(kUbah)} ${fmtNum(Math.abs(kUbah), 2)} (${fmtPct(kPct)})</span>` : ""}</div>
+      ${sparkline(kh, 320, 64)}
+      <span class="note">${T("Rupiah per 1 dolar AS. Naik berarti rupiah melemah. Diperbarui {t}.", { t: esc(timeAgo(kurs.diperbarui)) })}</span></div>` : "");
     const naik = [...list].filter((r) => r.persen > 0).sort((a, b) => b.persen - a.persen).slice(0, 3);
     const turun = [...list].filter((r) => r.persen < 0).sort((a, b) => a.persen - b.persen).slice(0, 3);
     const mv = (r) => `<button type="button" class="mover ${arah(r.persen)}" data-kode="${esc(r.kode)}"><b>${esc(r.kode)}</b> ${fmtPct(r.persen)}</button>`;

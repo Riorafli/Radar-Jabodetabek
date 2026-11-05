@@ -232,6 +232,8 @@ window.RADAR_I18N = {
     "Turun terbanyak": "Top losers",
     "Indeks Harga Saham Gabungan. Data {t} WIB, grafik 70 hari.": "Jakarta Composite Index. Data {t} WIB, 70-day chart.",
     "Tidak ada saham yang cocok.": "No matching stocks.",
+    "Kurs USD/IDR": "USD/IDR rate",
+    "Rupiah per 1 dolar AS. Naik berarti rupiah melemah. Diperbarui {t}.": "Rupiah per US dollar. Up means a weaker rupiah. Updated {t}.",
     "Buka": "Open",
     "Tertinggi": "High",
     "Terendah": "Low",

@@ -337,7 +337,8 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
 
 /* ============================================================ saham */
 .disclaimer { padding: var(--space-xs) var(--space-sm); border: var(--rule-hair) solid var(--color-warn); background: var(--color-warn-wash); color: var(--color-ink); }
-.ihsg { display: flex; flex-direction: column; gap: var(--space-2xs); padding-block: var(--space-sm); margin-bottom: var(--space-sm); border-block: 3px double var(--color-rule-2); }
+.ihsg { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--space-md) var(--space-xl); padding-block: var(--space-sm); margin-bottom: var(--space-sm); border-block: 3px double var(--color-rule-2); }
+.idx { display: flex; flex-direction: column; gap: var(--space-2xs); min-width: 0; }
 .ihsg:empty { display: none; }
 .ihsg-main { display: flex; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap; }
 .lbl { font: 700 var(--text-md)/1.2 var(--font-display); color: var(--color-ink); }
