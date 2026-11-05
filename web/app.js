@@ -703,9 +703,13 @@
     if (!vals || vals.length < 2) return `<span class="spark-empty"></span>`;
     const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
     const line = vals.map((v, i) => `${i ? "L" : "M"}${((i / (vals.length - 1)) * w).toFixed(1)},${(h - 3 - ((v - min) / span) * (h - 6)).toFixed(1)}`).join("");
-    return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
-      <path class="sp-area" d="${line}L${w},${h}L0,${h}Z"/><path class="sp-line" d="${line}"/></svg>`;
+    // coloured by the trend over the period drawn: green up, red down, wash fading to the baseline
+    const id = `spg${++sparkN}`;
+    return `<svg class="spark ${vals[vals.length - 1] >= vals[0] ? "naik" : "turun"}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sp-s0"/><stop offset="1" class="sp-s1"/></linearGradient></defs>
+      <path class="sp-area" fill="url(#${id})" d="${line}L${w},${h}L0,${h}Z"/><path class="sp-line" d="${line}"/></svg>`;
   }
+  let sparkN = 0;
 
   const kodeQS = (k) => (k ? `&kode=cs.${encodeURIComponent(`{"${k}"}`)}` : "");
 
