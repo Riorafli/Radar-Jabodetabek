@@ -35,6 +35,19 @@ rss:
     jenis: swasta
     url: https://www.cnnindonesia.com/gaya-hidup/rss
     filter_wilayah: true
+  # lifestyle sections: food stories feed the viral score (pipeline/kuliner.py)
+  - nama: Liputan6 Lifestyle
+    jenis: swasta
+    url: https://feed.liputan6.com/rss/lifestyle
+    filter_wilayah: true
+  - nama: iNews Lifestyle
+    jenis: swasta
+    url: https://www.inews.id/feed/lifestyle
+    filter_wilayah: true
+  - nama: Sindonews Lifestyle
+    jenis: swasta
+    url: https://lifestyle.sindonews.com/rss
+    filter_wilayah: true
   - nama: CNBC Indonesia
     jenis: swasta
     url: https://www.cnbcindonesia.com/news/rss

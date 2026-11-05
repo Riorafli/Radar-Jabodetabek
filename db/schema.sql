@@ -89,6 +89,7 @@ alter table item add column if not exists topik text[] not null default '{}';
 alter table item add column if not exists jenis_sumber text;  -- resmi | negara | swasta | lokal | lainnya
 alter table item add column if not exists inti text;          -- 2-4 key points, one per line (pipeline/inti.py)
 alter table item add column if not exists inti_at timestamptz; -- set once tried (also when skipped)
+alter table item add column if not exists kuliner_at timestamptz; -- food places read (pipeline/kuliner.py)
 create index if not exists item_topik on item using gin (topik);
 
 create table if not exists promo (

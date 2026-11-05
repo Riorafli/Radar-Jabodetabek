@@ -721,3 +721,10 @@ def test_saham_tanggal_serial_sheets():
     assert str(tanggal("46260.66667")) == "2026-08-26" and str(tanggal("2026-08-26")) == "2026-08-26"
     csv_text = "IHSG,,,USDIDR,,\nDate,Close,,Date,Close,\n46260.66667,6405.69,,46260.99861,17778,\n"
     assert [(k, str(d), v) for k, d, v in parse_riwayat(csv_text)] == [("IHSG", "2026-08-26", 6405.69), ("USDIDR", "2026-08-26", 17778.0)]
+
+
+def test_kuliner_prefilter():
+    from pipeline.kuliner import kuliner
+    assert kuliner("Bek & Brew: Menikmati Gurihnya Bakmi Bebek di Senopati")
+    assert kuliner("Kafe baru di Bekasi", "puding mangga")
+    assert not kuliner("Banjir rendam 3 RT di Jakarta Timur")

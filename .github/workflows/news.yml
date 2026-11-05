@@ -31,6 +31,8 @@ jobs:
         continue-on-error: true
       - run: python -m pipeline.gambar saham
         continue-on-error: true
+      - run: python -m pipeline.kuliner
+        continue-on-error: true
       - run: python -m pipeline.inti
         continue-on-error: true
       - run: python -m pipeline.terjemah

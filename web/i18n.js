@@ -181,7 +181,7 @@ window.RADAR_I18N = {
     // ---- viral
     "Lagi ramai": "Trending",
     "Lagi ramai di {a}": "Trending in {a}",
-    "Skor dihitung tiap jam dari lonjakan sebutan (YouTube, berita, Reddit), engagement, jumlah platform, dan laporan pengguna, dibanding rata-rata 14 hari di zona yang sama. “Ramai” adalah perkiraan, bukan data real-time.": "The score is computed hourly from spikes in mentions (YouTube, news, Reddit), engagement, number of platforms and user reports, compared with the 14-day average in the same zone. “Busy” is an estimate, not real-time data.",
+    "Skor dihitung tiap jam dari lonjakan sebutan (YouTube, berita kuliner, Reddit), engagement, jumlah platform, dan laporan pengguna, dibanding rata-rata 14 hari di zona yang sama. “Ramai” adalah perkiraan, bukan data real-time.": "The score is computed hourly from spikes in mentions (YouTube, food news, Reddit), engagement, number of platforms and user reports, compared with the 14-day average in the same zone. “Busy” is an estimate, not real-time data.",
     "Lagi dibicarakan": "Being talked about",
     "paling banyak disebut 7 hari terakhir": "most mentioned in the last 7 days",
     "{n} sebutan/7 hari": "{n} mentions/7 days",
