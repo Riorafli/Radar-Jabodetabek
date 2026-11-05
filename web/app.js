@@ -416,7 +416,7 @@
     } catch (e) { fail(el, e); }
   }
 
-  const kodeNama = (k) => (S.wilayahs.find((w) => w.kode === k) || {}).nama || k;
+  const kodeNama = (k) => (S.wilayahs.find((w) => w.kode === k) || {}).nama || PROV[k] || k;
 
   function sisaChip(selesai, perkiraan) {
     const d = daysLeft(selesai);
@@ -581,6 +581,10 @@
 
   const sudahLapor = (id) => Date.now() - Number(store.get(`lapor:${id}`) || 0) < 6 * 3600 * 1000;
   
+  /** Google Maps search for a place, where visitors read its rating and reviews (no API, no scraping) */
+  const ulasanUrl = (nama, area) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${nama} ${area || "Jabodetabek"}`)}`;
+  const ulasanLink = (nama, area) => `<a class="ulasan" href="${esc(ulasanUrl(nama, area))}" target="_blank" rel="noopener noreferrer">${T("Ulasan di Google Maps")}</a>`;
+
   async function renderViral() {
     const el = $("#list-viral"), elBaru = $("#list-baru");
     $("#h-viral").textContent = T("Lagi ramai di {a}", { a: areaName() });
@@ -608,7 +612,8 @@
             ${url ? `<a class="title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(r.nama)}</a>` : `<span class="title">${esc(r.nama)}</span>`}
             <div class="meta">${tier === 1 ? `<span class="chip urgent">${NAIK}Viral</span>` : ""}${r.zona || r.kode_wilayah ? `<span class="chip place">${esc(r.zona || kodeNama(r.kode_wilayah))}</span>` : ""}
               <span>${jumlah}</span><span>${r.platform} platform${src.length ? ` (${esc(src.join(", "))})` : ""}</span>
-              ${r.jarak != null ? `<span>${(r.jarak / 1000).toFixed(1)} km</span>` : ""}</div>
+              ${r.jarak != null ? `<span>${(r.jarak / 1000).toFixed(1)} km</span>` : ""}
+              ${ulasanLink(r.nama, r.zona || kodeNama(r.kode_wilayah))}</div>
             <div class="bar"><span style="--p:${Math.max(0.04, r.skor / max[tier]).toFixed(3)}"></span></div>
           </div>
           <button class="btn ghost ${done ? "done" : ""}" type="button" data-lapor="${r.entitas_id}" data-zona="${r.zona_id ?? ""}" ${done ? "disabled" : ""}>${done ? T("Terkirim") : T("Ramai di sini")}</button>
@@ -621,7 +626,8 @@
       const baru = await data.baru(S.area);
       elBaru.innerHTML = baru.map((r, i) => `<li style="--i:${i}"><b>${esc(r.nama)}</b>
         <span class="meta">${r.zona ? `<span class="chip place">${esc(r.zona)}</span>` : ""}<span>${T("tercatat {t}", { t: timeAgo(r.baru_sejak) })}</span>
-        <a href="https://www.openstreetmap.org/?mlat=${Number(r.lat)}&mlon=${Number(r.lon)}#map=18/${Number(r.lat)}/${Number(r.lon)}" target="_blank" rel="noopener noreferrer">${T("lihat peta")}</a></span></li>`).join("")
+        <a href="https://www.openstreetmap.org/?mlat=${Number(r.lat)}&mlon=${Number(r.lon)}#map=18/${Number(r.lat)}/${Number(r.lon)}" target="_blank" rel="noopener noreferrer">${T("lihat peta")}</a>
+        ${ulasanLink(r.nama, r.zona)}</span></li>`).join("")
         || empty(T("Belum ada tempat baru tercatat. Muncul setelah pemindaian OSM harian menemukan tempat yang baru ditambahkan."));
     } catch (e) { fail(elBaru, e); }
   }
@@ -951,13 +957,13 @@
       for (const r of baru) {
         if (r.lat == null) continue;
         L.marker([r.lat, r.lon], { icon: pinIcon(12, "new") })
-          .bindPopup(`<b>${esc(r.nama)}</b><br>${T("Tempat baru")}${r.zona ? `, ${esc(r.zona)}` : ""}`).addTo(S.layers);
+          .bindPopup(`<b>${esc(r.nama)}</b><br>${T("Tempat baru")}${r.zona ? `, ${esc(r.zona)}` : ""}<br>${ulasanLink(r.nama, r.zona)}`).addTo(S.layers);
       }
       for (const r of viral) {
         if (r.lat == null) continue;
         const url = safeUrl(r.contoh_url);
         L.marker([r.lat, r.lon], { icon: pinIcon(Math.round(14 + 16 * (r.skor / max))), zIndexOffset: 1000 })
-          .bindPopup(`<b>${esc(r.nama)}</b><br>${esc(r.zona || "")}<br>${(r.tier || 1) === 1 ? T("{n} sebutan/24 jam", { n: r.mention_24j }) : T("{n} sebutan/7 hari", { n: (r.detail && r.detail.mention_7h) || r.mention_24j })}, ${T("skor")} ${r.skor.toFixed(2)}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${T("contoh konten")}</a>` : ""}`)
+          .bindPopup(`<b>${esc(r.nama)}</b><br>${esc(r.zona || "")}<br>${(r.tier || 1) === 1 ? T("{n} sebutan/24 jam", { n: r.mention_24j }) : T("{n} sebutan/7 hari", { n: (r.detail && r.detail.mention_7h) || r.mention_24j })}, ${T("skor")} ${r.skor.toFixed(2)}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${T("contoh konten")}</a>` : ""}<br>${ulasanLink(r.nama, r.zona)}`)
           .addTo(S.layers);
       }
     } catch (e) { console.error(e); }

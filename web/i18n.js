@@ -204,6 +204,7 @@ window.RADAR_I18N = {
     "Tempat makan baru": "New places to eat",
     "tercatat {t}": "listed {t}",
     "lihat peta": "see map",
+    "Ulasan di Google Maps": "Reviews on Google Maps",
     "Belum ada tempat baru tercatat. Muncul setelah pemindaian OSM harian menemukan tempat yang baru ditambahkan.": "No new places listed yet. They appear once the daily OSM scan finds newly added places.",
     "Lihat tempat yang lagi ramai?": "Seeing a busy place?",
     "Laporanmu ikut dihitung dalam skor viral jam berikutnya.": "Your report counts toward next hour's trending score.",
