@@ -1,4 +1,4 @@
-# Radar Jabodetabek
+# Golden Eye
 
 Berita, promo, tempat viral, saham, game, dan pantauan berita China untuk Jabodetabek, dalam satu halaman dan bisa dipilah per kota atau per zona.
 

@@ -8,10 +8,11 @@
   --color-error: oklch(52% 0.19 27); --color-success: oklch(50% 0.12 150);
   --container: 1440px; --gutter: 64px; --gap-columns: 32px; --section-gap-s: 120px; --section-gap: 144px; --section-gap-l: 176px;
   --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
-  --color-paper: oklch(94% 0.011 92); --color-paper-2: oklch(90.5% 0.015 88); --color-paper-3: oklch(87% 0.017 86);
-  --color-ink: oklch(17% 0.012 60); --color-ink-2: oklch(27% 0.012 58); --color-muted: oklch(46% 0.014 60);
-  --color-rule: oklch(68% 0.016 75); --color-rule-2: oklch(34% 0.012 60);
-  --color-accent: oklch(44% 0.13 32); --color-accent-ink: oklch(95% 0.012 90); --color-focus: oklch(48% 0.17 32);
+  --color-paper: oklch(96% 0.022 90); --color-paper-2: oklch(93% 0.032 88); --color-paper-3: oklch(89.5% 0.042 86);
+  --color-ink: oklch(22% 0.025 70); --color-ink-2: oklch(32% 0.03 70); --color-muted: oklch(47% 0.035 72);
+  --color-rule: oklch(77% 0.06 84); --color-rule-2: oklch(42% 0.05 74);
+  --color-accent: oklch(46% 0.1 72); --color-accent-ink: oklch(22% 0.025 70); --color-focus: oklch(55% 0.14 75);
+  --color-gold: oklch(82% 0.1 85); --color-gold-2: oklch(74% 0.11 82); --color-gold-ink: oklch(22% 0.03 70);
   --font-display: "Zilla Slab", ui-serif, Georgia, serif; --font-body: "Spectral", ui-serif, Georgia, serif;
   --font-outlier: "Libre Franklin", ui-sans-serif, sans-serif;
   --radius-card: 0; --radius-pill: 0; --rule-hair: 1px;

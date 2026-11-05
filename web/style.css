@@ -3,6 +3,7 @@
  * axes: light/slab-serif/warm · posture: restrained · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E4 S3 R4 V4 · weakest: S, six rubrics share one masthead, so each panel opens on its own Zilla head and a double rule */
 /* Hallmark · dropped https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js · Leaflet now loads on demand from app.js (loadLeaflet) when the Peta tab opens, to keep the first load light */
+/* Hallmark · palette: soft gold for the Golden Eye rename (2026-11-05): cream paper, brown ink, antique-gold links, gold fills on active states with brown text */
 /* Hallmark · answered: performance, no web-font weight beyond 700/500/400, Leaflet loads only on the Peta tab, no infinite animation anywhere */
 @import url("./tokens.css");
 @import url("./base.css");
@@ -23,10 +24,11 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-paper: oklch(19% 0.01 62); --color-paper-2: oklch(23% 0.011 62); --color-paper-3: oklch(27% 0.012 62);
-  --color-ink: oklch(92% 0.012 90); --color-ink-2: oklch(84% 0.012 88); --color-muted: oklch(70% 0.014 80);
-  --color-rule: oklch(40% 0.012 70); --color-rule-2: oklch(72% 0.012 80);
-  --color-accent: oklch(72% 0.11 38); --color-accent-ink: oklch(19% 0.01 62); --color-focus: oklch(75% 0.14 38);
+  --color-paper: oklch(18% 0.015 75); --color-paper-2: oklch(22% 0.02 76); --color-paper-3: oklch(26.5% 0.025 78);
+  --color-ink: oklch(93% 0.025 88); --color-ink-2: oklch(86% 0.03 86); --color-muted: oklch(72% 0.035 84);
+  --color-rule: oklch(40% 0.035 80); --color-rule-2: oklch(76% 0.07 85);
+  --color-accent: oklch(82% 0.1 85); --color-accent-ink: oklch(18% 0.015 75); --color-focus: oklch(84% 0.13 85);
+  --color-gold: oklch(80% 0.1 85); --color-gold-2: oklch(72% 0.11 82); --color-gold-ink: oklch(18% 0.02 75);
   --color-good: oklch(75% 0.1 150); --color-bad: oklch(74% 0.13 27); --color-warn: oklch(80% 0.1 80);
   --color-warn-wash: oklch(28% 0.04 80); --color-bad-wash: oklch(28% 0.045 27);
   --color-scrim: oklch(10% 0.01 60 / 0.75);
@@ -82,7 +84,11 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--color-ink); }
 /* ============================================================ masthead */
 .top { background: var(--color-paper); border-bottom: var(--rule-hair) solid var(--color-rule-2); position: sticky; top: 0; z-index: var(--z-sticky-nav); }
 .top-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); flex-wrap: wrap; padding-block: var(--space-sm); }
-.brand { font: 700 1.5rem/1 var(--font-display); letter-spacing: var(--tracking-display); color: var(--color-ink); text-decoration: none; }
+.brand { display: inline-flex; align-items: center; gap: var(--space-xs); font: 700 1.5rem/1 var(--font-display); letter-spacing: var(--tracking-display); color: var(--color-ink); text-decoration: none; }
+.brand-eye { flex: none; width: 1.6em; height: 1em; }
+.be-lid { fill: none; stroke: var(--color-gold-2); stroke-width: 1.6; }
+.be-iris { fill: var(--color-gold); }
+.be-pupil { fill: var(--color-ink); }
 .brand:hover { text-decoration: underline; text-decoration-thickness: 2px; }
 .brand:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; }
 .area-ctl { display: flex; gap: var(--space-xs); flex: 0 1 auto; justify-content: flex-end; align-items: center; min-width: 0; }
@@ -101,7 +107,7 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--color-ink); }
 .tabs button:hover { color: var(--color-ink); border-bottom-color: var(--color-rule); }
 .tabs button:active { color: var(--color-ink-2); }
 .tabs button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
-.tabs button[aria-selected="true"] { color: var(--color-ink); border-bottom-color: var(--color-accent); }
+.tabs button[aria-selected="true"] { color: var(--color-ink); border-bottom-color: var(--color-gold-2); }
 
 .demo { background: var(--color-paper-2); border-bottom: var(--rule-hair) solid var(--color-rule); font-size: var(--text-sm); padding-block: var(--space-xs); }
 
@@ -151,8 +157,8 @@ h4 { font: 700 var(--text-md)/1.2 var(--font-display); margin: var(--space-sm) 0
 .fchip:hover:not(:disabled) { border-color: var(--color-ink); }
 .fchip:active:not(:disabled) { background: var(--color-paper-2); }
 .fchip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
-.fchip.on { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
-.fchip.on .n { color: var(--color-paper-3); }
+.fchip.on { background: var(--color-gold); color: var(--color-gold-ink); border-color: var(--color-gold-2); }
+.fchip.on .n { color: var(--color-gold-ink); opacity: 0.75; }
 .fchip:disabled { cursor: default; color: var(--color-muted); border-style: dashed; }
 .chips.sub .fchip { font-size: var(--text-xs); min-height: 30px; }
 #f-food .sep { flex: none; width: 1px; margin: 0 var(--space-2xs); background: var(--color-rule); }
@@ -287,7 +293,7 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
 .rank > li.tier-head { font: 700 var(--text-lg)/1.2 var(--font-display); padding: var(--space-lg) 0 var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule-2); }
 .rank > li.tier-head .muted { margin-left: var(--space-xs); }
 .bar { height: 3px; margin-top: var(--space-xs); background: var(--color-paper-3); max-width: 28rem; }
-.bar > span { display: block; height: 100%; background: var(--color-ink); transform-origin: left; transform: scaleX(var(--p, 0)); }
+.bar > span { display: block; height: 100%; background: var(--color-gold-2); transform-origin: left; transform: scaleX(var(--p, 0)); }
 .rank > li.t2 .bar > span { background: var(--color-muted); }
 .rank .btn { min-height: 34px; padding: var(--space-xs) var(--space-sm); font-size: var(--text-sm); }
 .rank .btn.done:disabled { color: var(--color-good); border-color: var(--color-good); }
@@ -426,8 +432,8 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
 .boxscore button:hover { background: var(--color-paper-2); }
 .boxscore button:active { background: var(--color-paper-3); }
 .boxscore button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
-.boxscore button.on { background: var(--color-ink); color: var(--color-paper); }
-.boxscore button.on .rk, .boxscore button.on .jml, .boxscore button.on .jn { color: var(--color-paper-3); }
+.boxscore button.on { background: var(--color-gold); color: var(--color-gold-ink); }
+.boxscore button.on .rk, .boxscore button.on .jml, .boxscore button.on .jn { color: var(--color-gold-ink); opacity: 0.8; }
 
 /* ============================================================ map */
 #map { isolation: isolate; height: min(70vh, 580px); border: var(--rule-hair) solid var(--color-rule-2); background: var(--color-paper-2); display: grid; place-items: center; color: var(--color-muted); }
