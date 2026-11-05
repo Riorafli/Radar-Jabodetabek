@@ -28,6 +28,9 @@ def main():
         w = csv.writer(f)
         w.writerow(["kode", "simbol"] + [k for k, _ in kolom] + ["waktu"])
         for i, (kode, simbol) in enumerate(rows, start=2):
+            if simbol.startswith("CURRENCY:"):   # currencies only answer the bare call (no attributes)
+                w.writerow([kode, simbol, "Dolar AS ke Rupiah", f'=IFERROR(GOOGLEFINANCE(B{i}),"")'] + [""] * (len(kolom) - 1))
+                continue
             w.writerow([kode, simbol] + [f'=IFERROR(GOOGLEFINANCE(B{i},"{a}"),"")' for _, a in kolom]
                        + [f'=IFERROR(TEXT(GOOGLEFINANCE(B{i},"tradetime"),"yyyy-mm-dd hh:mm"),"")'])
     # history: one 3-column block per stock; row 1 = code, row 2 = spilling formula
