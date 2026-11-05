@@ -316,7 +316,7 @@
   const S = { tab: "berita", area: null, zonas: [], wilayahs: [], offset: 0, q: "", map: null, layers: null, me: null,
     bf: { t: "semua", w: "semua", s: "", j: "", v: false },
     promos: [], outlets: [], outletKey: null,
-    sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", loaded: false, pasar: "", pasarOff: 0, kode: "" },
+    sh: { rows: [], hist: {}, sektor: "semua", sort: "kode", q: "", semua: false, loaded: false, pasar: "", pasarOff: 0, kode: "" },
     cn: { kat: "semua", sumber: "", q: "", asli: false, offset: 0, jenis: "", w: "semua" },
     pf: { k: "semua", p: "semua", s: "baru", q: "", pasti: false, j: "semua", h: "semua" } };
   try { Object.assign(S.pf, JSON.parse(store.get("promoFilter") || "{}"), { q: "" }); } catch { /* ignore */ }
@@ -699,11 +699,12 @@
   const fmtPct = (n) => (n == null ? "–" : `${n > 0 ? "+" : ""}${fmtNum(n, 2)}%`);
   const arah = (n) => (n > 0 ? "naik" : n < 0 ? "turun" : "datar");
   const panah = (n) => (n > 0 ? "▲" : n < 0 ? "▼" : "■");
-  function sparkline(vals, w = 90, h = 28) {
-    if (!vals || vals.length < 2) return `<span class="spark-empty" style="width:${w}px"></span>`;
+  function sparkline(vals, w = 120, h = 36) {
+    if (!vals || vals.length < 2) return `<span class="spark-empty"></span>`;
     const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
-    const pts = vals.map((v, i) => `${((i / (vals.length - 1)) * w).toFixed(1)},${(h - 2 - ((v - min) / span) * (h - 4)).toFixed(1)}`).join(" ");
-    return `<svg class="spark ${vals[vals.length - 1] >= vals[0] ? "naik" : "turun"}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline points="${pts}"/></svg>`;
+    const line = vals.map((v, i) => `${i ? "L" : "M"}${((i / (vals.length - 1)) * w).toFixed(1)},${(h - 3 - ((v - min) / span) * (h - 6)).toFixed(1)}`).join("");
+    return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+      <path class="sp-area" d="${line}L${w},${h}L0,${h}Z"/><path class="sp-line" d="${line}"/></svg>`;
   }
 
   const kodeQS = (k) => (k ? `&kode=cs.${encodeURIComponent(`{"${k}"}`)}` : "");
@@ -784,6 +785,16 @@
   }
 
   const INDEKS = new Set(["IHSG", "USDIDR"]);   // shown as cards above the list, not as stocks
+  /** the stock's card, showing the full list first when it is folded away */
+  function kartuSaham(kode) {
+    let li = document.querySelector(`.saham-row[data-kode="${CSS.escape(kode)}"]`);
+    if (!li && S.sh.rows.some((r) => r.kode === kode && !INDEKS.has(r.kode))) {
+      S.sh.semua = true; S.sh.sektor = "semua"; S.sh.q = ""; $("#sq").value = "";
+      drawSaham();
+      li = document.querySelector(`.saham-row[data-kode="${CSS.escape(kode)}"]`);
+    }
+    return li;
+  }
 
   function drawSaham() {
     const sh = S.sh, el = $("#list-saham");
@@ -834,12 +845,21 @@
     const by = { kode: (a, b) => a.kode.localeCompare(b.kode), naik: (a, b) => (b.persen ?? -1e9) - (a.persen ?? -1e9),
       turun: (a, b) => (a.persen ?? 1e9) - (b.persen ?? 1e9), volume: (a, b) => (b.volume || 0) - (a.volume || 0) };
     rows.sort(by[sh.sort]);
-    el.innerHTML = rows.map((r, i) => `<li class="saham-row" data-kode="${esc(r.kode)}" style="--i:${i}">
+    // a short list keeps the market news close; search or a sector shows every match
+    const ringkas = !q && sh.sektor === "semua" && !sh.semua;
+    // two full rows of cards, whatever the screen width (at least 6 on a phone's 2 columns)
+    const kolom = getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length || 4;
+    const awal = Math.max(6, kolom * 2);
+    const tampil = ringkas ? rows.slice(0, awal) : rows;
+    const more = $("#more-saham");
+    more.hidden = !(!q && sh.sektor === "semua" && rows.length > awal);
+    more.textContent = sh.semua ? T("Ringkas daftar saham") : T("Tampilkan semua {n} saham", { n: rows.length });
+    el.innerHTML = tampil.map((r, i) => `<li class="saham-row" data-kode="${esc(r.kode)}" style="--i:${i}">
       <button type="button" class="sh-btn" aria-expanded="false">
         <span class="sh-id"><b>${esc(r.kode)}</b><span>${esc(r.nama || "")}</span></span>
-        ${sparkline(sh.hist[r.kode])}
-        <span class="sh-harga">${fmtNum(r.harga)}</span>
         <span class="pill ${arah(r.persen)}">${fmtPct(r.persen)}</span>
+        <span class="sh-harga">${fmtNum(r.harga)}</span>
+        ${sparkline(sh.hist[r.kode])}
       </button>
       <div class="sh-detail" hidden></div>
     </li>`).join("") || empty(T("Tidak ada saham yang cocok."));
@@ -849,6 +869,7 @@
     const det = li.querySelector(".sh-detail"), btn = li.querySelector(".sh-btn");
     const open = det.hidden;
     det.hidden = !open;
+    li.classList.toggle("buka", open);
     btn.setAttribute("aria-expanded", String(open));
     if (!open || det.dataset.ok) return;
     const r = S.sh.rows.find((x) => x.kode === li.dataset.kode);
@@ -1117,22 +1138,26 @@
     $("#list-pasar").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-kode]");
       if (!b) return;
-      const li = document.querySelector(`.saham-row[data-kode="${CSS.escape(b.dataset.kode)}"]`);
-      if (li && !$("#list-saham").hidden) { li.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "center" }); bukaSaham(li); }
+      const li = !$("#list-saham").hidden && kartuSaham(b.dataset.kode);
+      if (li) { li.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "center" }); bukaSaham(li); }
       else setKode(b.dataset.kode);
     });
     $("#pasar-top").addEventListener("click", (e) => { const b = e.target.closest("button[data-top]"); if (b) setKode(b.dataset.top); });
     $("#pasar-kode-x").addEventListener("click", () => setKode(S.sh.kode));
     $("#f-sektor").addEventListener("click", (e) => { const b = e.target.closest("button[data-s]"); if (b) { S.sh.sektor = b.dataset.s; drawSaham(); } });
     $("#s-sort").addEventListener("change", (e) => { S.sh.sort = e.target.value; drawSaham(); });
+    $("#more-saham").addEventListener("click", () => {
+      S.sh.semua = !S.sh.semua;
+      drawSaham();
+      if (!S.sh.semua) $("#list-saham").scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" });
+    });
     let ts;
     $("#sq").addEventListener("input", (e) => { clearTimeout(ts); ts = setTimeout(() => { S.sh.q = e.target.value; drawSaham(); }, 200); });
     $("#list-saham").addEventListener("click", (e) => { const li = e.target.closest(".sh-btn") && e.target.closest(".saham-row"); if (li) bukaSaham(li); });
     $("#movers").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-kode]");
       if (!b) return;
-      S.sh.sektor = "semua"; S.sh.q = ""; $("#sq").value = ""; drawSaham();
-      const li = document.querySelector(`.saham-row[data-kode="${CSS.escape(b.dataset.kode)}"]`);
+      const li = kartuSaham(b.dataset.kode);
       if (li) { li.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "center" }); bukaSaham(li); }
     });
     $("#f-kat").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) setPF({ k: b.dataset.k, p: "semua" }); });
